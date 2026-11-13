@@ -38,7 +38,13 @@
     "favourites": "Favourites",
     "favouritesAria": "Favourites ({count})",
     "partnerPanel": "Partner panel",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "currencyNames": {
+      "EUR": "Euro",
+      "USD": "US dollar",
+      "GBP": "British pound",
+      "EGP": "Egyptian pound"
+    }
   },
   "footer": {
     "aboutText": "Sharm Station Viaggi plans and books day trips, Nile cruises, packages, hotels and transfers across Egypt, with local guides and flexible payment.",
@@ -109,7 +115,32 @@
     "toPlaceholder": "Hotel or address",
     "date": "Date",
     "search": "Search",
-    "getPrice": "Get price"
+    "getPrice": "Get price",
+    "suggest": {
+      "destinations": "Destinations",
+      "hotels": "Hotels",
+      "airports": "Airports and hubs",
+      "places": "Popular destinations · fixed price",
+      "tripsCount": "{count, plural, =0 {Trips and tours} one {# trip} other {# trips}}",
+      "staysIn": "Hotels and rooms",
+      "hotelIn": "{stars, plural, =0 {Hotel} other {#-star hotel}} · {city}",
+      "fixedPrice": "Fixed price",
+      "useTyped": "Use “{text}”",
+      "noMatches": "No matches. Try another name.",
+      "clear": "Clear",
+      "fromPlaceholder": "Airport or hub",
+      "hubType": {
+        "airport": "Airport",
+        "port": "Port",
+        "city": "City",
+        "other": "Pick-up point"
+      },
+      "trips": "Trips",
+      "nile_trips": "Nile trips",
+      "packages": "Packages",
+      "searching": "Searching…",
+      "country": "Egypt"
+    }
   },
   "home": {
     "categories": {

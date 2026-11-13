@@ -90,7 +90,7 @@ export async function Footer() {
         </div>
         <div className="mt-6 flex flex-col gap-4 border-t border-white/15 pt-6 md:flex-row md:items-center md:justify-between">
           <p className="text-sm text-white/80">{t("footer.copyright", { year })}</p>
-          <div className="flex gap-3">
+          <div className="flex items-center gap-2">
             <Suspense fallback={<LanguageSwitcherFallback />}>
               <LanguageSwitcher />
             </Suspense>

@@ -92,7 +92,7 @@ CR-2 Tax included
 - Add it to RoomCard (next to the price), Room detail price block, Building detail rooms list, accommodation booking summary.
 
 CR-3 Home transfers section
-- Home/Transfers promo (desktop and mobile): order is form card first, image second. Desktop: form on the left, image on the right below the section header is kept but the image must come after the inputs in reading order; mobile: image placed under the "Get price" button.
+- Home/Transfers promo and the Transfers page (desktop and mobile): the airport image comes FIRST, then the "Book an airport transfer" form card (revised 13 Nov 2026).
 
 CR-4 Google reviews
 - Replace ReviewSummary with GoogleReviewSummary: Google "G" logo, Google rating 4.8, "Based on 1,284 Google reviews", "Write a review on Google" button, small "Reviews from Google" attribution. Remove the 5-to-1 star breakdown bars and "verified bookings" copy.

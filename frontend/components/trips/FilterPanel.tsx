@@ -1,9 +1,11 @@
 "use client";
 
+import { Combobox } from "@/components/ui/Combobox";
+import { useLocationGroups } from "@/components/ui/locationGroups";
 import type { DestinationSummary } from "@/lib/api/types";
 import { useCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
-import { Check, ChevronDown, CircleCheck } from "lucide-react";
+import { Check, ChevronDown, CircleCheck, MapPin } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useId, useState, type ReactNode } from "react";
 import { FilterSwitchRow } from "./FilterSwitchRow";
@@ -89,11 +91,13 @@ export function FilterPanel({
       </Group>
       {kind !== "packages" && (
         <Group title={t("destination")}>
-          {destinations.map((d) => (
-            <Option key={d.slug} selected={state.destination === d.slug} onClick={() => set({ destination: state.destination === d.slug ? undefined : d.slug })}>
-              {d.name}
-            </Option>
-          ))}
+          <DestinationFilter
+            kind={kind}
+            label={t("destination")}
+            destinations={destinations}
+            value={state.destination}
+            onChange={(destination) => set({ destination })}
+          />
         </Group>
       )}
       {kind === "trips" && (
@@ -113,5 +117,50 @@ export function FilterPanel({
         ))}
       </Group>
     </div>
+  );
+}
+
+/** Searchable destination picker (type-ahead, grouped, with a clear button). */
+function DestinationFilter({
+  kind,
+  label,
+  destinations,
+  value,
+  onChange,
+}: {
+  kind: ListingKind;
+  label: string;
+  destinations: DestinationSummary[];
+  value: string | undefined;
+  onChange: (slug: string | undefined) => void;
+}) {
+  const t = useTranslations("search");
+  const groups = useLocationGroups();
+  const selectedName = destinations.find((d) => d.slug === value)?.name ?? "";
+  const [text, setText] = useState(selectedName);
+  const [lastValue, setLastValue] = useState(value);
+  // Follow outside changes (removable chips, "Clear all") without an effect.
+  if (lastValue !== value) {
+    setLastValue(value);
+    setText(selectedName);
+  }
+  const destinationsOnly = (loaded: ReturnType<typeof groups.destinations>[]) => loaded.filter((g) => g.key === "destinations");
+
+  return (
+    <Combobox
+      variant="field"
+      label={label}
+      hideLabel
+      icon={<MapPin aria-hidden />}
+      placeholder={t("whereTo")}
+      value={text}
+      onInputChange={setText}
+      onSelect={(option) => onChange(option && !option.value.includes(":") ? option.value : undefined)}
+      groups={[groups.destinations(destinations)]}
+      loadGroups={async (query, signal) => destinationsOnly(await groups.remote(kind === "nile" ? "nile" : "trips")(query, signal))}
+      emptyText={groups.labels.noMatches}
+      clearLabel={groups.labels.clear}
+      loadingText={groups.labels.searching}
+    />
   );
 }

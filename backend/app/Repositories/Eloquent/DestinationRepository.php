@@ -4,6 +4,7 @@ namespace App\Repositories\Eloquent;
 
 use App\Models\Destination;
 use App\Repositories\Contracts\DestinationRepositoryInterface;
+use App\Repositories\Eloquent\Concerns\MatchesSearchTokens;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class DestinationRepository extends BaseRepository implements DestinationRepositoryInterface
 {
+    use MatchesSearchTokens;
+
     protected function model(): string
     {
         return Destination::class;
@@ -46,5 +49,15 @@ class DestinationRepository extends BaseRepository implements DestinationReposit
     public function isInUse(Destination $destination): bool
     {
         return $destination->trips()->exists() || $destination->buildings()->exists();
+    }
+
+    public function suggest(array $tokens, int $limit): Collection
+    {
+        $query = $this->query()
+            ->active()
+            ->withCount(['trips' => fn (Builder $trips) => $trips->published()]);
+        $this->matchTokens($query, $tokens, ['name']);
+
+        return $query->orderByDesc('trips_count')->limit($limit)->get();
     }
 }

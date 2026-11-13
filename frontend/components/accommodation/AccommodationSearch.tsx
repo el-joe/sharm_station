@@ -1,14 +1,17 @@
 "use client";
 
+import { SelectMenu } from "@/components/ui/SelectMenu";
 import { FilterSwitchRow } from "@/components/trips/FilterSwitchRow";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
+import { Combobox } from "@/components/ui/Combobox";
+import { useLocationGroups } from "@/components/ui/locationGroups";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import type { DestinationSummary } from "@/lib/api/types";
 import { useToday } from "@/lib/hooks";
 import { addDays, cn, parseISODate, toISODate } from "@/lib/utils";
-import { CircleCheck, Search, SlidersHorizontal } from "lucide-react";
+import { ArrowUpDown, CircleCheck, MapPin, Search, SlidersHorizontal } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useId, useState, useTransition, type FormEvent } from "react";
 
@@ -47,6 +50,10 @@ export function AccommodationSearch({ query, destinations, buildings, total }: {
   const [pending, startTransition] = useTransition();
   const [draft, setDraft] = useState(query);
   const [sheet, setSheet] = useState(false);
+  const groups = useLocationGroups();
+  const [placeText, setPlaceText] = useState(
+    () => buildings.find((b) => b.slug === query.building)?.name ?? destinations.find((d) => d.slug === query.destination)?.name ?? "",
+  );
 
   const defaultIn = today ? toISODate(addDays(parseISODate(today), 14)) : "";
   const checkIn = draft.check_in ?? defaultIn;
@@ -76,14 +83,25 @@ export function AccommodationSearch({ query, destinations, buildings, total }: {
   return (
     <div className={cn("flex flex-col gap-6 transition-opacity", pending && "opacity-60")}>
       <form onSubmit={submit} className="grid gap-4 rounded-card border border-ink-100 bg-white p-4 shadow-card md:grid-cols-2 md:p-6 lg:grid-cols-[1.3fr_1fr_1fr_0.7fr_0.7fr_auto] lg:items-end">
-        <Field label={t("destination")} htmlFor={`${id}-d`}>
-          <Select id={`${id}-d`} value={draft.destination ?? ""} onChange={(e) => setDraft({ ...draft, destination: e.target.value || undefined })}>
-            <option value="">{t("anywhere")}</option>
-            {destinations.map((d) => (
-              <option key={d.slug} value={d.slug}>{d.name}</option>
-            ))}
-          </Select>
-        </Field>
+        <Combobox
+          id={`${id}-d`}
+          variant="field"
+          label={t("destination")}
+          icon={<MapPin aria-hidden />}
+          placeholder={t("anywhere")}
+          value={placeText}
+          onInputChange={setPlaceText}
+          onSelect={(option) => {
+            if (!option) setDraft({ ...draft, destination: undefined, building: undefined });
+            else if (option.value.startsWith("hotel:")) setDraft({ ...draft, building: option.value.slice(6), destination: undefined });
+            else setDraft({ ...draft, destination: option.value, building: undefined });
+          }}
+          groups={[groups.destinations(destinations, "stays"), groups.hotels(buildings.map((b) => ({ slug: b.slug, name: b.name, stars: 0, city: "" })))]}
+          loadGroups={groups.remote("stays")}
+          emptyText={groups.labels.noMatches}
+          clearLabel={groups.labels.clear}
+          loadingText={groups.labels.searching}
+        />
         <Field label={t("checkIn")} htmlFor={`${id}-in`}>
           <Input id={`${id}-in`} type="date" value={checkIn} min={today ?? undefined} onChange={(e) => {
             const v = e.target.value;
@@ -114,14 +132,16 @@ export function AccommodationSearch({ query, destinations, buildings, total }: {
           <Button variant="outline" size="sm" className="h-11 lg:hidden" icon={<SlidersHorizontal className="size-4" aria-hidden />} onClick={() => { setDraft(query); setSheet(true); }}>
             {tf("title")}
           </Button>
-          <label className="flex items-center gap-2 text-sm text-ink-700">
-            <span className="max-sm:sr-only">{tf("sortBy")}</span>
-            <select value={query.sort} onChange={(e) => go({ ...query, sort: e.target.value as AccommodationQuery["sort"] })} className="h-11 rounded-control border border-ink-300 bg-white px-3 font-semibold text-ink-900">
-              {(["recommended", "price_asc", "price_desc"] as const).map((s) => (
-                <option key={s} value={s}>{tf(`sort.${s}`)}</option>
-              ))}
-            </select>
-          </label>
+          <div className="flex items-center gap-2 text-sm text-ink-700">
+            <span className="max-sm:sr-only" id="rooms-sort-label">{tf("sortBy")}</span>
+            <div className="w-48">
+              <SelectMenu aria-labelledby="rooms-sort-label" appearance="outline" size="sm" align="end" leading={<ArrowUpDown aria-hidden />} value={query.sort} onChange={(e) => go({ ...query, sort: e.target.value as AccommodationQuery["sort"] })} className="h-11">
+                {(["recommended", "price_asc", "price_desc"] as const).map((s) => (
+                  <option key={s} value={s}>{tf(`sort.${s}`)}</option>
+                ))}
+              </SelectMenu>
+            </div>
+          </div>
         </div>
       </div>
 

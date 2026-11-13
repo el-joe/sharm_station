@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'country' => 'Egitto',
     'facilities' => [
         'pool' => 'Piscina', 'restaurant' => 'Ristorante', 'sun_terrace' => 'Terrazza solarium', 'wifi' => 'Wi-Fi', 'bar' => 'Bar',
         'spa' => 'Spa', 'gym' => 'Palestra', 'shade' => 'Zona d\'ombra', 'cushions' => 'Cuscini',

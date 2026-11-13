@@ -10,6 +10,14 @@ import { getTranslations } from "next-intl/server";
 import { locale as rootLocale } from "next/root-params";
 import { Suspense } from "react";
 
+
+/** Coordinates passed from the home search (?to_lat=&to_lng=) when a suggestion was picked. */
+function toPoint(lat?: string, lng?: string) {
+  const la = Number(lat);
+  const ln = Number(lng);
+  return lat && lng && Number.isFinite(la) && Number.isFinite(ln) ? { lat: la, lng: ln } : null;
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await rootLocale();
   const t = await getTranslations("transfers");
@@ -37,15 +45,15 @@ export default async function TransfersPage({ searchParams }: PageProps<"/[local
         </div>
       </section>
       <div className="container-page flex flex-col gap-6 py-8 lg:py-12">
-        {/* CR-3: form first, image after */}
-        <Suspense fallback={<TransferMiniForm catalog={catalog} headingLevel="h2" />}>
-          {searchParams.then((sp) => (
-            <TransferMiniForm catalog={catalog} headingLevel="h2" initial={{ hub: one(sp.hub), destination: one(sp.to), date: one(sp.date) }} />
-          ))}
-        </Suspense>
+        {/* CR-3 (revised): image first, then the form */}
         <div className="relative h-[220px] overflow-hidden rounded-image md:h-[360px]">
           <AppImage src="/images/airport.webp" alt={t("imageAlt")} fill sizes="(min-width: 1248px) 1200px, 100vw" className="object-cover" />
         </div>
+        <Suspense fallback={<TransferMiniForm catalog={catalog} headingLevel="h2" />}>
+          {searchParams.then((sp) => (
+            <TransferMiniForm catalog={catalog} headingLevel="h2" initial={{ hub: one(sp.hub), destination: one(sp.to), date: one(sp.date), point: toPoint(one(sp.to_lat), one(sp.to_lng)) }} />
+          ))}
+        </Suspense>
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {perks.map(({ Icon, text }) => (
             <li key={text} className="flex items-center gap-3 rounded-card border border-ink-100 bg-white p-4 shadow-card">

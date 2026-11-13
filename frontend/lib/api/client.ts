@@ -45,6 +45,8 @@ import {
 } from "./adapters";
 import { mockApi } from "./mock-api";
 import type {
+  SuggestGroup,
+  SuggestScope,
   ApiValidationError,
   AuthResponse,
   AuthUser,
@@ -416,6 +418,18 @@ export const api = {
       () => ({ status: "pending" }),
     ),
 
+  /** GET /search/suggest: grouped type-ahead suggestions; [] when the API is unavailable. */
+  suggest: async (scope: SuggestScope, q: string, o: RequestOptions, hubId?: number): Promise<SuggestGroup[]> => {
+    if (USE_MOCKS) return [];
+    try {
+      const res = await request<Envelope<SuggestGroup[]>>("GET", "/search/suggest", o, { scope, q, hub_id: hubId, limit: 8 });
+      return isArray(res.data) ? res.data : [];
+    } catch (error) {
+      if (o.signal?.aborted) throw error;
+      return [];
+    }
+  },
+
   /** Mock hubs (used when GET /transfers/hubs is empty or unreachable). */
   transferHubs: (): TransferHub[] => mockApi.transferHubs(),
 
@@ -441,7 +455,7 @@ export const api = {
       ]);
       if (!isArray(hubs.data) || !isArray(vehicles.data) || !hubs.data.length || !vehicles.data.length) return mock;
       return {
-        hubs: hubs.data.map((h) => ({ code: String(h.id), id: h.id, name: h.name, places: h.places ?? [], vehicle_type_ids: h.vehicle_type_ids })),
+        hubs: hubs.data.map((h) => ({ code: String(h.id), id: h.id, name: h.name, city: h.destination?.name, type: h.type, places: h.places ?? [], vehicle_type_ids: h.vehicle_type_ids })),
         vehicles: vehicles.data.map((v) => ({ code: String(v.id), name: v.name, capacity: v.capacity })),
         live: true,
       };
@@ -458,7 +472,9 @@ export const api = {
   quoteTransfer: async (body: TransferQuoteRequest, o: RequestOptions, catalog?: TransferCatalog): Promise<TransferQuoteResult> => {
     if (!catalog?.live) return mockApi.quoteTransfer(body);
     const hub = catalog.hubs.find((h) => h.code === body.hub);
-    const place = hub?.places?.find((p) => p.name.trim().toLowerCase() === body.destination.trim().toLowerCase());
+    const place =
+      hub?.places?.find((p) => p.name.trim().toLowerCase() === body.destination.trim().toLowerCase()) ??
+      (body.point ? { name: body.destination.trim(), lat: body.point.lat, lng: body.point.lng } : undefined);
     if (!hub?.id || !place) throw new ApiError(422, "Unknown destination", { destination: ["unknown"] });
     const raw = data(
       await request<Envelope<RawQuote & { distance_km?: number; duration_minutes?: number }>>("POST", "/transfers/quote", o, {}, {
@@ -658,6 +674,8 @@ function accountDetails(raw: unknown): Record<string, string> {
 interface RawTransferHub {
   id: number;
   name: string;
+  type?: string;
+  destination?: { name: string; slug: string } | null;
   places?: { name: string; lat: number; lng: number }[];
   vehicle_type_ids?: number[] | null;
 }

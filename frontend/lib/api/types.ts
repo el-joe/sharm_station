@@ -512,7 +512,10 @@ export interface TransferHub {
   /** Mock hubs: a short code; API hubs: the hub id as a string. */
   code: string;
   name: string;
-  /** API only: id for POST /transfers/quote. */
+  /** City / destination the hub serves (e.g. "Sharm El Sheikh"), shown under the name. */
+  city?: string;
+  /** Hub kind from the API: airport, port, city... */
+  type?: string;
   id?: number;
   /** API only: known destinations (fixed routes) with coordinates. */
   places?: { name: string; lat: number; lng: number }[];
@@ -539,6 +542,25 @@ export interface TransferQuoteRequest {
   vehicle: string;
   date: string;
   passengers?: number;
+  /** Coordinates of a picked suggestion (fixed-price place or hotel), so it can be priced. */
+  point?: { lat: number; lng: number } | null;
+}
+
+/** GET /search/suggest scopes (one per search field). */
+export type SuggestScope = "trips" | "nile" | "packages" | "stays" | "transfer_from" | "transfer_to";
+
+export interface SuggestItem {
+  type: "destination" | "hotel" | "trip" | "package" | "hub" | "place";
+  value: string;
+  label: string;
+  /** "Naama Bay, Sharm El Sheikh, Egypt" */
+  location: string;
+  meta: { trips_count?: number; stars?: number; lat?: number | null; lng?: number | null; fixed_price?: boolean; trip_type?: string; hub_type?: string };
+}
+
+export interface SuggestGroup {
+  key: "destinations" | "hotels" | "trips" | "nile_trips" | "packages" | "hubs" | "places";
+  items: SuggestItem[];
 }
 
 export interface TransferQuoteResult {

@@ -1,12 +1,13 @@
 "use client";
 
+import { SelectMenu } from "@/components/ui/SelectMenu";
 import { Button } from "@/components/ui/Button";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import type { DestinationSummary, TripSort } from "@/lib/api/types";
 import { useCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
-import { SlidersHorizontal, X } from "lucide-react";
+import { ArrowUpDown, SlidersHorizontal, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition, type ReactNode } from "react";
 import { FilterPanel } from "./FilterPanel";
@@ -85,20 +86,27 @@ export function ListingShell({
               {t("title")}
               {chips.length > 0 && <span className="grid size-5 place-items-center rounded-full bg-primary-700 text-xs text-white">{chips.length}</span>}
             </Button>
-            <label className="flex items-center gap-2 text-sm text-ink-700">
-              <span className="max-sm:sr-only">{t("sortBy")}</span>
-              <select
-                value={state.sort}
-                onChange={(e) => navigate({ ...state, sort: e.target.value as TripSort, page: 1 })}
-                className="h-11 rounded-control border border-ink-300 bg-white px-3 font-semibold text-ink-900 focus:border-primary-500 focus:outline-none"
-              >
-                {(["recommended", "price_asc", "price_desc", "newest"] as const).map((s) => (
-                  <option key={s} value={s}>
-                    {t(`sort.${s}`)}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="flex items-center gap-2 text-sm text-ink-700">
+              <span className="max-sm:sr-only" id="listing-sort-label">{t("sortBy")}</span>
+              <div className="w-48">
+                <SelectMenu
+                  aria-labelledby="listing-sort-label"
+                  appearance="outline"
+                  size="sm"
+                  align="end"
+                  leading={<ArrowUpDown aria-hidden />}
+                  value={state.sort}
+                  onChange={(e) => navigate({ ...state, sort: e.target.value as TripSort, page: 1 })}
+                  className="h-11"
+                >
+                  {(["recommended", "price_asc", "price_desc", "newest"] as const).map((s) => (
+                    <option key={s} value={s}>
+                      {t(`sort.${s}`)}
+                    </option>
+                  ))}
+                </SelectMenu>
+              </div>
+            </div>
           </div>
         </div>
 

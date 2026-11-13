@@ -1,11 +1,12 @@
 import { AppImage } from "@/components/ui/AppImage";
+import type { HotelSuggestion } from "@/components/ui/locationGroups";
 import type { DestinationSummary, TransferHub } from "@/lib/api/types";
 import { useTranslations } from "next-intl";
 import { HeroSearchCard } from "./HeroSearchCard";
 import { TrustChips } from "./TrustChips";
 
 /** Figma HomeHero (60:14593): photo, glass panel, H1, HeroSearchCard, TrustChips. */
-export function HomeHero({ destinations, hubs, rating }: { destinations: DestinationSummary[]; hubs: TransferHub[]; rating: number }) {
+export function HomeHero({ destinations, hubs, hotels, rating }: { destinations: DestinationSummary[]; hubs: TransferHub[]; hotels: HotelSuggestion[]; rating: number }) {
   const t = useTranslations("hero");
   return (
     <section className="relative isolate overflow-hidden" aria-labelledby="hero-title">
@@ -21,7 +22,7 @@ export function HomeHero({ destinations, hubs, rating }: { destinations: Destina
             <span className="max-md:hidden">{t("subtitle")}</span>
           </p>
           <div className="w-full max-w-[1000px]">
-            <HeroSearchCard destinations={destinations} hubs={hubs} />
+            <HeroSearchCard destinations={destinations} hubs={hubs} hotels={hotels} />
           </div>
           <TrustChips rating={rating} />
         </div>

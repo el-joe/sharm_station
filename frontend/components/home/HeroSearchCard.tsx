@@ -1,5 +1,7 @@
 "use client";
 
+import { Combobox, type ComboboxOption } from "@/components/ui/Combobox";
+import { useLocationGroups, type HotelSuggestion } from "@/components/ui/locationGroups";
 import { useRouter } from "@/i18n/navigation";
 import type { DestinationSummary, TransferHub } from "@/lib/api/types";
 import { useToday } from "@/lib/hooks";
@@ -42,12 +44,26 @@ const inputCls = "h-full min-w-0 flex-1 bg-transparent text-base text-ink-900 pl
  * have Destination + Travellers only (no date). Accommodation has dates;
  * Transfers has its own mini form.
  */
-export function HeroSearchCard({ destinations, hubs }: { destinations: DestinationSummary[]; hubs: TransferHub[] }) {
+/** Closest destination slug for free text: exact name, then "starts with", then "contains". */
+function resolveDestination(text: string, destinations: DestinationSummary[]): string | undefined {
+  const q = text.trim().toLowerCase();
+  if (!q) return undefined;
+  return (
+    destinations.find((d) => d.name.toLowerCase() === q) ??
+    destinations.find((d) => d.name.toLowerCase().startsWith(q)) ??
+    destinations.find((d) => d.name.toLowerCase().includes(q))
+  )?.slug;
+}
+
+export function HeroSearchCard({ destinations, hubs, hotels = [] }: { destinations: DestinationSummary[]; hubs: TransferHub[]; hotels?: HotelSuggestion[] }) {
   const t = useTranslations("search");
   const router = useRouter();
   const id = useId();
   const [tab, setTab] = useState<Service>("trips");
-  const [destination, setDestination] = useState("");
+  const groups = useLocationGroups();
+  /** Text shown in the destination field and the option picked from the dropdown (if any). */
+  const [destinationText, setDestinationText] = useState("");
+  const [destinationPick, setDestinationPick] = useState<ComboboxOption | null>(null);
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
   const todayIso = useToday();
@@ -55,35 +71,59 @@ export function HeroSearchCard({ destinations, hubs }: { destinations: Destinati
   const [checkInState, setCheckIn] = useState<string | null>(null);
   const [checkOutState, setCheckOut] = useState<string | null>(null);
   const [hub, setHub] = useState(hubs[0]?.code ?? "");
+  const [hubText, setHubText] = useState(hubs[0]?.name ?? "");
   const [to, setTo] = useState("");
+  const [toPoint, setToPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [dateState, setDate] = useState<string | null>(null);
   const checkIn = checkInState ?? shift(14);
   const checkOut = checkOutState ?? shift(17);
   const date = dateState ?? shift(7);
   const tomorrow = shift(1);
 
+  const pickedSlug = destinationPick && !destinationPick.value.includes(":") ? destinationPick.value : undefined;
+  const destination = pickedSlug ?? resolveDestination(destinationText, destinations) ?? "";
+  const selectedHub = hubs.find((h) => h.code === hub);
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (tab === "accommodation") {
+    const [pickType, pickSlug] = destinationPick && destinationPick.value.includes(":") ? destinationPick.value.split(":", 2) : [];
+    if (pickType === "trip") {
+      router.push(`${tab === "nile" ? "/nile" : "/trips"}/${pickSlug}`);
+    } else if (pickType === "package") {
+      router.push(`/packages/${pickSlug}`);
+    } else if (tab === "accommodation" && pickType === "hotel") {
+      router.push({ pathname: `/buildings/${pickSlug}`, query: { check_in: checkIn, check_out: checkOut, adults: String(adults), children: String(children) } });
+    } else if (tab === "accommodation") {
       router.push({ pathname: "/accommodation", query: { ...(destination && { destination }), check_in: checkIn, check_out: checkOut, adults: String(adults), children: String(children) } });
     } else if (tab === "transfers") {
-      router.push({ pathname: "/transfers", query: { hub, to, date } });
+      router.push({ pathname: "/transfers", query: { hub, to, date, ...(toPoint ? { to_lat: String(toPoint.lat), to_lng: String(toPoint.lng) } : {}) } });
     } else {
       router.push({ pathname: LISTING[tab], query: { ...(destination && { destination }), adults: String(adults), ...(children ? { children: String(children) } : {}) } });
     }
   };
 
-  const destinationSelect = (
-    <FieldShell label={t("destination")} htmlFor={`${id}-dest`} icon={<MapPin className="size-4" aria-hidden />}>
-      <select id={`${id}-dest`} value={destination} onChange={(e) => setDestination(e.target.value)} className={cn(inputCls, "cursor-pointer appearance-none", !destination && "text-ink-500")}>
-        <option value="">{t("whereTo")}</option>
-        {destinations.map((d) => (
-          <option key={d.slug} value={d.slug}>
-            {d.name}
-          </option>
-        ))}
-      </select>
-    </FieldShell>
+  const destinationField = (
+    <Combobox
+      id={`${id}-dest-${tab === "accommodation" ? "stay" : "trip"}`}
+      label={t("destination")}
+      icon={<MapPin className="size-4" aria-hidden />}
+      placeholder={t("whereTo")}
+      value={destinationText}
+      onInputChange={(text) => {
+        setDestinationText(text);
+        setDestinationPick(null);
+      }}
+      onSelect={setDestinationPick}
+      loadGroups={groups.remote(tab === "accommodation" ? "stays" : tab === "transfers" ? "trips" : tab)}
+      loadingText={groups.labels.searching}
+      groups={
+        tab === "accommodation"
+          ? [groups.destinations(destinations, "stays"), ...(hotels.length ? [groups.hotels(hotels)] : [])]
+          : [groups.destinations(destinations)]
+      }
+      emptyText={groups.labels.noMatches}
+      clearLabel={groups.labels.clear}
+    />
   );
 
   const searchButton = (
@@ -123,7 +163,7 @@ export function HeroSearchCard({ destinations, hubs }: { destinations: Destinati
       <form id={`${id}-panel`} role="tabpanel" aria-labelledby={`${id}-tab-${tab}`} onSubmit={submit} className="mt-5 flex flex-col gap-4">
         {(tab === "trips" || tab === "nile" || tab === "packages") && (
           <>
-            {destinationSelect}
+            {destinationField}
             <div className="flex flex-col gap-4 md:flex-row md:items-end">
               <div className="flex-1">
                 <TravellersPicker adults={adults} childCount={children} label={t("travellers")} onChange={(a, c) => { setAdults(a); setChildren(c); }} />
@@ -135,7 +175,7 @@ export function HeroSearchCard({ destinations, hubs }: { destinations: Destinati
 
         {tab === "accommodation" && (
           <>
-            {destinationSelect}
+            {destinationField}
             <div className="grid gap-4 md:grid-cols-2">
               <FieldShell label={t("checkIn")} htmlFor={`${id}-in`} icon={<CalendarDays className="size-4" aria-hidden />}>
                 <input id={`${id}-in`} type="date" value={checkIn} min={tomorrow} onChange={(e) => { setCheckIn(e.target.value); if (e.target.value >= checkOut) setCheckOut(toISODate(addDays(parseISODate(e.target.value), 1))); }} className={inputCls} required />
@@ -156,16 +196,49 @@ export function HeroSearchCard({ destinations, hubs }: { destinations: Destinati
         {tab === "transfers" && (
           <>
             <div className="grid gap-4 md:grid-cols-2">
-              <FieldShell label={t("from")} htmlFor={`${id}-hub`} icon={<MapPin className="size-4" aria-hidden />}>
-                <select id={`${id}-hub`} value={hub} onChange={(e) => setHub(e.target.value)} className={cn(inputCls, "cursor-pointer appearance-none")}>
-                  {hubs.map((h) => (
-                    <option key={h.code} value={h.code}>{h.name}</option>
-                  ))}
-                </select>
-              </FieldShell>
-              <FieldShell label={t("to")} htmlFor={`${id}-to`} icon={<MapPin className="size-4" aria-hidden />}>
-                <input id={`${id}-to`} value={to} onChange={(e) => setTo(e.target.value)} placeholder={t("toPlaceholder")} className={inputCls} />
-              </FieldShell>
+              <Combobox
+                id={`${id}-hub`}
+                label={t("from")}
+                icon={<MapPin className="size-4" aria-hidden />}
+                placeholder={groups.labels.fromPlaceholder}
+                value={hubText}
+                onInputChange={setHubText}
+                onSelect={(option) => {
+                  if (option) {
+                    setHub(option.value);
+                    setTo("");
+                    setToPoint(null);
+                  }
+                }}
+                groups={[groups.hubs(hubs)]}
+                loadGroups={selectedHub?.id ? groups.remote("transfer_from") : undefined}
+                loadingText={groups.labels.searching}
+                emptyText={groups.labels.noMatches}
+                clearLabel={groups.labels.clear}
+              />
+              <Combobox
+                id={`${id}-to`}
+                label={t("to")}
+                icon={<MapPin className="size-4" aria-hidden />}
+                placeholder={t("toPlaceholder")}
+                value={to}
+                onInputChange={(text) => {
+                  setTo(text);
+                  setToPoint(null);
+                }}
+                onSelect={(option) => {
+                  const lat = option?.data?.lat;
+                  const lng = option?.data?.lng;
+                  setToPoint(typeof lat === "number" && typeof lng === "number" ? { lat, lng } : null);
+                }}
+                groups={[groups.places(selectedHub)]}
+                loadGroups={selectedHub?.id ? groups.remote("transfer_to", selectedHub.id) : undefined}
+                loadingText={groups.labels.searching}
+                allowFreeText
+                freeTextLabel={groups.labels.useTyped}
+                emptyText={groups.labels.noMatches}
+                clearLabel={groups.labels.clear}
+              />
             </div>
             <div className="flex flex-col gap-4 md:flex-row md:items-end">
               <FieldShell label={t("date")} htmlFor={`${id}-date`} icon={<CalendarDays className="size-4" aria-hidden />}>

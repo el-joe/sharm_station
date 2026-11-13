@@ -36,4 +36,13 @@ interface TripRepositoryInterface extends BaseRepositoryInterface
     public function findForEditor(int $id): Trip;
 
     public function isUsedInPackages(Trip $trip): bool;
+
+    /**
+     * Published trips of the given types matching every token on title or destination name.
+     *
+     * @param  list<string>  $tokens
+     * @param  list<TripType>  $types
+     * @return Collection<int, Trip>
+     */
+    public function suggest(array $tokens, array $types, int $limit): Collection;
 }

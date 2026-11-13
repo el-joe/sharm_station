@@ -4,6 +4,7 @@ namespace App\Repositories\Contracts;
 
 use App\Models\Building;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * @extends BaseRepositoryInterface<Building>
@@ -23,4 +24,12 @@ interface BuildingRepositoryInterface extends BaseRepositoryInterface
      * @return array<string, string>
      */
     public function placeOptions(): array;
+
+    /**
+     * Published buildings matching every token on name, address or destination name.
+     *
+     * @param  list<string>  $tokens
+     * @return Collection<int, Building>
+     */
+    public function suggest(array $tokens, int $limit, ?int $destinationId = null): Collection;
 }

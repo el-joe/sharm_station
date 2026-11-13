@@ -57,7 +57,7 @@ export function MobileDrawer() {
             </ul>
           </nav>
           <div className="flex flex-col gap-4 border-t border-ink-100 p-4">
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <Suspense fallback={<LanguageSwitcherFallback className="border border-ink-300" />}>
                 <LanguageSwitcher className="border border-ink-300" />
               </Suspense>

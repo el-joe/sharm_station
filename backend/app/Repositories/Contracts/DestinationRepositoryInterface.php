@@ -24,4 +24,12 @@ interface DestinationRepositoryInterface extends BaseRepositoryInterface
     public function adminQuery(): Builder;
 
     public function isInUse(Destination $destination): bool;
+
+    /**
+     * Active destinations whose name matches every token (all active ones when no tokens).
+     *
+     * @param  list<string>  $tokens
+     * @return Collection<int, Destination>
+     */
+    public function suggest(array $tokens, int $limit): Collection;
 }

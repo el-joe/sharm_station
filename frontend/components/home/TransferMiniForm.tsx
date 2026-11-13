@@ -1,7 +1,9 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
+import { Combobox } from "@/components/ui/Combobox";
 import { Field, Input, Select } from "@/components/ui/Field";
+import { useLocationGroups } from "@/components/ui/locationGroups";
 import { api, ApiError } from "@/lib/api/client";
 import type { Locale, TransferCatalog, TransferQuoteRequest } from "@/lib/api/types";
 import { Price } from "@/lib/currency";
@@ -9,7 +11,7 @@ import { useToday } from "@/lib/hooks";
 import { whatsappHref } from "@/lib/site";
 import { addDays, cn, parseISODate, toISODate } from "@/lib/utils";
 import { useMutation } from "@tanstack/react-query";
-import { Car, CheckCircle2, MessageCircle } from "lucide-react";
+import { Car, CheckCircle2, MapPin, MessageCircle, Plane } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useId, useState, type FormEvent } from "react";
 
@@ -21,7 +23,7 @@ export function TransferMiniForm({
   headingLevel = "h3",
 }: {
   catalog: TransferCatalog;
-  initial?: Partial<Pick<TransferQuoteRequest, "hub" | "destination" | "date" | "vehicle">>;
+  initial?: Partial<Pick<TransferQuoteRequest, "hub" | "destination" | "date" | "vehicle" | "point">>;
   className?: string;
   headingLevel?: "h2" | "h3";
 }) {
@@ -31,7 +33,10 @@ export function TransferMiniForm({
   const locale = useLocale() as Locale;
   const { hubs, vehicles, live } = catalog;
   const [hub, setHub] = useState(hubs.some((h) => h.code === initial?.hub) ? initial!.hub! : (hubs[0]?.code ?? ""));
+  const groups = useLocationGroups();
+  const [hubText, setHubText] = useState(() => hubs.find((h) => h.code === (hubs.some((x) => x.code === initial?.hub) ? initial!.hub : hubs[0]?.code))?.name ?? "");
   const [destination, setDestination] = useState(initial?.destination ?? "");
+  const [point, setPoint] = useState<{ lat: number; lng: number } | null>(initial?.point ?? null);
   const [dateState, setDate] = useState<string | null>(initial?.date || null);
   const [vehicle, setVehicle] = useState<string>(vehicles.some((v) => v.code === initial?.vehicle) ? initial!.vehicle! : (vehicles[0]?.code ?? "sedan"));
   const [error, setError] = useState<string | null>(null);
@@ -49,11 +54,11 @@ export function TransferMiniForm({
       return;
     }
     setError(null);
-    quote.mutate({ hub, destination: destination.trim(), date, vehicle });
+    quote.mutate({ hub, destination: destination.trim(), date, vehicle, point });
   };
 
-  const hubName = hubs.find((h) => h.code === hub)?.name ?? hub;
-  const places = hubs.find((h) => h.code === hub)?.places ?? [];
+  const selectedHub = hubs.find((h) => h.code === hub);
+  const hubName = selectedHub?.name ?? hub;
   const vehicleLabel = (code: string) => {
     const v = vehicles.find((x) => x.code === code);
     if (!live || !v) return ["sedan", "minivan", "van"].includes(code) ? t(`vehicles.${code as "sedan"}`) : code;
@@ -67,23 +72,61 @@ export function TransferMiniForm({
       <p className="mt-2 text-ink-700">{t("formSubtitle")}</p>
       <form onSubmit={submit} noValidate className="mt-5 flex flex-col gap-4">
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label={t("from")} htmlFor={`${id}-from`}>
-            <Select id={`${id}-from`} value={hub} onChange={(e) => setHub(e.target.value)}>
-              {hubs.map((h) => (
-                <option key={h.code} value={h.code}>{h.name}</option>
-              ))}
-            </Select>
-          </Field>
-          <Field label={t("to")} htmlFor={`${id}-to`} error={error ?? undefined}>
-            <Input id={`${id}-to`} list={places.length ? `${id}-places` : undefined} value={destination} onChange={(e) => setDestination(e.target.value)} placeholder={t("toPlaceholder")} invalid={Boolean(error)} aria-describedby={error ? `${id}-to-error` : undefined} autoComplete="off" />
-            {places.length > 0 && (
-              <datalist id={`${id}-places`}>
-                {places.map((p) => (
-                  <option key={p.name} value={p.name} />
-                ))}
-              </datalist>
+          <Combobox
+            id={`${id}-from`}
+            variant="field"
+            label={t("from")}
+            icon={<Plane aria-hidden />}
+            placeholder={groups.labels.fromPlaceholder}
+            value={hubText}
+            onInputChange={setHubText}
+            onSelect={(option) => {
+              if (option) {
+                setHub(option.value);
+                setDestination("");
+                setPoint(null);
+              }
+            }}
+            groups={[groups.hubs(hubs)]}
+            loadGroups={live ? groups.remote("transfer_from") : undefined}
+            emptyText={groups.labels.noMatches}
+            clearLabel={groups.labels.clear}
+            loadingText={groups.labels.searching}
+          />
+          <div className="flex flex-col gap-1">
+            <Combobox
+              id={`${id}-to`}
+              variant="field"
+              label={t("to")}
+              icon={<MapPin aria-hidden />}
+              placeholder={t("toPlaceholder")}
+              value={destination}
+              onInputChange={(text) => {
+                setDestination(text);
+                setPoint(null);
+                if (error) setError(null);
+              }}
+              onSelect={(option) => {
+                const lat = option?.data?.lat;
+                const lng = option?.data?.lng;
+                setPoint(typeof lat === "number" && typeof lng === "number" ? { lat, lng } : null);
+              }}
+              groups={[groups.places(selectedHub)]}
+              loadGroups={live && selectedHub?.id ? groups.remote("transfer_to", selectedHub.id) : undefined}
+              allowFreeText
+              freeTextLabel={groups.labels.useTyped}
+              invalid={Boolean(error)}
+              describedBy={error ? `${id}-to-error` : undefined}
+              emptyText={groups.labels.noMatches}
+              clearLabel={groups.labels.clear}
+              loadingText={groups.labels.searching}
+            />
+            {error && (
+              <p id={`${id}-to-error`} className="text-sm text-error" role="alert">
+                {error}
+              </p>
             )}
-          </Field>
+          </div>
           <Field label={t("date")} htmlFor={`${id}-date`}>
             <Input id={`${id}-date`} type="date" value={date} min={today ? toISODate(addDays(parseISODate(today), 1)) : undefined} onChange={(e) => setDate(e.target.value)} />
           </Field>

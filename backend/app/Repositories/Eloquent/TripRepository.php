@@ -11,6 +11,7 @@ use App\Models\Booking;
 use App\Models\PackageStageTrip;
 use App\Models\Trip;
 use App\Repositories\Contracts\TripRepositoryInterface;
+use App\Repositories\Eloquent\Concerns\MatchesSearchTokens;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -20,6 +21,8 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class TripRepository extends BaseRepository implements TripRepositoryInterface
 {
+    use MatchesSearchTokens;
+
     protected function model(): string
     {
         return Trip::class;
@@ -113,5 +116,13 @@ class TripRepository extends BaseRepository implements TripRepositoryInterface
     public function isUsedInPackages(Trip $trip): bool
     {
         return PackageStageTrip::query()->where('trip_id', $trip->id)->exists();
+    }
+
+    public function suggest(array $tokens, array $types, int $limit): Collection
+    {
+        $query = $this->query()->published()->with('destination')->whereIn('type', $types);
+        $this->matchTokens($query, $tokens, ['title', 'destination.name']);
+
+        return $query->orderByDesc('featured')->orderBy('sort')->limit($limit)->get();
     }
 }

@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\PartnerPanelController;
 use App\Http\Controllers\Api\V1\PaymentWebhookController;
 use App\Http\Controllers\Api\V1\RoomController;
 use App\Http\Controllers\Api\V1\RoomQuoteController;
+use App\Http\Controllers\Api\V1\SearchSuggestController;
 use App\Http\Controllers\Api\V1\TransferController;
 use App\Http\Controllers\Api\V1\TripController;
 use App\Http\Controllers\Api\V1\TripQuoteController;
@@ -28,6 +29,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->name('api.v1.')->middleware(SetLocaleAndCurrency::class)->group(function (): void {
     Route::get('meta', MetaController::class)->name('meta');
     Route::get('home', HomeController::class)->name('home');
+    Route::get('search/suggest', SearchSuggestController::class)->middleware('throttle:120,1')->name('search.suggest');
 
     Route::get('destinations', [DestinationController::class, 'index'])->name('destinations.index');
     Route::get('destinations/{slug}', [DestinationController::class, 'show'])->name('destinations.show');

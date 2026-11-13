@@ -19,7 +19,7 @@ export async function Header() {
         {t("common.skipToContent")}
       </a>
       <div className="hidden bg-primary-700 text-white md:block">
-        <div className="container-page flex h-9 items-center justify-between text-sm">
+        <div className="container-page flex h-11 items-center justify-between text-sm">
           <div className="flex items-center gap-6">
             <a href={`tel:${PHONE_DISPLAY.replace(/\s/g, "")}`} className="inline-flex items-center gap-2 hover:underline">
               <Phone className="size-4" aria-hidden /> {PHONE_DISPLAY}
@@ -28,8 +28,8 @@ export async function Header() {
               <MessageCircle className="size-4" aria-hidden /> {t("header.whatsapp")}
             </a>
           </div>
-          <div className="flex items-center gap-3 py-1 [&_label]:h-7">
-            <Suspense fallback={<LanguageSwitcherFallback className="h-7" />}>
+          <div className="flex items-center gap-2">
+            <Suspense fallback={<LanguageSwitcherFallback />}>
               <LanguageSwitcher />
             </Suspense>
             <CurrencySwitcher />

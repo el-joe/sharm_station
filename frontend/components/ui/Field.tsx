@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
-import { AlertCircle, ChevronDown } from "lucide-react";
-import { forwardRef, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { AlertCircle } from "lucide-react";
+import { SelectMenu } from "./SelectMenu";
+import { forwardRef, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
 
 export const controlClasses =
   "w-full rounded-control border border-ink-300 bg-ink-100 px-4 text-base text-ink-900 placeholder:text-ink-500 transition-colors focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-100 aria-[invalid=true]:border-error aria-[invalid=true]:bg-white disabled:opacity-60";
@@ -50,19 +51,8 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
   return <input ref={ref} aria-invalid={invalid || undefined} className={cn(controlClasses, "h-12", className)} {...props} />;
 });
 
-export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement> & { invalid?: boolean }>(function Select(
-  { className, invalid, children, ...props },
-  ref,
-) {
-  return (
-    <div className="relative">
-      <select ref={ref} aria-invalid={invalid || undefined} className={cn(controlClasses, "h-12 cursor-pointer appearance-none pe-10", className)} {...props}>
-        {children}
-      </select>
-      <ChevronDown className="pointer-events-none absolute end-3 top-1/2 size-5 -translate-y-1/2 text-ink-700" aria-hidden />
-    </div>
-  );
-});
+/** Form dropdown: the polished SelectMenu (custom panel) backed by a hidden native select. */
+export const Select = SelectMenu;
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean }>(function Textarea(
   { className, invalid, ...props },

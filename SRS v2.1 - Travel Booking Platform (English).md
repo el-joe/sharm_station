@@ -14,7 +14,7 @@ This document defines every requirement of an online travel platform with **five
 | --- | --- | --- |
 | CR-1 | Trips support two **pricing modes**: **per unit** (vehicle/seat options such as Single buggy and Double buggy in the same trip) and **per person** (one price per person with a maximum number of persons per booking, e.g. snorkelling) | 3.1, 3.4, 3.6, 18 |
 | CR-2 | Accommodation shows a **"Tax included"** badge: displayed room prices include taxes and city fees | 6.1, 6.3, 18 |
-| CR-3 | Home page transfers section: the **image is placed after the form inputs** (form first, image second, on desktop and mobile) | 13.1 |
+| CR-3 | Transfers: the **airport image is placed before the "Book an airport transfer" form** (image first, form second) on the home page section "Airport transfers at fixed prices" and on the Transfers page, desktop and mobile (revised 13 Nov 2026) | 13.1 |
 | CR-4 | **Reviews come from Google** (Google Business Profile via the Places API); the on-site review system is removed | 3.1, 13.1, 14.1, 15.1, 17.3, 18 |
 | CR-5 | **No date in trip search**: the date field is removed from the trips, Nile trips and packages search and filters; the booking widget keeps one travel date, used to pick the season price | 3.4, 3.7, 13.2 |
 | CR-6 | The **Free cancellation** filter in the mobile filter sheet is restyled as a professional switch row (icon, label, helper text, toggle) | 13.3 |
@@ -145,6 +145,7 @@ Each trip, Nile trip and package offers **Private**, **Group** or both. The cust
 - Trips and packages are **not inventory-scheduled**: the system does not count seats or block dates when seats run out. The only scheduling is the day rule above (open question 6 asks whether group departures need seat limits).
 - The admin can close any date for either type (blackout dates) and set a cut-off time before departure.
 - The booking records the booking type, so vouchers and operations lists can separate private tours from group departures.
+- **Search fields:** destination, pick-up and drop-off fields are type-ahead dropdowns: every typed word must match the name or the location, results are grouped (destinations, hotels, trips, airports, fixed-price places) with a location line under each, and transfer drop-off also accepts a typed address.
 - **No date in search (CR-5):** the date is not asked in the trips, Nile trips and packages search bar or listing filters. The customer chooses a single **travel date** only inside the booking widget; it is validated against the day rules above and selects the season price (3.8).
 
 #### 3.4.1 Pricing modes (CR-1)
@@ -615,7 +616,7 @@ A policy per product, building or transfer hub with time bands (for example: mor
 
 | Page | Content |
 | --- | --- |
-| Home | Hero with a multi-service search (no date field on the Trips, Nile and Packages tabs), destinations, featured trips, packages, accommodation highlights, **transfers section with the booking form first and the image after the inputs** (CR-3), **Google reviews** (CR-4), why choose us, newsletter |
+| Home | Hero with a multi-service search (no date field on the Trips, Nile and Packages tabs), destinations, featured trips, packages, accommodation highlights, **transfers section with the airport image first and the booking form after it** (CR-3), **Google reviews** (CR-4), why choose us, newsletter |
 | Trips and Nile trips listing | Card grid, filters, sorting, pagination |
 | Trip page | Gallery, price and Google rating, **Private / Group selector**, **unit selector for per-unit trips** (Single / Double...), maximum persons note for per-person trips, travel date inside the booking widget (any day for private, listed days for group), **Prices and seasons** table, description, highlights, included and not included, timeline, add-ons, meeting point and map, policies, FAQ, Google reviews, similar trips, side booking form |
 | Packages and package page | Stages and trips within the timeline, **"Transfers included" badge**, add-ons, booking form |
@@ -623,7 +624,7 @@ A policy per product, building or transfer hub with time bands (for example: mor
 | **Accommodation listing** | **Rooms directly** as cards with building data, search and filters, map view (6.3) |
 | **Room page** | Gallery, room details, building card, availability calendar, booking widget |
 | **Building page** | Building details, amenities, policies, map, its rooms |
-| Transfer request | Request form with live quote (Section 5) |
+| Transfer request | Airport image first, then the request form with live quote (Section 5, CR-3) |
 | Booking and payment | Steps, price summary, room allocation, gateway or manual method with proof upload |
 | Booking confirmation | Reference, details, voucher download |
 | Customer account | My bookings, booking detail with payments and proofs, profile, favourites |

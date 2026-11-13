@@ -5,13 +5,17 @@ namespace App\Repositories\Eloquent;
 use App\Enums\RoomStatus;
 use App\Models\Building;
 use App\Repositories\Contracts\BuildingRepositoryInterface;
+use App\Repositories\Eloquent\Concerns\MatchesSearchTokens;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * @extends BaseRepository<Building>
  */
 class BuildingRepository extends BaseRepository implements BuildingRepositoryInterface
 {
+    use MatchesSearchTokens;
+
     protected function model(): string
     {
         return Building::class;
@@ -47,5 +51,16 @@ class BuildingRepository extends BaseRepository implements BuildingRepositoryInt
             ->get(['id', 'name', 'google_place_id'])
             ->mapWithKeys(fn (Building $building): array => [$building->google_place_id => (string) $building->name])
             ->all();
+    }
+
+    public function suggest(array $tokens, int $limit, ?int $destinationId = null): Collection
+    {
+        $query = $this->query()->published()->with('destination');
+        if ($destinationId !== null) {
+            $query->where('destination_id', $destinationId);
+        }
+        $this->matchTokens($query, $tokens, ['name', 'address', 'destination.name']);
+
+        return $query->orderByDesc('featured')->orderByDesc('stars')->limit($limit)->get();
     }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { SelectMenu } from "@/components/ui/SelectMenu";
 import { Badge, BadgeIcons } from "@/components/ui/Badge";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
@@ -335,12 +336,12 @@ function WidgetBody({
                 <label htmlFor={id(`age-${i}`)} className="text-sm text-ink-700">
                   {t("childAge", { n: i + 1 })}
                 </label>
-                <select
+                <SelectMenu
                   id={id(`age-${i}`)}
                   value={age ?? ""}
-                  aria-invalid={showErrors && age == null ? true : undefined}
+                  invalid={showErrors && age == null}
+                  searchable={false}
                   onChange={(e) => state.setChildAges((prev) => prev.map((p, j) => (j === i ? (e.target.value === "" ? null : Number(e.target.value)) : p)))}
-                  className="h-12 rounded-control border border-ink-300 bg-ink-100 px-3 text-ink-900 focus:border-primary-500 focus:outline-none aria-[invalid=true]:border-error"
                 >
                   <option value="">{t("selectAge")}</option>
                   {Array.from({ length: 18 }, (_, a) => (
@@ -348,7 +349,7 @@ function WidgetBody({
                       {t("years", { count: a })}
                     </option>
                   ))}
-                </select>
+                </SelectMenu>
               </div>
             ))}
           </div>

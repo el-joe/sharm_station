@@ -7,6 +7,7 @@ use App\Enums\ServiceType;
 use App\Models\Booking;
 use App\Models\Package;
 use App\Repositories\Contracts\PackageRepositoryInterface;
+use App\Repositories\Eloquent\Concerns\MatchesSearchTokens;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -16,6 +17,8 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class PackageRepository extends BaseRepository implements PackageRepositoryInterface
 {
+    use MatchesSearchTokens;
+
     protected function model(): string
     {
         return Package::class;
@@ -95,5 +98,13 @@ class PackageRepository extends BaseRepository implements PackageRepositoryInter
         return $this->query()
             ->with(['destination', 'stages.stageTrips', 'includedTransfers', 'addons'])
             ->findOrFail($id);
+    }
+
+    public function suggest(array $tokens, int $limit): Collection
+    {
+        $query = $this->query()->published()->with('destination');
+        $this->matchTokens($query, $tokens, ['title', 'destination.name']);
+
+        return $query->orderByDesc('featured')->orderBy('sort')->limit($limit)->get();
     }
 }

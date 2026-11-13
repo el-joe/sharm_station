@@ -29,6 +29,7 @@ export default async function HomePage() {
   const [home, t] = await Promise.all([getHome(locale), getTranslations("home")]);
   const catalog = await getTransferCatalog(locale);
   const hubs = catalog.hubs;
+  const hotels = [...new Map(home.rooms.map((r) => [r.building.slug, { slug: r.building.slug, name: r.building.name, stars: r.building.stars, city: r.building.location }])).values()];
   const classic = home.packages[0];
   const cruise = home.nile.find((n) => (n.days ?? 0) > 1) ?? home.nile[0];
 
@@ -45,7 +46,7 @@ export default async function HomePage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-      <HomeHero destinations={home.destinations} hubs={hubs} rating={home.hero_stats.rating} />
+      <HomeHero destinations={home.destinations} hubs={hubs} hotels={hotels} rating={home.hero_stats.rating} />
       <CategoryTiles />
       <DestinationGrid destinations={home.destinations} />
 

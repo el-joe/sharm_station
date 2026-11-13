@@ -28,4 +28,12 @@ interface PackageRepositoryInterface extends BaseRepositoryInterface
     public function adminQuery(?string $status = null): Builder;
 
     public function findForEditor(int $id): Package;
+
+    /**
+     * Published packages matching every token on title or destination name.
+     *
+     * @param  list<string>  $tokens
+     * @return Collection<int, Package>
+     */
+    public function suggest(array $tokens, int $limit): Collection;
 }

@@ -5,7 +5,7 @@
  * product slug/type, so pages never show a broken image. Absolute URLs (real
  * uploads served by the API) are passed through untouched.
  */
-import { API_URL } from "../site";
+import { PUBLIC_API_URL } from "../site";
 
 const IMG = {
   cairo: "/images/cairo.webp",
@@ -23,7 +23,7 @@ const IMG = {
 
 const API_ORIGIN = (() => {
   try {
-    return new URL(API_URL).origin;
+    return new URL(PUBLIC_API_URL).origin;
   } catch {
     return "";
   }

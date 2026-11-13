@@ -38,7 +38,13 @@
     "favourites": "Preferiti",
     "favouritesAria": "Preferiti ({count})",
     "partnerPanel": "Area partner",
-    "signOut": "Esci"
+    "signOut": "Esci",
+    "currencyNames": {
+      "EUR": "Euro",
+      "USD": "Dollaro USA",
+      "GBP": "Sterlina britannica",
+      "EGP": "Sterlina egiziana"
+    }
   },
   "footer": {
     "aboutText": "Sharm Station Viaggi organizza e prenota escursioni, crociere sul Nilo, pacchetti, hotel e transfer in tutto l'Egitto, con guide locali e pagamenti flessibili.",
@@ -109,7 +115,32 @@
     "toPlaceholder": "Hotel o indirizzo",
     "date": "Data",
     "search": "Cerca",
-    "getPrice": "Calcola prezzo"
+    "getPrice": "Calcola prezzo",
+    "suggest": {
+      "destinations": "Destinazioni",
+      "hotels": "Hotel",
+      "airports": "Aeroporti e punti di partenza",
+      "places": "Destinazioni popolari · prezzo fisso",
+      "tripsCount": "{count, plural, =0 {Escursioni e tour} one {# escursione} other {# escursioni}}",
+      "staysIn": "Hotel e camere",
+      "hotelIn": "{stars, plural, =0 {Hotel} other {Hotel # stelle}} · {city}",
+      "fixedPrice": "Prezzo fisso",
+      "useTyped": "Usa “{text}”",
+      "noMatches": "Nessun risultato. Prova un altro nome.",
+      "clear": "Cancella",
+      "fromPlaceholder": "Aeroporto o punto di partenza",
+      "hubType": {
+        "airport": "Aeroporto",
+        "port": "Porto",
+        "city": "Città",
+        "other": "Punto di partenza"
+      },
+      "trips": "Escursioni",
+      "nile_trips": "Crociere sul Nilo",
+      "packages": "Pacchetti",
+      "searching": "Ricerca in corso…",
+      "country": "Egitto"
+    }
   },
   "home": {
     "categories": {

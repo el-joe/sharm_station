@@ -5,6 +5,7 @@
 */
 
 return [
+    'country' => 'Egypt',
     'facilities' => [
         'pool' => 'Pool', 'restaurant' => 'Restaurant', 'sun_terrace' => 'Sun terrace', 'wifi' => 'Wi-Fi', 'bar' => 'Bar',
         'spa' => 'Spa', 'gym' => 'Gym', 'shade' => 'Shade', 'cushions' => 'Cushions',
