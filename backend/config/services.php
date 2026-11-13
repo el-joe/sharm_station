@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'google' => [
+        'places_key' => env('GOOGLE_PLACES_API_KEY'),
+        'place_id' => env('GOOGLE_PLACE_ID'),
+        'places_endpoint' => env('GOOGLE_PLACES_ENDPOINT', 'https://places.googleapis.com/v1/places'),
+    ],
+
 ];

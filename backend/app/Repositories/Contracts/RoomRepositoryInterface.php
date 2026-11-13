@@ -1,0 +1,67 @@
+<?php
+
+namespace App\Repositories\Contracts;
+
+use App\DTOs\Room\RoomFilterData;
+use App\Enums\RoomAvailabilityStatus;
+use App\Models\Room;
+use App\Models\RoomAvailability;
+use Carbon\CarbonInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
+
+/**
+ * @extends BaseRepositoryInterface<Room>
+ */
+interface RoomRepositoryInterface extends BaseRepositoryInterface
+{
+    /**
+     * Price bounds of $filters must already be in EUR.
+     */
+    public function paginateBookable(RoomFilterData $filters): LengthAwarePaginator;
+
+    public function findBookable(int $id): ?Room;
+
+    /**
+     * @return Collection<int, Room>
+     */
+    public function featured(int $limit = 6): Collection;
+
+    /**
+     * @return Collection<int, Room>
+     */
+    public function siblings(Room $room, int $limit = 6): Collection;
+
+    /**
+     * Locks the room row for the rest of the transaction.
+     */
+    public function lockForBooking(int $id): ?Room;
+
+    /**
+     * @return Builder<Room>
+     */
+    public function adminQuery(?int $buildingId = null): Builder;
+
+    /**
+     * Room holds that expire within the given number of minutes.
+     *
+     * @return Collection<int, RoomAvailability>
+     */
+    public function holdsExpiringWithin(int $minutes): Collection;
+
+    /**
+     * Availability rows of a room between two dates (inclusive), keyed by Y-m-d.
+     *
+     * @return \Illuminate\Support\Collection<string, RoomAvailability>
+     */
+    public function availabilityBetween(Room $room, CarbonInterface $from, CarbonInterface $to): \Illuminate\Support\Collection;
+
+    /**
+     * Opens or closes dates manually; booked and active held nights are left untouched.
+     *
+     * @param  list<string>  $dates  Y-m-d
+     * @return int Number of dates changed.
+     */
+    public function setManualStatus(Room $room, array $dates, RoomAvailabilityStatus $status): int;
+}

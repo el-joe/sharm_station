@@ -1,0 +1,76 @@
+<?php
+
+namespace App\DTOs\Pricing;
+
+use App\Enums\PriceRule;
+
+final readonly class QuoteLineData
+{
+    public const TYPE_ADULT = 'adult';
+
+    public const TYPE_CHILD = 'child';
+
+    public const TYPE_UNIT = 'unit';
+
+    public const TYPE_ADDON = 'addon';
+
+    public const TYPE_NIGHT = 'night';
+
+    public const TYPE_TAX = 'tax';
+
+    /**
+     * @param  array<string, mixed>  $meta
+     */
+    public function __construct(
+        public string $type,
+        public string $label,
+        public int $quantity,
+        public float $unitPrice,
+        public float $total,
+        public ?float $partnerUnitPrice = null,
+        public ?float $partnerTotal = null,
+        public ?PriceRule $priceRule = null,
+        public array $meta = [],
+    ) {}
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            type: $data['type'],
+            label: $data['label'],
+            quantity: (int) $data['quantity'],
+            unitPrice: (float) $data['unit_price'],
+            total: (float) $data['total'],
+            partnerUnitPrice: isset($data['partner_unit_price']) ? (float) $data['partner_unit_price'] : null,
+            partnerTotal: isset($data['partner_total']) ? (float) $data['partner_total'] : null,
+            priceRule: isset($data['price_rule']) ? PriceRule::from($data['price_rule']) : null,
+            meta: $data['meta'] ?? [],
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toArray(bool $includePartner = false): array
+    {
+        $line = [
+            'type' => $this->type,
+            'label' => $this->label,
+            'quantity' => $this->quantity,
+            'unit_price' => $this->unitPrice,
+            'total' => $this->total,
+            'meta' => (object) $this->meta,
+        ];
+
+        if ($includePartner) {
+            $line['partner_unit_price'] = $this->partnerUnitPrice;
+            $line['partner_total'] = $this->partnerTotal;
+            $line['price_rule'] = $this->priceRule?->value;
+        }
+
+        return $line;
+    }
+}

@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Repositories\Contracts;
+
+use App\DTOs\Trip\TripAdminFilterData;
+use App\DTOs\Trip\TripFilterData;
+use App\Enums\TripType;
+use App\Models\Trip;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
+
+/**
+ * @extends BaseRepositoryInterface<Trip>
+ */
+interface TripRepositoryInterface extends BaseRepositoryInterface
+{
+    /**
+     * Price bounds of $filters must already be in EUR.
+     */
+    public function paginatePublished(TripFilterData $filters): LengthAwarePaginator;
+
+    public function findPublishedBySlug(string $slug): ?Trip;
+
+    /**
+     * @param  list<TripType>  $types
+     * @return Collection<int, Trip>
+     */
+    public function featured(array $types, int $limit = 6): Collection;
+
+    /**
+     * @return Builder<Trip>
+     */
+    public function adminQuery(TripAdminFilterData $filters): Builder;
+
+    public function findForEditor(int $id): Trip;
+
+    public function isUsedInPackages(Trip $trip): bool;
+}
