@@ -1,6 +1,8 @@
 "use client";
 
 import { AppImage } from "@/components/ui/AppImage";
+import { useAuth } from "@/lib/auth";
+import { useNationalityCode } from "@/lib/nationality";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -69,6 +71,8 @@ function CheckoutWithDraft({ draft }: { draft: CheckoutDraft }) {
   const format = useFormatter();
   const locale = useLocale() as Locale;
   const { currency } = useCurrency();
+  const { token: authToken } = useAuth();
+  const nationality = useNationalityCode();
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -114,6 +118,10 @@ function CheckoutWithDraft({ draft }: { draft: CheckoutDraft }) {
 
   const onSubmit = handleSubmit(async (values) => {
     setServerError(null);
+    if (!nationality) {
+      setServerError(t("nationalityMissing"));
+      return;
+    }
     const lead = { name: `${values.first_name} ${values.last_name}`.trim(), email: values.email, phone: values.phone, country: values.country };
     const body: CreateBookingRequest = {
       service_type: draft.service_type,
@@ -135,9 +143,11 @@ function CheckoutWithDraft({ draft }: { draft: CheckoutDraft }) {
       pickup_hotel: values.pickup_hotel || undefined,
       locale,
       currency,
+      nationality_code: nationality,
     };
     try {
-      const res = await api.createBooking(body, { locale, currency });
+      // Signed-in customers send their token so the booking is linked to their account (My bookings).
+      const res = await api.createBooking(body, { locale, currency, token: authToken });
       saveBooking({ ...res, draft, lead });
       router.push(`/booking/${res.reference}`);
     } catch (err) {

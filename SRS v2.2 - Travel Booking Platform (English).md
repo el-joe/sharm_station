@@ -1,6 +1,6 @@
-# SRS v2.1 - Travel Booking Platform (English)
+# SRS v2.2 - Travel Booking Platform (English)
 
-Version 2.1 · Nov 13, 2026 (supersedes v2.0 · Nov 2, 2026)
+Version 2.2 · Nov 17, 2026 (supersedes v2.1 · Nov 13, 2026)
 
 ## 1. Introduction
 
@@ -21,6 +21,17 @@ This document defines every requirement of an online travel platform with **five
 | CR-7 | **Seasonal price list**: every trip, Nile trip, package and accommodation room has price periods (season from date, season to date, prices) | 3.8 (new), 6.2, 18 |
 | CR-8 | Nile trips: the **cabin deck** option is removed (no deck selection or deck field on cabins) | 4.1 |
 | CR-9 | The **admin dashboard is built in Laravel** (Blade, Tailwind CSS, vanilla JavaScript, Yajra DataTables, Select2; **no Livewire**) with a Repository + Service + DTO + Enum architecture; the customer site stays on Next.js | 17 |
+
+**What changed in v2.2 (Nov 17, 2026):**
+
+| # | Change | Sections |
+| --- | --- | --- |
+| CR-10 | **Nationality pricing**: customers choose their nationality before using the site (mandatory first-visit modal, detected country preselected). Prices of trips (single-day, multi-day, Nile), packages, transfers and rooms are set per **nationality group** and **season** | 2.2, 3.8, 3.9 (new), 13.3 |
+| CR-11 | **Partner commission = percentages only**, per type: Single-day trips, Multi-day trips, Nile trips, Packages, Transfers. **No accommodation commission.** Global settings in the admin, optional per-partner override in the partner profile | 8 (rewritten), 9.4 |
+| CR-12 | **Explicit partner prices removed**: partner price = customer price − commission %. Partners pay customer prices for accommodation | 8, 18 |
+| CR-13 | **Partner panel** completed (dashboard, bookings, statements, price list, profile); partner bookings use the **end client's nationality** | 9 |
+| CR-15 | **Partners book only in the partner panel**: the customer website has no partner operations (no partner prices, badges, bar or checkout); the partner panel has its own booking flow | 8.3, 9.2, 9.3, 13.3 |
+| CR-14 | **Claude MCP server**: Claude reads trips, transfers, packages and accommodations, creates **accommodation suggestions** and **SEO suggestions**; admins edit, approve or reject them | 14.1, 17.4 (new), 18 |
 
 ### 1.1 Purpose
 
@@ -57,7 +68,7 @@ Project owner, operations manager, development and design teams, and the testing
 | Tax included | Displayed accommodation prices already include VAT, tourism tax and city fees |
 | Add-on | An optional or required extra attached to a trip, Nile trip or package |
 | Retail price | The price shown to normal customers |
-| Partner price | The price shown to a logged-in approved partner |
+| Partner price | The customer price minus the partner's commission percentage, shown to a logged-in approved partner (CR-11) |
 | Commission | A percentage the partner earns, applied as a reduction from the retail price |
 | Partner | A registered business account approved by the admin to book at partner prices |
 | Deposit / Balance | Part of the total paid at booking / the remainder collected outside the site |
@@ -156,7 +167,7 @@ Every trip, Nile trip and package has one pricing mode, chosen by the admin.
 | --- | --- | --- |
 | Example | Snorkelling, Ras Mohammed boat trip, city tour | Beach buggy, quad bike, jet ski, private boat |
 | How it is priced | Each traveller pays the per-person price (private tier or group age band) | The customer picks **unit options** and a quantity of each; each unit has its own price |
-| Admin data | Price per person (by tier or age band), **maximum persons per booking**, optional minimum | List of unit options: name (Single buggy, Double buggy), **seats per unit** (1, 2...), price per unit in EUR, partner price, maximum quantity, optional children allowed |
+| Admin data | Price per person (by tier or age band), **maximum persons per booking**, optional minimum | List of unit options: name (Single buggy, Double buggy), **seats per unit** (1, 2...), price per unit in EUR (per nationality group and season), maximum quantity, optional children allowed |
 | Validation | Party size must be between the minimum and the **maximum persons** | Total seats of the chosen units must be at least the number of travellers; every unit carries at least one traveller; at least one adult per unit |
 | Example total | 4 persons x EUR 25 = EUR 100 | 1 Single buggy (EUR 35) + 1 Double buggy (EUR 50) for 3 riders = EUR 85 |
 
@@ -165,7 +176,7 @@ Every trip, Nile trip and package has one pricing mode, chosen by the admin.
 
 ### 3.5 Add-ons (trips, Nile trips and packages)
 
-- An add-on has: name, description, image, price in EUR, **pricing basis** (per person, per booking, or per unit with a quantity), **required or optional**, maximum quantity, which booking types it applies to (private, group, both), a partner price (Section 8), and translations.
+- An add-on has: name, description, image, price in EUR, **pricing basis** (per person, per booking, or per unit with a quantity), **required or optional**, maximum quantity, which booking types it applies to (private, group, both), and translations. Partners get the commission of the product's type (Section 8).
 - Examples: hot-air balloon, lunch upgrade, private guide, photographer, extra night.
 - The customer selects add-ons in the booking widget and again at checkout; they appear as separate lines in the price summary, the deposit calculation and the voucher.
 - Add-ons can be defined once and attached to many trips, Nile trips and packages, or created for one product only.
@@ -209,6 +220,15 @@ Every **trip, Nile trip, package and accommodation room** has a price list made 
 - The product page shows "Prices from" using the lowest price of the active and future seasons, and a **price list table** (season, dates, price) in a "Prices and seasons" block.
 - Add-ons keep a single price unless the admin enables seasonal prices on them.
 - The admin manages seasons in a **Price list** tab of each product, with copy-to-next-year and bulk-copy-to-other-products actions.
+
+### 3.9 Nationality pricing (CR-10)
+
+- The admin manages **nationality groups** (for example Egyptian, Arab countries, Europe, Rest of world) and assigns every country to at most one group. Exactly one group is the **default**, used for countries without a group.
+- Each trip (single-day, multi-day, Nile), package, transfer fixed route and room has a **price matrix**: a base price per nationality group, and seasons (from date, to date) whose prices can apply to one group or to all groups.
+- Price used: the season for the customer's group on the travel date (each night for rooms) → a season for all groups → the base price of the group → the product base price.
+- Seasons of the same product and the same group cannot overlap. A season for one group **may** overlap a season for all groups; the group's own season then wins for that group.
+- **Nationality gate:** on the first visit a modal that cannot be dismissed asks the visitor's nationality; the country detected from the connection or the browser is preselected and can be changed. The choice is stored in a cookie and in the account, shown in the header, and can be changed at any time; prices update immediately.
+- Every booking stores the nationality and the group used. A partner booking uses the **end client's nationality** entered by the partner.
 
 ## 4. Nile trips and packages
 
@@ -337,7 +357,7 @@ A direct accommodation booking service. The admin creates **buildings** and then
 ### 6.2 Rooms (dashboard)
 
 - Each room belongs to one building: name or number, room type (single, double, twin, triple, family, suite), **capacity** (maximum adults, maximum children, maximum total), bed configuration, size, view, amenities, gallery, description and translations.
-- **Price:** a base price per night in EUR, with a pricing mode of **per room** or **per person**; the **seasonal price list** of Section 3.8 (season from, season to, price per night); weekend rules; price override on any date; extra-bed and cot prices; minimum and maximum nights; a partner price (Section 8). Prices are tax-inclusive when the building's Taxes included flag is on.
+- **Price:** a base price per night in EUR, with a pricing mode of **per room** or **per person**; the **seasonal price list** of Section 3.8 (season from, season to, price per night); weekend rules; price override on any date; extra-bed and cot prices; minimum and maximum nights; prices per nationality group and season (3.9). Partners pay the customer price (no accommodation commission). Prices are tax-inclusive when the building's Taxes included flag is on.
 - **Availability calendar per room:** open or closed per date, with bookings shown as blocked ranges; the admin can close dates manually (maintenance, owner use).
 - A room is an **exclusive unit**: while booked, it cannot be booked by anyone else for those nights. There are no shared rooms or dormitory beds (Section 7).
 - Optional: iCal import and export per room to avoid double-booking with other channels.
@@ -448,42 +468,44 @@ Per-person example (whole stay): adult 150 EUR; a child aged 8 with a 50% discou
 
 The price summary shows each room's occupants, each person's price, the discount applied and the room total.
 
-## 8. Pricing engine and partner prices
+## 8. Pricing engine and partner prices (rewritten in v2.2: CR-11, CR-12)
 
-Every service has a **retail price** (customers) and a **partner price** (approved partners). The admin can define the partner price in two ways, and the system supports both at the same time.
+The **customer price** of every item comes from the nationality and season price matrix (3.9). A logged-in approved partner sees the **partner price**, which is always the customer price reduced by a **commission percentage**. There are no separately typed partner prices.
 
-### 8.1 Two ways to set partner prices
+### 8.1 Commission types and settings
 
-| Method | How it works | Best for |
-| --- | --- | --- |
-| **A. Commission rule** (recommended default) | The partner price is the retail price reduced by a **commission percentage**. The percentage is set **per partner and per service category** (Trips, Nile trips, Packages, Transfers, Accommodation). Example: Partner Alpha earns 15% on Trips, 10% on Packages, 8% on Accommodation | Most items: no double data entry; changing a retail price updates the partner price automatically |
-| **B. Explicit partner price (dual price)** | When the admin enters a price on any item, a second field **Partner price** sits beside it. If filled, it is used for partners instead of the commission rule | Special net rates, contract prices, individual rooms or trips with their own partner rate |
+| Commission type | Applies to |
+| --- | --- |
+| Single-day trips | Single-day trips and their add-ons |
+| Multi-day trips | Multi-day trips, their add-ons and optional rooms |
+| Nile trips | Nile trips, their add-ons and cabins |
+| Packages | Packages and their add-ons |
+| Transfers | Standalone transfers |
+| Accommodation | **No commission**: partners pay the customer price |
 
-**Priority order (first match wins):** item-level partner price (method B) > partner's category commission (method A) > partner's default commission > retail price.
+- **Global commission settings** (admin → Settings → Commissions): one percentage (0–100) per type.
+- **Partner override** (admin → Partners → partner profile → Commissions): optional percentage per type for that partner.
+- **Resolution:** partner override for the type, if set → global setting for the type → 0 %.
+- Commissions are **percentages only**.
 
-### 8.2 What is covered
+### 8.2 Calculation
 
-The rule applies to every priced element: trip and package prices (private tiers, group age bands and unit options, in every season), add-ons, optional rooms, accommodation room prices and extras, children fees, and transfer prices (the commission is applied to the computed retail result; fixed routes may carry an explicit partner price).
+- The engine computes each customer price line (nationality group, season, tiers, units, children discounts, add-ons, nights), then reduces it by the resolved percentage, rounded to two decimals per line.
+- The booking stores: nationality and group, customer (retail) total, partner total, commission percentage and amount, and the source of the percentage (partner override or global setting).
+- Coupons do not apply to partner bookings unless the admin enables that per partner. Deposit, balance, currencies and payment methods work on the partner total.
 
-### 8.3 Calculation
+### 8.3 Display rules
 
-- **Method B items:** the engine uses the partner price fields in the same calculation (including children discounts and tiers).
-- **Method A items:** the engine first computes the full retail line (tiers, children discounts, nights, extras), then reduces it by the commission percentage.
-- Amounts are rounded to two decimals after each line. The result is stored on the booking: retail total, partner total, commission amount and the rule that applied.
-- Coupons do not apply to partner bookings unless the admin enables that per partner.
-- Deposit, balance, currencies and payment methods work the same for partners, computed on the partner total.
+- **The customer website never shows partner prices** (CR-15), not even to a signed-in partner: public pages and public APIs always use customer prices.
+- Partner prices appear **only inside the partner panel** (catalogue, quotes, bookings, price list, statements), with a "Partner price" badge and, if the admin enables it, the customer price struck through beside it.
+- Partner prices are never exposed in public pages, public APIs or SEO output.
+- A partner can print a client voucher without prices.
 
-### 8.4 Display rules
+### 8.4 Admin screens
 
-- A logged-in approved partner sees **partner prices everywhere** (listing cards, detail pages, search, checkout) with a "Partner price" badge. The admin can choose to show the retail price struck through beside it.
-- Visitors and customers never see partner prices; partner prices are not exposed in public pages, APIs or SEO output.
-- A partner can print a **client voucher without prices**, so it can be handed to the end client.
-
-### 8.5 Admin screens
-
-- **Price entry:** every price field in trips, Nile trips, packages, unit options, season prices, add-ons, rooms, transfers has the optional Partner price field next to the retail field, with a preview of the resulting partner price from the commission rule.
-- **Partners > Commission matrix:** a table of partners x categories with commission percentages and the default commission.
-- **Reports:** sales by partner, commission granted, margin versus retail.
+- Commission settings per type (global) and per-partner overrides with the effective percentage shown.
+- Price matrix per product (base per nationality group + seasons per group). No partner-price fields anywhere.
+- Reports: sales by partner, commission granted, margin versus customer price.
 
 ## 9. Partner portal
 
@@ -497,8 +519,8 @@ A partner is the same kind of user as a customer, who reserves the same services
 
 ### 9.2 What a partner can do
 
-- Use the whole website as a logged-in partner: search and book trips, Nile trips, packages, transfers and accommodation at partner prices, with the same booking rules (booking types, add-ons, room allocation, children policy, availability).
-- Enter the end client's details as the lead traveller, while the partner is recorded as the booker.
+- Book trips, Nile trips, packages, transfers and accommodation **from the partner panel's New booking flow** (CR-15) at partner prices, with the same booking rules (booking types, add-ons, room allocation, children policy, availability). The public website is not used for partner bookings.
+- Enter the end client's details and **nationality** as the lead traveller (the nationality sets the price, CR-13), while the partner is recorded as the booker.
 - Pay with the same online gateways and offline methods with proof upload.
 - Download vouchers with or without prices.
 
@@ -506,17 +528,17 @@ A partner is the same kind of user as a customer, who reserves the same services
 
 | Page | Content |
 | --- | --- |
-| Dashboard | Bookings this month, total sales at partner price, commission saved, balances due, pending proofs |
+| Dashboard | Bookings this month, total sales at partner price, commission earned, balances due, pending proofs, commission % per type |
 | My bookings | List with filters (service, status, date, payment status), booking detail, payment history, upload proof, cancel |
-| New booking | Shortcut to the storefront in partner mode |
+| New booking | Catalogue of all services at partner prices for the client's nationality → configure (date, booking type, travellers or units, add-ons) → client details and payment → confirmation and vouchers |
 | Statements | Per period: bookings, partner totals, payments, outstanding balance, export to PDF and Excel |
-| Price list | Read-only partner price list per service (optional, if the admin enables it) |
+| Price list | Read-only list of customer and partner prices per service for a chosen nationality (optional, if the admin enables it) |
 | Company profile | Company data, contacts, password, notification settings |
 
 ### 9.4 Admin: Partners module
 
 - Partner applications queue, approve or reject with reason, suspend or reactivate.
-- Commission matrix per partner and category, price display options, coupon permission.
+- Per-partner commission overrides per type (percentages; empty = global setting), price display options, coupon permission.
 - Create or edit a booking on behalf of a partner.
 - Partner reports: bookings, sales, commissions, outstanding balances; export.
 - Credit terms (pay later) are out of scope for now; all partner bookings follow the normal deposit and balance rules (open question 12).
@@ -646,7 +668,7 @@ A policy per product, building or transfer hub with time bands (for example: mor
 
 - Fully responsive on mobile and tablet; supports LTR and RTL so languages such as Arabic can be added.
 - Favourites for registered users; WhatsApp quick contact; lazy-loaded modern image formats.
-- A logged-in partner sees partner prices and a Partner badge throughout; visitors never do.
+- The public website looks the same for everyone; a signed-in partner only gets a "Partner panel" link in the account menu (CR-15).
 - **Mobile filter sheet (CR-6):** boolean filters such as Free cancellation are shown as a full-width switch row: leading icon, label, one-line helper text ("Cancel up to 24 hours before for a full refund"), and a 44 px toggle on the right, inside a bordered card. No bare checkboxes in the mobile sheet. The active filter also appears as a removable chip.
 
 ### 13.4 Google reviews (CR-4)
@@ -665,12 +687,12 @@ A policy per product, building or transfer hub with time bands (for example: mor
 | Module | Functions |
 | --- | --- |
 | Statistics | Bookings today and this month, revenue, deposits collected and balance due, bookings awaiting payment, pending receipts, partner sales, best sellers, charts |
-| Trips and Nile trips | CRUD, gallery, drag-and-drop timeline builder, **private and group settings** (private tiers, group days and dates, blackout dates, lead time), **pricing mode** (per person with maximum persons, or per unit with unit options), **seasonal price list**, pricing with **retail and partner price fields**, add-ons, optional rooms (Nile cabins without deck), policies, SEO, translations |
+| Trips and Nile trips | CRUD, gallery, drag-and-drop timeline builder, **private and group settings** (private tiers, group days and dates, blackout dates, lead time), **pricing mode** (per person with maximum persons, or per unit with unit options), **seasonal price list**, **price matrix per nationality group and season** (3.9), add-ons, optional rooms (Nile cabins without deck), policies, SEO, translations |
 | Packages | Stages, link trips, arrange days, price mode, **seasonal price list**, included transfers, add-ons, retail and partner prices |
-| Add-ons library | Reusable add-ons with pricing basis, required or optional, booking types, partner price |
+| Add-ons library | Reusable add-ons with pricing basis, required or optional, booking types |
 | Transfers | Requests, statuses, driver and car details, hubs and zones, pricing rules, fixed routes, vehicles and multipliers, pricing simulator, included-transfer tasks from packages |
 | **Buildings** | Create and edit buildings: data, amenities, gallery, policies, children policy, deposit, cancellation, **Taxes included** flag, Google Place ID |
-| **Rooms** | Create rooms inside a building: type, capacity, beds, gallery, pricing mode, **seasonal price list**, partner price, min and max nights; availability calendar per room, manual blocks, iCal links |
+| **Rooms** | Create rooms inside a building: type, capacity, beds, gallery, pricing mode, **price matrix per nationality group and season**, min and max nights; availability calendar per room, manual blocks, iCal links |
 | **Accommodation bookings calendar** | Occupancy grid of rooms by date, drag to move a booking, hold and release |
 | Destinations | Destinations with images and descriptions |
 | Unit types and ratings | Trip-room unit types and star ratings |
@@ -685,6 +707,10 @@ A policy per product, building or transfer hub with time bands (for example: mor
 | Coupons | Percentage or fixed codes, validity, usage limit, applicability by service |
 | Notifications | Email templates and sending log |
 | Users and roles | Team accounts and permissions |
+| **Nationality groups** (CR-10) | Groups, default group, country assignment |
+| **Commission settings** (CR-11) | Global percentage per commission type |
+| **AI suggestions** (CR-14) | Inbox of suggestions created by Claude through the MCP server: edit, approve (applies the change) or reject with a reason |
+| **MCP access** (CR-14) | Create and revoke access tokens for Claude; connection instructions |
 | Settings | Company data, SEO, default deposit, hold durations, languages, maintenance, distance unit |
 | Reports | Bookings, revenue, payments, balances, best sellers, partner sales and commissions; Excel and PDF export |
 | Activity log | Every action by dashboard users |
@@ -777,23 +803,33 @@ Both Next.js apps talk only to the Laravel API, which owns the data and calls th
 - WhatsApp contact links (WhatsApp Business API is out of scope).
 - Optional iCal import and export for room calendars.
 
+### 17.4 Claude MCP server (CR-14)
+
+- An MCP server inside the Laravel application (laravel/mcp, HTTP transport at `/mcp`), protected by an access token created in the admin.
+- **Read tools:** trips (all types), packages, transfers (hubs, fixed routes, vehicles) and accommodations (buildings with rooms), including content, prices per nationality group and season, and SEO fields. No customer or partner data.
+- **Suggestion tools:** `create_accommodation_suggestion` (building and rooms data) and `suggest_seo` (meta title, description, keywords, slug and sharing text per language for a trip, package, transfer route, building or room).
+- Suggestions are never published directly: they appear in the admin AI suggestions inbox, where an admin edits, approves (the change is applied) or rejects them. Every decision is logged.
+
 ## 18. Data model (main entities)
 
 | Entity | Key fields and relations |
 | --- | --- |
 | users | Name, email, phone, password, role (customer, partner, staff) |
-| partners | user\_id, company, tax number, contact, country, status (pending, active, suspended), default commission %, show retail price flag, coupons allowed, approved by and at |
-| partner\_category\_commissions | partner\_id, category (trips, nile\_trips, packages, transfers, accommodation), commission % |
-| partner\_prices | Polymorphic item type and id, partner price in EUR (explicit partner price per item or room) |
+| partners | user\_id, company, tax number, contact, country, status (pending, active, suspended), show retail price flag, coupons allowed, approved by and at |
+| commission\_settings | category (single-day trips, multi-day trips, Nile trips, packages, transfers), percent |
+| nationality\_groups, countries | Groups (default flag) and ISO countries assigned to a group |
+| product\_prices | Polymorphic product, nationality group, base prices (adult, child, tiers, units, per night, transfer) |
+| ai\_suggestions | type (accommodation create, SEO update), subject, payload, original values, status, reviewer, note |
+| partner\_category\_commissions | partner\_id, category (single-day trips, multi-day trips, Nile trips, packages, transfers), commission % override |
 | destinations | Name, description, images, slug |
 | trips | Type (single-day, multi-day, Nile), destination, title, description, duration, highlights, private enabled, group enabled, **pricing mode (per person, per unit)**, **min and max persons per booking**, base price, deposit %, cancellation policy, SEO |
-| trip\_unit\_options | trip\_id, name, seats per unit, price per unit in EUR, partner price, max quantity, children allowed, sort order (per-unit trips: Single buggy, Double buggy) |
-| season\_prices | Polymorphic priceable (trip, package, room), name, season from, season to, recurring yearly, active, **price payload**: per-person price, child price, private tier prices, unit option prices, price per night, partner price |
+| trip\_unit\_options | trip\_id, name, seats per unit, price per unit in EUR, max quantity, children allowed, sort order (per-unit trips: Single buggy, Double buggy) |
+| season\_prices | Polymorphic priceable (trip, package, room, transfer route), **nationality group (or all groups)**, name, season from, season to, recurring yearly, active, **price payload**: per-person price, child price, private tier prices, unit option prices, price per night |
 | trip\_availability\_rules | trip\_id, booking type (private or group), weekdays, specific dates, blackout dates, lead time, cut-off |
 | trip\_private\_price\_tiers | trip\_id, min people, max people, price per person in EUR |
 | trip\_group\_prices | trip\_id, category (adult or child band), price per person in EUR (base; seasonal values live in season\_prices) |
 | trip\_media, trip\_days, trip\_timeline\_items | Gallery, days and timeline items with times |
-| addons | name, description, price in EUR, pricing basis, required flag, max quantity, booking types, partner price |
+| addons | name, description, price in EUR, pricing basis, required flag, max quantity, booking types |
 | addon\_assignments | addon\_id, product type and id (trip, Nile trip, package) |
 | packages, package\_stages, package\_stage\_trips | Package data, stages with destination and days, trips per day, price mode, transfers included flag |
 | package\_included\_transfers | package\_id, stage, from, to, vehicle type, day (template for included-transfer tasks) |
@@ -806,7 +842,7 @@ Both Next.js apps talk only to the Laravel API, which owns the data and calls th
 | room\_availability | room\_id, date, status (open, closed, held, booked), price override |
 | room\_ical\_links | room\_id, import and export URLs |
 | child\_policies | Owner (building, room or trip unit), max adults and children, age bands, discount type and value per band, discount conditions, extra bed |
-| transfer\_hubs, transfer\_pricing\_rules, transfer\_fixed\_routes, vehicle\_types | Hubs and zones, tiers and fees, fixed routes with optional partner price, vehicles and multipliers |
+| transfer\_hubs, transfer\_pricing\_rules, transfer\_fixed\_routes, vehicle\_types | Hubs and zones, tiers and fees, fixed routes with prices per nationality group, vehicles and multipliers |
 | transfer\_requests | Hub, destination, date, vehicle, passengers, distance, time, pricing breakdown, status, driver and car |
 | bookings | reference, service type, booking type (private or group), pricing mode, season applied, start date or check-in and check-out, booker user, partner\_id, lead traveller, **retail total EUR, partner total EUR, commission amount, price rule applied**, currency, exchange rate, deposit, balance, status |
 | booking\_travelers | booking\_id, name, type, age |

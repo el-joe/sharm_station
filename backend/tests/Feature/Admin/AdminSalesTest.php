@@ -82,34 +82,32 @@ test('the booking detail shows price lines and changes status through BookingSer
     ]);
 });
 
-test('the commission matrix saves category and default commissions', function () {
-    $alpha = Partner::factory()->create(['default_commission' => 10]);
+test('the commission override matrix saves and clears partner overrides', function () {
+    $alpha = Partner::factory()->create();
     $beta = Partner::factory()->pending()->create();
     $alpha->categoryCommissions()->create(['category' => CommissionCategory::Packages, 'commission_percent' => 5]);
 
-    $this->actingAs($this->admin)->get(route('admin.partners.commissions.edit'))->assertOk()->assertSee($alpha->company)->assertSee($beta->company);
+    $this->actingAs($this->admin)->get(route('admin.partners.commissions.edit'))->assertOk()->assertSee($alpha->company)->assertSee($beta->company)->assertDontSee('Default %');
 
     $this->actingAs($this->admin)->put(route('admin.partners.commissions.update'), ['partners' => [
-        $alpha->id => ['default' => '12.5', 'categories' => ['trips' => '15', 'nile_trips' => '', 'packages' => '', 'transfers' => '8', 'accommodation' => '']],
-        $beta->id => ['default' => '', 'categories' => ['accommodation' => '20']],
+        $alpha->id => ['categories' => ['single_day_trips' => '15', 'nile_trips' => '', 'packages' => '', 'transfers' => '8']],
+        $beta->id => ['categories' => ['multi_day_trips' => '20']],
     ]])->assertRedirect(route('admin.partners.commissions.edit'))->assertSessionHas('success', 'Commissions saved for 2 partners.');
 
     $alpha->refresh()->load('categoryCommissions');
     $beta->refresh()->load('categoryCommissions');
-    expect((float) $alpha->default_commission)->toBe(12.5)
-        ->and($alpha->commissionFor(CommissionCategory::Trips))->toBe(15.0)
+    expect($alpha->commissionFor(CommissionCategory::SingleDayTrips))->toBe(15.0)
         ->and($alpha->commissionFor(CommissionCategory::Transfers))->toBe(8.0)
         ->and($alpha->commissionFor(CommissionCategory::Packages))->toBeNull()
-        ->and($beta->default_commission)->toBeNull()
-        ->and($beta->commissionFor(CommissionCategory::Accommodation))->toBe(20.0);
+        ->and($beta->commissionFor(CommissionCategory::MultiDayTrips))->toBe(20.0);
 });
 
 test('the commission matrix rejects percentages above 100', function () {
     $partner = Partner::factory()->create();
 
     $this->actingAs($this->admin)->put(route('admin.partners.commissions.update'), ['partners' => [
-        $partner->id => ['default' => '120'],
-    ]])->assertSessionHasErrors(["partners.{$partner->id}.default"]);
+        $partner->id => ['categories' => ['packages' => '120']],
+    ]])->assertSessionHasErrors(["partners.{$partner->id}.categories.packages"]);
 });
 
 test('partners are listed and can be approved and suspended', function () {

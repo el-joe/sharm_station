@@ -24,12 +24,14 @@ final readonly class QuoteRequestData
         public array $addons = [],
         public ?Partner $partner = null,
         public string $currency = 'EUR',
+        public ?string $nationalityCode = null,
+        public ?int $nationalityGroupId = null,
     ) {}
 
     /**
      * @param  array<string, mixed>  $data
      */
-    public static function fromArray(array $data, ?Partner $partner = null, string $currency = 'EUR'): self
+    public static function fromArray(array $data, ?Partner $partner = null, string $currency = 'EUR', ?string $nationalityCode = null, ?int $nationalityGroupId = null): self
     {
         $bookingType = $data['booking_type'] instanceof BookingType ? $data['booking_type'] : BookingType::from($data['booking_type']);
 
@@ -43,12 +45,14 @@ final readonly class QuoteRequestData
             addons: array_values(array_map(AddonSelectionData::fromArray(...), $data['addons'] ?? [])),
             partner: $partner,
             currency: $currency,
+            nationalityCode: $nationalityCode,
+            nationalityGroupId: $nationalityGroupId,
         );
     }
 
-    public static function fromRequest(FormRequest $request, ?Partner $partner = null, string $currency = 'EUR'): self
+    public static function fromRequest(FormRequest $request, ?Partner $partner = null, string $currency = 'EUR', ?string $nationalityCode = null, ?int $nationalityGroupId = null): self
     {
-        return self::fromArray($request->validated(), $partner, $currency);
+        return self::fromArray($request->validated(), $partner, $currency, $nationalityCode, $nationalityGroupId);
     }
 
     public function persons(): int

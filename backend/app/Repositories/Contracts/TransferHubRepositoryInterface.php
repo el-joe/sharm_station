@@ -33,4 +33,11 @@ interface TransferHubRepositoryInterface extends BaseRepositoryInterface
      * @return Collection<int, TransferFixedRoute>
      */
     public function suggestPlaces(int $hubId, array $tokens, int $limit): Collection;
+
+    /**
+     * Every hub (enabled or not) with its destination and fixed routes (vehicle type and prices loaded).
+     *
+     * @return Collection<int, TransferHub>
+     */
+    public function forMcp(): Collection;
 }

@@ -7,6 +7,7 @@ use App\Enums\RoomAvailabilityStatus;
 use App\Models\Room;
 use App\Models\RoomAvailability;
 use App\Repositories\Contracts\RoomRepositoryInterface;
+use App\Repositories\Eloquent\Concerns\MatchesSearchTokens;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,6 +19,8 @@ use Illuminate\Support\Facades\DB;
  */
 class RoomRepository extends BaseRepository implements RoomRepositoryInterface
 {
+    use MatchesSearchTokens;
+
     protected function model(): string
     {
         return Room::class;
@@ -28,7 +31,7 @@ class RoomRepository extends BaseRepository implements RoomRepositoryInterface
         $query = $this->query()
             ->bookable()
             ->select('rooms.*')
-            ->with(['building.destination', 'seasonPrices' => fn ($query) => $query->where('is_active', true)])
+            ->with(['building.destination', 'seasonPrices' => fn ($query) => $query->where('is_active', true), 'productPrices'])
             ->when($filters->destination, fn (Builder $query, string $slug) => $query->whereHas('building.destination', fn (Builder $destination) => $destination->where('slug', $slug)))
             ->when($filters->building, fn (Builder $query, string $slug) => $query->whereHas('building', fn (Builder $building) => $building->where('slug', $slug)))
             ->when($filters->roomType, fn (Builder $query, $type) => $query->where('room_type', $type))
@@ -56,7 +59,7 @@ class RoomRepository extends BaseRepository implements RoomRepositoryInterface
     {
         return $this->query()
             ->bookable()
-            ->with(['building.destination', 'building.childPolicy.bands', 'childPolicy.bands', 'seasonPrices' => fn ($query) => $query->where('is_active', true)])
+            ->with(['building.destination', 'building.childPolicy.bands', 'childPolicy.bands', 'seasonPrices' => fn ($query) => $query->where('is_active', true), 'productPrices'])
             ->withAvailabilitySummary()
             ->find($id);
     }
@@ -65,7 +68,7 @@ class RoomRepository extends BaseRepository implements RoomRepositoryInterface
     {
         return $this->query()
             ->bookable()
-            ->with('building.destination')
+            ->with(['building.destination', 'seasonPrices', 'productPrices'])
             ->withAvailabilitySummary()
             ->orderBy('from_price')
             ->limit($limit)
@@ -78,7 +81,7 @@ class RoomRepository extends BaseRepository implements RoomRepositoryInterface
             ->bookable()
             ->where('building_id', $room->building_id)
             ->whereKeyNot($room->getKey())
-            ->with('building.destination')
+            ->with(['building.destination', 'seasonPrices', 'productPrices'])
             ->withAvailabilitySummary()
             ->orderBy('sort')
             ->limit($limit)
@@ -145,5 +148,19 @@ class RoomRepository extends BaseRepository implements RoomRepositoryInterface
 
             return $changed;
         });
+    }
+
+    public function forCatalogue(?string $destination, array $tokens): Collection
+    {
+        $query = $this->query()
+            ->bookable()
+            ->with(['building.destination', 'seasonPrices', 'productPrices'])
+            ->when($destination, fn (Builder $query, string $slug) => $query->whereHas('building.destination', fn (Builder $destination) => $destination->where('slug', $slug)));
+
+        if ($tokens !== []) {
+            $this->matchTokens($query, $tokens, ['name', 'building.name']);
+        }
+
+        return $query->orderBy('building_id')->orderBy('sort')->get();
     }
 }

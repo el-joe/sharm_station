@@ -1,6 +1,7 @@
 "use client";
 
 import { PriceSummary } from "@/components/booking/PriceSummary";
+import { useNationalityCode } from "@/lib/nationality";
 import { Badge, BadgeIcons } from "@/components/ui/Badge";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
@@ -23,6 +24,7 @@ export function RoomBookingWidget({ room }: { room: RoomDetail }) {
   const tb = useTranslations("booking");
   const locale = useLocale() as Locale;
   const { currency } = useCurrency();
+  const nationality = useNationalityCode();
   const router = useRouter();
   const today = useToday();
   // Dates/guests chosen on the listing are carried over in the query string.
@@ -50,8 +52,8 @@ export function RoomBookingWidget({ room }: { room: RoomDetail }) {
   const request: RoomQuoteRequest = { room_id: room.id, check_in: checkIn, check_out: checkOut, adults, children, child_ages: [] };
   const debounced = useDebounced(request, 300);
   const quote = useQuery({
-    queryKey: ["room-quote", debounced, currency, locale],
-    queryFn: ({ signal }) => api.quoteRoom(debounced, { locale, currency, signal }),
+    queryKey: ["room-quote", debounced, currency, locale, nationality],
+    queryFn: ({ signal }) => api.quoteRoom(debounced, { locale, currency, signal, nationality }),
     enabled: Boolean(debounced.check_in && debounced.check_out) && errors.length === 0 && nights > 0,
     placeholderData: keepPreviousData,
   });

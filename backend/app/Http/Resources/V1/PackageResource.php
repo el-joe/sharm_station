@@ -3,7 +3,6 @@
 namespace App\Http\Resources\V1;
 
 use App\Enums\BookingType;
-use App\Enums\CommissionCategory;
 use App\Http\Resources\V1\Concerns\PresentsContent;
 use App\Http\Resources\V1\Concerns\PresentsPrices;
 use App\Models\Addon;
@@ -30,8 +29,6 @@ class PackageResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $category = CommissionCategory::Packages;
-        $isPartner = $this->partner($request) !== null;
         $startDays = $this->resource->stageStartDays();
 
         return [
@@ -43,10 +40,9 @@ class PackageResource extends JsonResource
             'deposit_percent' => (float) $this->deposit_percent,
             'discount_percent' => $this->discount_percent !== null ? (float) $this->discount_percent : null,
             'group_prices' => [
-                'adult' => $this->money($this->base_price),
-                'child' => $this->money($this->base_child_price ?? $this->base_price),
+                'adult' => $this->groupBasePrice($this->resource, 'adult_price'),
+                'child' => $this->groupBasePrice($this->resource, 'child_price') ?? $this->groupBasePrice($this->resource, 'adult_price'),
             ],
-            'partner_price' => $this->when($isPartner, fn (): ?array => $this->partnerMoney($request, $category, $this->from_price ?? $this->base_price, $this->partner_price)),
             'stages' => $this->stages->map(fn (PackageStage $stage): array => [
                 'position' => $stage->position,
                 'destination' => $stage->destination ? ['name' => $stage->destination->name, 'slug' => $stage->destination->slug] : null,
@@ -100,7 +96,6 @@ class PackageResource extends JsonResource
                 'required' => $addon->required,
                 'max_quantity' => $addon->max_quantity,
                 'booking_types' => $addon->booking_types ?? [],
-                ...($isPartner ? ['partner_price' => $this->partnerMoney($request, $category, $addon->price, $addon->partner_price)] : []),
             ])->values(),
             'availability' => collect(BookingType::cases())->mapWithKeys(fn (BookingType $type): array => [
                 $type->value => ['enabled' => $this->supportsBookingType($type), 'lead_time_hours' => 24],

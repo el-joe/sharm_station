@@ -2,17 +2,19 @@
 
 namespace App\Services;
 
-use App\DTOs\Pricing\PartnerPriceData;
+use App\DTOs\Pricing\CommissionData;
 use App\Enums\CommissionCategory;
-use App\Enums\PriceRule;
 use App\Models\Partner;
 use App\Models\User;
+use App\Services\Pricing\CommissionResolver;
 
 /**
- * Partner price priority (SRS 8.1): item partner price > partner category commission > partner default commission > retail.
+ * Partner price = customer price − commission % (CR-11, CR-12). There are no explicit partner prices.
  */
 class PartnerPricingService
 {
+    public function __construct(private readonly CommissionResolver $commissions) {}
+
     public function partnerFor(?User $user): ?Partner
     {
         $partner = $user?->activePartner();
@@ -21,35 +23,13 @@ class PartnerPricingService
         return $partner;
     }
 
-    /**
-     * Rule to apply to one priced item, or null when the request is not from an active partner.
-     */
-    public function resolve(?Partner $partner, CommissionCategory $category, float|string|null $explicitPartnerPrice = null): ?PartnerPriceData
+    public function commission(?Partner $partner, ?CommissionCategory $category): CommissionData
     {
-        if ($partner === null || ! $partner->isActive()) {
-            return null;
-        }
-
-        if ($explicitPartnerPrice !== null) {
-            return new PartnerPriceData(PriceRule::PartnerPrice, explicitUnitPrice: (float) $explicitPartnerPrice);
-        }
-
-        $partner->loadMissing('categoryCommissions');
-        $categoryCommission = $partner->commissionFor($category);
-
-        if ($categoryCommission !== null) {
-            return new PartnerPriceData(PriceRule::CategoryCommission, commissionPercent: $categoryCommission);
-        }
-
-        if ($partner->default_commission !== null) {
-            return new PartnerPriceData(PriceRule::DefaultCommission, commissionPercent: (float) $partner->default_commission);
-        }
-
-        return new PartnerPriceData(PriceRule::Retail);
+        return $this->commissions->resolve($partner, $category);
     }
 
-    public function unitPrice(?Partner $partner, CommissionCategory $category, float $retailUnitPrice, float|string|null $explicitPartnerPrice = null): ?float
+    public function partnerPrice(?Partner $partner, ?CommissionCategory $category, float $customerPrice): float
     {
-        return $this->resolve($partner, $category, $explicitPartnerPrice)?->unitPrice($retailUnitPrice);
+        return $this->commission($partner, $category)->apply($customerPrice);
     }
 }

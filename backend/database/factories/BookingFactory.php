@@ -39,7 +39,7 @@ class BookingFactory extends Factory
             'children' => 0,
             'retail_total' => 50,
             'commission_amount' => 0,
-            'price_rule' => PriceRule::Retail,
+            'price_rule' => PriceRule::None,
             'total' => 50,
             'deposit_percent' => 30,
             'deposit_amount' => 15,

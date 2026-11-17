@@ -40,12 +40,8 @@ class TripCardResource extends JsonResource
             'booking_types' => array_map(fn (BookingType $type): string => $type->value, $this->bookingTypes()),
             'min_persons' => $this->min_persons,
             'max_persons' => $this->max_persons,
-            'from_price' => $this->money($this->from_price),
+            'from_price' => $this->groupFromPrice($this->resource, $this->from_price),
             'price_unit' => $this->pricing_mode->value,
-            'partner_from_price' => $this->when(
-                $this->partner($request) !== null,
-                fn (): ?array => $this->partnerMoney($request, $this->type->commissionCategory(), $this->from_price),
-            ),
             'free_cancellation_hours' => $this->free_cancellation_hours,
             'featured' => $this->featured,
             'unit_label' => $this->unit_label,

@@ -16,6 +16,7 @@ final readonly class QuoteResultData
      * @param  array<string, list<string>>  $errors
      * @param  array<string, mixed>  $context  pricing_mode, booking_type, travel_date, nights, tax_included...
      * @param  array{total: float, deposit: float, balance: float}  $converted
+     * @param  array{code: string|null, group: array{id: int, code: string, name: string, is_default: bool}}|null  $nationality
      */
     public function __construct(
         public ServiceType $serviceType,
@@ -25,6 +26,7 @@ final readonly class QuoteResultData
         public ?float $partnerTotal,
         public float $commissionAmount,
         public PriceRule $priceRule,
+        public ?float $commissionPercent,
         public float $total,
         public float $depositPercent,
         public float $depositAmount,
@@ -34,6 +36,7 @@ final readonly class QuoteResultData
         public array $converted,
         public array $errors = [],
         public array $context = [],
+        public ?array $nationality = null,
     ) {}
 
     /**
@@ -48,7 +51,8 @@ final readonly class QuoteResultData
             retailTotal: (float) $data['retail_total'],
             partnerTotal: isset($data['partner_total']) ? (float) $data['partner_total'] : null,
             commissionAmount: (float) ($data['commission_amount'] ?? 0),
-            priceRule: PriceRule::from($data['price_rule'] ?? PriceRule::Retail->value),
+            priceRule: PriceRule::tryFrom((string) ($data['price_rule'] ?? '')) ?? PriceRule::None,
+            commissionPercent: isset($data['commission_percent']) ? (float) $data['commission_percent'] : null,
             total: (float) $data['total'],
             depositPercent: (float) $data['deposit_percent'],
             depositAmount: (float) $data['deposit_amount'],
@@ -58,6 +62,7 @@ final readonly class QuoteResultData
             converted: $data['converted'] ?? ['total' => (float) $data['total'], 'deposit' => (float) $data['deposit_amount'], 'balance' => (float) $data['balance_amount']],
             errors: $data['errors'] ?? [],
             context: $data['context'] ?? [],
+            nationality: $data['nationality'] ?? null,
         );
     }
 
@@ -88,6 +93,7 @@ final readonly class QuoteResultData
             'valid' => $this->isValid(),
             'service_type' => $this->serviceType->value,
             ...$this->context,
+            'nationality' => $this->nationality,
             'season_name' => $this->seasonName,
             'lines' => array_map(fn (QuoteLineData $line): array => $line->toArray($includePartner), $this->lines),
             'retail_total' => $this->retailTotal,
@@ -105,6 +111,8 @@ final readonly class QuoteResultData
         if ($includePartner) {
             $result['partner_total'] = $this->partnerTotal;
             $result['commission_amount'] = $this->commissionAmount;
+            $result['commission_percent'] = $this->commissionPercent;
+            $result['commission_source'] = $this->priceRule->value;
             $result['price_rule'] = $this->priceRule->value;
         }
 

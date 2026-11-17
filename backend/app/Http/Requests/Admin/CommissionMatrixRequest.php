@@ -18,7 +18,6 @@ class CommissionMatrixRequest extends FormRequest
     {
         return [
             'partners' => ['required', 'array'],
-            'partners.*.default' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'partners.*.categories' => ['nullable', 'array'],
             'partners.*.categories.*' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ];
@@ -30,7 +29,6 @@ class CommissionMatrixRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'partners.*.default.max' => 'A commission cannot exceed 100%.',
             'partners.*.categories.*.max' => 'A commission cannot exceed 100%.',
             'partners.*.categories.*.numeric' => 'Commissions must be numbers.',
         ];

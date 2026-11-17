@@ -19,12 +19,14 @@ final readonly class RoomQuoteRequestData
         public array $childAges = [],
         public ?Partner $partner = null,
         public string $currency = 'EUR',
+        public ?string $nationalityCode = null,
+        public ?int $nationalityGroupId = null,
     ) {}
 
     /**
      * @param  array<string, mixed>  $data
      */
-    public static function fromArray(array $data, ?Partner $partner = null, string $currency = 'EUR'): self
+    public static function fromArray(array $data, ?Partner $partner = null, string $currency = 'EUR', ?string $nationalityCode = null, ?int $nationalityGroupId = null): self
     {
         return new self(
             checkIn: CarbonImmutable::parse($data['check_in'])->startOfDay(),
@@ -34,12 +36,14 @@ final readonly class RoomQuoteRequestData
             childAges: array_values(array_map('intval', $data['child_ages'] ?? [])),
             partner: $partner,
             currency: $currency,
+            nationalityCode: $nationalityCode,
+            nationalityGroupId: $nationalityGroupId,
         );
     }
 
-    public static function fromRequest(FormRequest $request, ?Partner $partner = null, string $currency = 'EUR'): self
+    public static function fromRequest(FormRequest $request, ?Partner $partner = null, string $currency = 'EUR', ?string $nationalityCode = null, ?int $nationalityGroupId = null): self
     {
-        return self::fromArray($request->validated(), $partner, $currency);
+        return self::fromArray($request->validated(), $partner, $currency, $nationalityCode, $nationalityGroupId);
     }
 
     public function nights(): int

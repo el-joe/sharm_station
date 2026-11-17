@@ -4,8 +4,8 @@ use App\Enums\AddonPricingBasis;
 use App\Enums\CommissionCategory;
 use App\Enums\PriceRule;
 use App\Models\Addon;
+use App\Models\CommissionSetting;
 use App\Models\Partner;
-use App\Models\PartnerCategoryCommission;
 use App\Models\SeasonPrice;
 use App\Models\Trip;
 use App\Services\Pricing\TripPricingEngine;
@@ -241,88 +241,84 @@ describe('add-ons', function () {
 });
 
 describe('partner pricing', function () {
-    test('an explicit item partner price wins over the category commission', function () {
-        $trip = buggyTrip();
-        $trip->unitOptions[0]->update(['partner_price' => 30]);
-        $partner = Partner::factory()->create(['default_commission' => 10]);
-        PartnerCategoryCommission::factory()->for($partner)->create(['category' => CommissionCategory::Trips, 'commission_percent' => 15]);
-
-        $quote = $this->engine->quote($trip->fresh(), quoteRequest(['adults' => 3, 'units' => units($trip, ['Single buggy' => 1, 'Double buggy' => 1])], $partner));
-
-        expect($quote->lines[0]->partnerTotal)->toBe(30.0)
-            ->and($quote->lines[0]->priceRule)->toBe(PriceRule::PartnerPrice)
-            ->and($quote->lines[1]->partnerTotal)->toBe(42.5)
-            ->and($quote->lines[1]->priceRule)->toBe(PriceRule::CategoryCommission)
-            ->and($quote->retailTotal)->toBe(85.0)
-            ->and($quote->partnerTotal)->toBe(72.5)
-            ->and($quote->total)->toBe(72.5)
-            ->and($quote->commissionAmount)->toBe(12.5)
-            ->and($quote->priceRule)->toBe(PriceRule::Mixed);
-    });
-
-    test('the category commission wins over the default commission', function () {
-        $partner = Partner::factory()->create(['default_commission' => 10]);
-        PartnerCategoryCommission::factory()->for($partner)->create(['category' => CommissionCategory::Trips, 'commission_percent' => 15]);
+    test('the global setting of the type applies when the partner has no override', function () {
+        $partner = Partner::factory()->create();
 
         $quote = $this->engine->quote(snorkellingTrip(), quoteRequest(['adults' => 4], $partner));
 
-        expect($quote->partnerTotal)->toBe(85.0)
-            ->and($quote->priceRule)->toBe(PriceRule::CategoryCommission);
+        expect($quote->retailTotal)->toBe(100.0)
+            ->and($quote->partnerTotal)->toBe(85.0)
+            ->and($quote->commissionAmount)->toBe(15.0)
+            ->and($quote->commissionPercent)->toBe(15.0)
+            ->and($quote->priceRule)->toBe(PriceRule::GlobalSetting)
+            ->and($quote->lines[0]->commissionPercent)->toBe(15.0);
     });
 
-    test('the default commission applies when the partner has no commission for the category', function () {
-        $partner = Partner::factory()->create(['default_commission' => 10]);
-        PartnerCategoryCommission::factory()->for($partner)->create(['category' => CommissionCategory::NileTrips, 'commission_percent' => 20]);
+    test('a partner override wins over the global setting', function () {
+        $partner = Partner::factory()->create();
+        partnerOverride($partner, CommissionCategory::SingleDayTrips, 20);
+        partnerOverride($partner, CommissionCategory::NileTrips, 5);
 
         $quote = $this->engine->quote(snorkellingTrip(), quoteRequest(['adults' => 4], $partner));
 
-        expect($quote->partnerTotal)->toBe(90.0)
-            ->and($quote->priceRule)->toBe(PriceRule::DefaultCommission);
+        expect($quote->partnerTotal)->toBe(80.0)
+            ->and($quote->priceRule)->toBe(PriceRule::PartnerOverride)
+            ->and($quote->commissionPercent)->toBe(20.0);
     });
 
-    test('the retail price applies when the partner has no commission at all', function () {
-        $partner = Partner::factory()->withoutDefaultCommission()->create();
+    test('no commission applies when neither an override nor a global setting exists', function () {
+        CommissionSetting::query()->whereKey(CommissionCategory::SingleDayTrips->value)->delete();
+        $partner = Partner::factory()->create();
 
         $quote = $this->engine->quote(snorkellingTrip(), quoteRequest(['adults' => 4], $partner));
 
         expect($quote->partnerTotal)->toBe(100.0)
-            ->and($quote->priceRule)->toBe(PriceRule::Retail);
+            ->and($quote->commissionAmount)->toBe(0.0)
+            ->and($quote->priceRule)->toBe(PriceRule::None);
     });
 
-    test('nile trips use the nile trips commission', function () {
-        $partner = Partner::factory()->create(['default_commission' => 10]);
-        PartnerCategoryCommission::factory()->for($partner)->create(['category' => CommissionCategory::NileTrips, 'commission_percent' => 20]);
+    test('each trip type uses its own commission type', function () {
+        $partner = Partner::factory()->create();
+        partnerOverride($partner, CommissionCategory::NileTrips, 20);
 
-        $quote = $this->engine->quote(snorkellingTrip(['type' => 'nile']), quoteRequest(['adults' => 4], $partner));
+        $nile = $this->engine->quote(snorkellingTrip(['type' => 'nile']), quoteRequest(['adults' => 4], $partner));
+        $multiDay = $this->engine->quote(snorkellingTrip(['type' => 'multi_day', 'slug' => 'multi']), quoteRequest(['adults' => 4], $partner));
 
-        expect($quote->partnerTotal)->toBe(80.0);
+        expect($nile->partnerTotal)->toBe(80.0)
+            ->and($multiDay->partnerTotal)->toBe(90.0)
+            ->and($multiDay->priceRule)->toBe(PriceRule::GlobalSetting);
     });
 
-    test('a pending partner gets retail prices only', function () {
-        $partner = Partner::factory()->pending()->create(['default_commission' => 10]);
+    test('the commission is applied per line and rounded to cents (€45 − 15 % = €38.25)', function () {
+        $partner = Partner::factory()->create();
+
+        $quote = $this->engine->quote(snorkellingTrip(['base_price' => 45]), quoteRequest(['adults' => 1, 'children' => 1, 'child_ages' => [5]], $partner));
+
+        expect(collect($quote->lines)->map(fn ($line) => [$line->unitPrice, $line->partnerUnitPrice, $line->partnerTotal])->all())->toBe([
+            [45.0, 38.25, 38.25],
+            [22.5, 19.13, 19.13],
+        ])
+            ->and($quote->partnerTotal)->toBe(57.38)
+            ->and($quote->commissionAmount)->toBe(10.12);
+    });
+
+    test('a pending partner gets customer prices only', function () {
+        $partner = Partner::factory()->pending()->create();
 
         $quote = $this->engine->quote(snorkellingTrip(), quoteRequest(['adults' => 4], $partner));
 
         expect($quote->partnerTotal)->toBeNull()
-            ->and($quote->total)->toBe(100.0);
-    });
-
-    test('child band discounts are applied to the explicit partner price', function () {
-        $partner = Partner::factory()->create(['default_commission' => 10]);
-
-        $quote = $this->engine->quote(snorkellingTrip(['partner_price' => 20]), quoteRequest(['adults' => 1, 'children' => 1, 'child_ages' => [5]], $partner));
-
-        expect($quote->partnerTotal)->toBe(30.0)
-            ->and($quote->priceRule)->toBe(PriceRule::PartnerPrice);
+            ->and($quote->total)->toBe(100.0)
+            ->and($quote->priceRule)->toBe(PriceRule::None);
     });
 
     test('partner fields are left out of the public array', function () {
-        $partner = Partner::factory()->create(['default_commission' => 10]);
+        $partner = Partner::factory()->create();
         $quote = $this->engine->quote(snorkellingTrip(), quoteRequest(['adults' => 2], $partner));
 
-        expect($quote->toArray())->not->toHaveKeys(['partner_total', 'commission_amount', 'price_rule'])
+        expect($quote->toArray())->not->toHaveKeys(['partner_total', 'commission_amount', 'price_rule', 'commission_percent'])
             ->and($quote->toArray()['lines'][0])->not->toHaveKey('partner_total')
-            ->and($quote->toArray(includePartner: true))->toHaveKeys(['partner_total', 'commission_amount', 'price_rule']);
+            ->and($quote->toArray(includePartner: true))->toHaveKeys(['partner_total', 'commission_amount', 'commission_percent', 'commission_source']);
     });
 });
 
@@ -336,7 +332,8 @@ describe('deposit and currency', function () {
     });
 
     test('the deposit is computed on the partner total for partners', function () {
-        $partner = Partner::factory()->create(['default_commission' => 10]);
+        $partner = Partner::factory()->create();
+        partnerOverride($partner, CommissionCategory::SingleDayTrips, 10);
 
         $quote = $this->engine->quote(snorkellingTrip(), quoteRequest(['adults' => 4], $partner));
 

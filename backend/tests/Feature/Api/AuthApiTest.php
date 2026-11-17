@@ -63,3 +63,14 @@ test('logout revokes the current token', function () {
 
     expect($user->tokens()->count())->toBe(0);
 });
+
+test('throttles of different endpoints do not share one counter', function () {
+    // Unnamed route throttles are keyed by IP only; without a per-route prefix eleven quotes
+    // (limit 60) would also exhaust the login limit (10) and lock the visitor out of sign-in.
+    for ($i = 0; $i < 11; $i++) {
+        $this->postJson('/api/v1/transfers/quote', [])->assertUnprocessable();
+    }
+
+    $this->postJson('/api/v1/auth/login', ['email' => 'nobody@example.test', 'password' => 'wrong-password'])
+        ->assertUnprocessable();
+});

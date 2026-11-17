@@ -50,7 +50,7 @@ test('the package list and builder render', function () {
 
     $this->actingAs($this->admin)->get(route('admin.packages.index'))->assertOk()->assertSee('New package');
     $this->actingAs($this->admin)->get(route('admin.packages.create'))->assertOk()->assertSee('Included transfers');
-    $this->actingAs($this->admin)->get(route('admin.packages.edit', $package))->assertOk()->assertSee('Price list');
+    $this->actingAs($this->admin)->get(route('admin.packages.edit', $package))->assertOk()->assertSee('Price matrix');
     $this->actingAs($this->admin)->getJson(route('admin.packages.data', ['draw' => 1, 'start' => 0, 'length' => 10]))
         ->assertOk()->assertJsonStructure(['draw', 'recordsTotal', 'recordsFiltered', 'data']);
 });

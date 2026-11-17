@@ -5,41 +5,38 @@ namespace App\Services\Pricing;
 use App\DTOs\Pricing\QuoteLineData;
 use App\DTOs\Pricing\QuoteRequestData;
 use App\DTOs\Pricing\QuoteResultData;
+use App\DTOs\Pricing\ResolvedPriceData;
 use App\Enums\BookingType;
-use App\Enums\CommissionCategory;
 use App\Enums\PricingMode;
 use App\Models\ChildAgeBand;
-use App\Models\Partner;
-use App\Models\SeasonPrice;
 use App\Models\Trip;
 use App\Models\TripPrivateTier;
 use App\Models\TripUnitOption;
 use App\Services\AvailabilityService;
 use App\Services\CurrencyService;
-use App\Services\PartnerPricingService;
-use App\Services\SeasonPriceService;
+use App\Services\NationalityService;
 
 /**
- * Server-side price calculation for trips and Nile trips (SRS 3.4.1, 3.5, 3.8, 8, 10.1).
+ * Server-side price calculation for trips and Nile trips (SRS 3.4.1, 3.5, 3.8, 3.9, 8, 10.1):
+ * customer prices from the nationality/season matrix, partner prices = customer − commission %.
  */
 class TripPricingEngine
 {
     use BuildsQuotes;
 
     public function __construct(
-        private readonly SeasonPriceService $seasons,
+        private readonly PriceResolver $prices,
         private readonly AvailabilityService $availability,
-        private readonly PartnerPricingService $partnerPricing,
+        private readonly CommissionResolver $commissions,
+        private readonly NationalityService $nationalities,
         private readonly CurrencyService $currencies,
     ) {}
 
     public function quote(Trip $trip, QuoteRequestData $request): QuoteResultData
     {
-        $trip->loadMissing(['unitOptions', 'privateTiers', 'availabilityRules', 'childPolicy.bands', 'addons', 'seasonPrices']);
+        $trip->loadMissing(['unitOptions', 'privateTiers', 'availabilityRules', 'childPolicy.bands', 'addons', 'seasonPrices', 'productPrices']);
 
-        $this->resetErrors();
-        $category = $trip->type->commissionCategory();
-        $partner = $request->partner?->isActive() ? $request->partner : null;
+        $this->beginQuote($request->partner, $trip->type->commissionCategory(), $request->nationalityGroupId, $request->nationalityCode);
         $persons = $request->persons();
 
         $this->validateParty($trip, $request);
@@ -50,21 +47,20 @@ class TripPricingEngine
             $this->addError($trip->supportsBookingType($request->bookingType) ? 'travel_date' : 'booking_type', $availabilityError);
         }
 
-        $season = $this->seasons->forDate($trip, $request->travelDate);
+        $prices = $this->prices->resolve($trip, $this->nationalityGroup?->id, $request->travelDate);
 
         $lines = $trip->pricing_mode === PricingMode::PerUnit
-            ? $this->unitLines($trip, $request, $season, $partner, $category)
-            : $this->personLines($trip, $request, $season, $partner, $category);
+            ? $this->unitLines($trip, $request, $prices)
+            : $this->personLines($trip, $request, $prices);
 
         $unitCount = array_sum(array_map(fn (QuoteLineData $line): int => $line->quantity, array_filter($lines, fn (QuoteLineData $line): bool => $line->type === QuoteLineData::TYPE_UNIT)));
 
-        $lines = [...$lines, ...$this->addonLines($trip, $request, $persons, $unitCount, $partner, $category)];
+        $lines = [...$lines, ...$this->productAddonLines($trip->addons, $request, $persons, $unitCount)];
 
         return $this->buildResult(
             serviceType: $trip->type->serviceType(),
             lines: $lines,
-            seasonName: $season?->name,
-            partner: $partner,
+            seasonName: $prices->seasonName(),
             depositPercent: (float) $trip->deposit_percent,
             currency: $request->currency,
             context: [
@@ -109,7 +105,7 @@ class TripPricingEngine
      *
      * @return list<QuoteLineData>
      */
-    private function personLines(Trip $trip, QuoteRequestData $request, ?SeasonPrice $season, ?Partner $partner, CommissionCategory $category): array
+    private function personLines(Trip $trip, QuoteRequestData $request, ResolvedPriceData $prices): array
     {
         $persons = $request->persons();
 
@@ -122,15 +118,14 @@ class TripPricingEngine
                 return [];
             }
 
-            $seasonTierPrice = $season?->tierPriceFor($tier->id);
-            $adultPrice = $seasonTierPrice ?? (float) $tier->price_per_person;
-            $adultPartnerPrice = $seasonTierPrice !== null ? $season->tierPartnerPriceFor($tier->id) : $this->nullableFloat($tier->partner_price);
+            $field = "tier_prices.{$tier->id}";
+            $adultPrice = (float) $prices->price($field);
             $childPrice = $adultPrice;
             $adultLabel = "Private, party of {$tier->label()} (per person)";
         } else {
             $tier = null;
-            $seasonAdultPrice = $season?->adult_price !== null ? (float) $season->adult_price : null;
-            $adultPrice = $seasonAdultPrice ?? $this->nullableFloat($trip->base_price);
+            $field = 'adult_price';
+            $adultPrice = $prices->adult();
 
             if ($adultPrice === null) {
                 $this->addError('booking_type', 'No group price is set for this trip.');
@@ -138,8 +133,7 @@ class TripPricingEngine
                 return [];
             }
 
-            $adultPartnerPrice = $seasonAdultPrice !== null ? $this->nullableFloat($season->partner_price) : $this->nullableFloat($trip->partner_price);
-            $childPrice = $this->nullableFloat($season?->child_price) ?? $this->nullableFloat($trip->base_child_price) ?? $adultPrice;
+            $childPrice = $prices->child() ?? $adultPrice;
             $adultLabel = 'Adult';
         }
 
@@ -164,7 +158,6 @@ class TripPricingEngine
                 $childGroups[$key] ??= [
                     'label' => 'Child '.$band->label(),
                     'price' => $band->applyTo($adultPrice),
-                    'partner' => $adultPartnerPrice !== null ? $band->applyTo($adultPartnerPrice) : null,
                     'quantity' => 0,
                     'meta' => ['child_age_band_id' => $band->id, 'age' => $age, 'ages' => []],
                 ];
@@ -174,25 +167,26 @@ class TripPricingEngine
                 continue;
             }
 
-            $childGroups['child'] ??= ['label' => 'Child', 'price' => $childPrice, 'partner' => null, 'quantity' => 0, 'meta' => ['age' => $age, 'ages' => []]];
+            $childGroups['child'] ??= ['label' => 'Child', 'price' => $childPrice, 'quantity' => 0, 'meta' => ['age' => $age, 'ages' => []]];
             $childGroups['child']['quantity']++;
             $childGroups['child']['meta']['ages'][] = $age;
         }
 
         if ($request->children > 0 && $request->childAges === []) {
-            $childGroups['child'] = ['label' => 'Child', 'price' => $childPrice, 'partner' => null, 'quantity' => $request->children, 'meta' => []];
+            $childGroups['child'] = ['label' => 'Child', 'price' => $childPrice, 'quantity' => $request->children, 'meta' => []];
         }
 
         $lines = [];
 
         if ($adultQuantity > 0) {
-            $lines[] = $this->line(QuoteLineData::TYPE_ADULT, $adultLabel, $adultQuantity, $adultPrice, $adultPartnerPrice, $partner, $category, [
+            $lines[] = $this->line(QuoteLineData::TYPE_ADULT, $adultLabel, $adultQuantity, $adultPrice, [
                 'private_tier_id' => $tier?->id,
+                'price_source' => $prices->source($field)?->value,
             ]);
         }
 
         foreach ($childGroups as $group) {
-            $lines[] = $this->line(QuoteLineData::TYPE_CHILD, $group['label'], $group['quantity'], $group['price'], $group['partner'], $partner, $category, $group['meta']);
+            $lines[] = $this->line(QuoteLineData::TYPE_CHILD, $group['label'], $group['quantity'], $group['price'], $group['meta']);
         }
 
         return $lines;
@@ -203,7 +197,7 @@ class TripPricingEngine
      *
      * @return list<QuoteLineData>
      */
-    private function unitLines(Trip $trip, QuoteRequestData $request, ?SeasonPrice $season, ?Partner $partner, CommissionCategory $category): array
+    private function unitLines(Trip $trip, QuoteRequestData $request, ResolvedPriceData $prices): array
     {
         if ($request->units === []) {
             $this->addError('units', 'Choose at least one unit.');
@@ -239,13 +233,10 @@ class TripPricingEngine
             $units += $selection->quantity;
             $childrenAllowed = $childrenAllowed || $option->children_allowed;
 
-            $seasonPrice = $season?->unitPriceFor($option->id);
-            $price = $seasonPrice ?? (float) $option->price;
-            $explicitPartnerPrice = $seasonPrice !== null ? $season->unitPartnerPriceFor($option->id) : $this->nullableFloat($option->partner_price);
-
-            $lines[] = $this->line(QuoteLineData::TYPE_UNIT, (string) $option->name, $selection->quantity, $price, $explicitPartnerPrice, $partner, $category, [
+            $lines[] = $this->line(QuoteLineData::TYPE_UNIT, (string) $option->name, $selection->quantity, (float) $prices->unit($option->id), [
                 'unit_option_id' => $option->id,
                 'seats' => $option->seats,
+                'price_source' => $prices->source("unit_prices.{$option->id}")?->value,
             ]);
         }
 
@@ -270,13 +261,5 @@ class TripPricingEngine
         }
 
         return $lines;
-    }
-
-    /**
-     * @return list<QuoteLineData>
-     */
-    private function addonLines(Trip $trip, QuoteRequestData $request, int $persons, int $unitCount, ?Partner $partner, CommissionCategory $category): array
-    {
-        return $this->productAddonLines($trip->addons, $request, $persons, $unitCount, $partner, $category);
     }
 }

@@ -24,6 +24,7 @@
 | P3 | Admin two-factor auth for Super Admin; admin JS bundle code-splitting (~550 kB) |
 | P3 | Legal texts reviewed by counsel |
 | Before deploy | Change demo password in `UserSeeder`, `APP_DEBUG=false`, set `FRONTEND_URLS`, `GOOGLE_PLACES_API_KEY`, gateway keys |
+| Before deploy | `APP_DEBUG` must be `false` in production: with `APP_DEBUG=true` the admin DataTables JSON (Yajra) includes the executed SQL queries and bindings (found by the E2E run, 17 Nov 2026) |
 
 ## Local run
 

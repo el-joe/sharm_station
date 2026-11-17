@@ -30,6 +30,7 @@ function bookingBody(Trip $trip, array $overrides = []): array
             ['unit_option_id' => $trip->unitOptions[0]->id, 'quantity' => 1],
             ['unit_option_id' => $trip->unitOptions[1]->id, 'quantity' => 1],
         ],
+        'nationality_code' => 'IT',
         'lead' => ['name' => 'Giulia Rossi', 'email' => 'giulia@example.com', 'phone' => '+39 333 1234567'],
         'travelers' => [
             ['first_name' => 'Giulia', 'last_name' => 'Rossi', 'type' => 'adult'],
@@ -78,6 +79,7 @@ test('an accommodation booking can be created from a stay payload', function () 
         'check_in' => '2026-12-01',
         'check_out' => '2026-12-03',
         'adults' => 1,
+        'nationality_code' => 'IT',
         'lead' => ['name' => 'John Smith', 'email' => 'john@example.com'],
         'travelers' => [['first_name' => 'John', 'last_name' => 'Smith', 'type' => 'adult']],
     ])
@@ -128,21 +130,26 @@ test('a booking can be viewed by its owner but not by other customers', function
     $this->getJson('/api/v1/bookings/BK-3002')->assertOk();
 });
 
-test('partner totals are only shown to the partner who booked', function () {
+test('the public checkout books at customer prices even with a partner token', function () {
     $trip = buggyTrip();
-    $partner = Partner::factory()->create(['default_commission' => 10]);
+    $partner = Partner::factory()->create();
     Sanctum::actingAs($partner->user);
 
     $created = $this->postJson('/api/v1/bookings', bookingBody($trip))
         ->assertCreated()
-        ->assertJsonPath('data.totals.partner_total', 76.5)
-        ->assertJsonPath('data.totals.retail_total', 85);
+        ->assertJsonPath('data.totals.retail_total', 85)
+        ->assertJsonPath('data.totals.total', 85)
+        ->assertJsonPath('data.nationality.code', 'IT')
+        ->assertJsonPath('data.nationality.group.code', 'europe');
 
-    $token = $created->json('data.access_token');
-    app('auth')->forgetGuards();
+    expect($created->getContent())->not->toContain('partner_total');
+    $this->assertDatabaseHas('bookings', ['reference' => 'BK-2041', 'partner_id' => null, 'price_rule' => 'none', 'nationality_code' => 'IT']);
+});
 
-    $client = $this->withHeaders(['Authorization' => ''])->getJson("/api/v1/bookings/BK-2041?token={$token}")->assertOk();
+test('a booking requires a known nationality', function () {
+    $trip = buggyTrip();
 
-    expect($client->json('data.totals'))->toBe(['retail_total' => 85, 'base_currency' => 'EUR', 'prices_hidden' => true])
-        ->and($client->getContent())->not->toContain('partner_total');
+    $this->postJson('/api/v1/bookings', bookingBody($trip, ['nationality_code' => 'XX']))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['nationality_code']);
 });

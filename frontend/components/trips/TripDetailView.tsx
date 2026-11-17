@@ -25,15 +25,15 @@ import { WhatToBring } from "./WhatToBring";
 import { productHref } from "./paths";
 
 /** Shared detail page for trips, Nile trips and packages (SRS 13.1 "Trip page"). */
-export async function TripDetailView({ trip, locale }: { trip: TripDetail; locale: Locale }) {
+export async function TripDetailView({ trip, locale, nationality }: { trip: TripDetail; locale: Locale; nationality?: string }) {
   const [t, tc, reviews] = await Promise.all([getTranslations("trip"), getTranslations("common"), getGoogleReviews(locale)]);
   const tn = await getTranslations("nav");
   const tCard = await getTranslations("card");
 
   const similarSource =
     trip.type === "package"
-      ? await getPackages({ per_page: 4 }, locale)
-      : await getTrips({ type: trip.type === "nile" ? "nile" : ["single_day", "multi_day"], destination: undefined, per_page: 8 }, locale);
+      ? await getPackages({ per_page: 4 }, locale, nationality)
+      : await getTrips({ type: trip.type === "nile" ? "nile" : ["single_day", "multi_day"], destination: undefined, per_page: 8 }, locale, nationality);
   const similar = similarSource.data.filter((s) => s.slug !== trip.slug).slice(0, 3);
 
   const listing =

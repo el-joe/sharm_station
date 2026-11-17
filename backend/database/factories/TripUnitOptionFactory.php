@@ -21,7 +21,6 @@ class TripUnitOptionFactory extends Factory
             'name' => ['en' => 'Single buggy', 'it' => 'Buggy singolo'],
             'seats' => 1,
             'price' => 35,
-            'partner_price' => null,
             'max_quantity' => 10,
             'children_allowed' => true,
             'sort' => 0,

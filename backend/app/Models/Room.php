@@ -7,8 +7,10 @@ use App\Enums\RoomPricingMode;
 use App\Enums\RoomStatus;
 use App\Enums\RoomType;
 use App\Models\Concerns\HasChildPolicy;
+use App\Models\Concerns\HasProductPrices;
 use App\Models\Concerns\HasSeasonPrices;
 use App\Models\Concerns\HasTranslations;
+use App\Models\Contracts\Priceable;
 use Carbon\CarbonInterface;
 use Database\Factories\RoomFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -21,13 +23,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'building_id', 'name', 'number', 'room_type', 'max_adults', 'max_children', 'max_total', 'beds', 'size_m2', 'view',
-    'description', 'amenities', 'cover_image', 'pricing_mode', 'base_price', 'partner_price', 'extra_bed_price', 'from_price',
-    'min_nights', 'max_nights', 'status', 'sort',
+    'description', 'amenities', 'cover_image', 'pricing_mode', 'base_price', 'extra_bed_price', 'from_price',
+    'min_nights', 'max_nights', 'status', 'sort', 'seo',
 ])]
-class Room extends Model
+class Room extends Model implements Priceable
 {
     /** @use HasFactory<RoomFactory> */
-    use HasChildPolicy, HasFactory, HasSeasonPrices, HasTranslations;
+    use HasChildPolicy, HasFactory, HasProductPrices, HasSeasonPrices, HasTranslations;
 
     /**
      * @var list<string>
@@ -44,13 +46,13 @@ class Room extends Model
             'pricing_mode' => RoomPricingMode::class,
             'status' => RoomStatus::class,
             'amenities' => 'array',
+            'seo' => 'array',
             'max_adults' => 'integer',
             'max_children' => 'integer',
             'max_total' => 'integer',
             'min_nights' => 'integer',
             'max_nights' => 'integer',
             'base_price' => 'decimal:2',
-            'partner_price' => 'decimal:2',
             'extra_bed_price' => 'decimal:2',
             'from_price' => 'decimal:2',
         ];
@@ -126,5 +128,15 @@ class Room extends Model
     {
         $query->where('status', RoomStatus::Active)
             ->whereHas('building', fn (Builder $building) => $building->published());
+    }
+
+    public function basePriceFor(string $field): ?float
+    {
+        return $field === 'price_per_night' && $this->base_price !== null ? (float) $this->base_price : null;
+    }
+
+    public function priceFields(): array
+    {
+        return ['price_per_night' => $this->pricing_mode === RoomPricingMode::PerPerson ? 'Per person / night' : 'Per night'];
     }
 }

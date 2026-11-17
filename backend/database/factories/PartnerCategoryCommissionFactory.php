@@ -19,7 +19,7 @@ class PartnerCategoryCommissionFactory extends Factory
     {
         return [
             'partner_id' => Partner::factory(),
-            'category' => CommissionCategory::Trips,
+            'category' => CommissionCategory::SingleDayTrips,
             'commission_percent' => 15,
         ];
     }

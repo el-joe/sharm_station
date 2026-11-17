@@ -17,6 +17,7 @@ import { initDependentFields } from './modules/dependent-fields.js';
 import { initCharts } from './modules/charts.js';
 import { initRoomCalendar } from './modules/room-calendar.js';
 import { initAjaxToggles, initAjaxActions } from './modules/ajax-actions.js';
+import { initClipboard, initDialogs, initCharCounters } from './modules/clipboard.js';
 
 function boot(root = document) {
     initSelect2(root);
@@ -39,4 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initRoomCalendar();
     initAjaxToggles();
     initAjaxActions();
+    initClipboard();
+    initDialogs();
+    initCharCounters();
 });

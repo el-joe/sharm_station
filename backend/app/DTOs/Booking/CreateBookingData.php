@@ -34,13 +34,17 @@ final readonly class CreateBookingData
         public string $currency = 'EUR',
         public ?string $packageSlug = null,
         public ?TransferQuoteRequestData $transferQuote = null,
+        public ?string $nationalityCode = null,
+        public ?int $nationalityGroupId = null,
     ) {}
 
     /**
      * @param  array<string, mixed>  $data
      */
-    public static function fromArray(array $data, ?int $userId = null, ?Partner $partner = null, string $locale = 'en', string $currency = 'EUR'): self
+    public static function fromArray(array $data, ?int $userId = null, ?Partner $partner = null, string $locale = 'en', string $currency = 'EUR', ?int $nationalityGroupId = null): self
     {
+        $nationalityCode = isset($data['nationality_code']) ? strtoupper((string) $data['nationality_code']) : null;
+
         $service = self::serviceFor($data);
         $isRoom = $service === ServiceType::Accommodation;
         $isTransfer = $service === ServiceType::Transfer;
@@ -52,20 +56,22 @@ final readonly class CreateBookingData
             leadPhone: $data['lead']['phone'] ?? null,
             travelers: array_values(array_map(TravelerData::fromArray(...), $data['travelers'] ?? [])),
             tripSlug: $isRoom || $isTransfer || $isPackage ? null : ($data['trip_slug'] ?? null),
-            tripQuote: $isRoom || $isTransfer ? null : QuoteRequestData::fromArray($data, $partner, $currency),
+            tripQuote: $isRoom || $isTransfer ? null : QuoteRequestData::fromArray($data, $partner, $currency, $nationalityCode, $nationalityGroupId),
             roomId: $isRoom ? (int) $data['room_id'] : null,
-            roomQuote: $isRoom ? RoomQuoteRequestData::fromArray($data, $partner, $currency) : null,
+            roomQuote: $isRoom ? RoomQuoteRequestData::fromArray($data, $partner, $currency, $nationalityCode, $nationalityGroupId) : null,
             notes: $data['notes'] ?? null,
             userId: $userId,
             partner: $partner,
             locale: $locale,
             currency: $currency,
             packageSlug: $isPackage ? $data['package_slug'] : null,
-            transferQuote: $isTransfer ? TransferQuoteRequestData::fromArray($data['transfer'], $partner, $currency) : null,
+            transferQuote: $isTransfer ? TransferQuoteRequestData::fromArray($data['transfer'], $partner, $currency, $nationalityCode, $nationalityGroupId) : null,
+            nationalityCode: $nationalityCode,
+            nationalityGroupId: $nationalityGroupId,
         );
     }
 
-    public static function fromRequest(FormRequest $request, ?Partner $partner = null, string $currency = 'EUR'): self
+    public static function fromRequest(FormRequest $request, ?Partner $partner = null, string $currency = 'EUR', ?int $nationalityGroupId = null): self
     {
         return self::fromArray(
             $request->validated(),
@@ -73,6 +79,7 @@ final readonly class CreateBookingData
             $partner,
             app()->getLocale(),
             $currency,
+            $nationalityGroupId,
         );
     }
 

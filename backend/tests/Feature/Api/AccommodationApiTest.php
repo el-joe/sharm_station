@@ -20,7 +20,7 @@ beforeEach(function () {
         'stars' => 4,
         'google_place_id' => 'ChIJ-nile-view',
     ]);
-    $this->room = Room::factory()->for($this->building)->create(['base_price' => 85, 'from_price' => 85, 'partner_price' => 70]);
+    $this->room = Room::factory()->for($this->building)->create(['base_price' => 85, 'from_price' => 85]);
 });
 
 test('rooms are listed directly with their building data and the tax included flag', function () {
@@ -70,11 +70,12 @@ test('a room shows its price list, building details and other rooms but no partn
     expect($response->getContent())->not->toContain('partner_from_price');
 });
 
-test('partners see the room partner price', function () {
+test('partners see the customer room price on the public site', function () {
     Sanctum::actingAs(Partner::factory()->create()->user);
 
     $this->getJson("/api/v1/rooms/{$this->room->id}")
-        ->assertJsonPath('data.partner_from_price.amount_eur', 70);
+        ->assertJsonPath('data.from_price.amount_eur', 85)
+        ->assertJsonMissingPath('data.partner_from_price');
 });
 
 test('an unknown room returns 404', function () {

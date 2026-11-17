@@ -48,4 +48,12 @@ class TransferHubRepository extends BaseRepository implements TransferHubReposit
             ->take($limit)
             ->values();
     }
+
+    public function forMcp(): Collection
+    {
+        return $this->query()
+            ->with(['destination:id,name,slug', 'fixedRoutes.vehicleType', 'fixedRoutes.seasonPrices', 'fixedRoutes.productPrices'])
+            ->orderBy('sort')
+            ->get();
+    }
 }

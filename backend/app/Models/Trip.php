@@ -8,8 +8,10 @@ use App\Enums\PublishStatus;
 use App\Enums\TripType;
 use App\Models\Concerns\HasAddons;
 use App\Models\Concerns\HasChildPolicy;
+use App\Models\Concerns\HasProductPrices;
 use App\Models\Concerns\HasSeasonPrices;
 use App\Models\Concerns\HasTranslations;
+use App\Models\Contracts\Priceable;
 use Database\Factories\TripFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -23,15 +25,15 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 #[Fillable([
     'type', 'destination_id', 'category', 'title', 'slug', 'summary', 'description', 'duration_hours', 'days', 'nights',
     'private_enabled', 'group_enabled', 'pricing_mode', 'min_persons', 'max_persons', 'base_price', 'base_child_price',
-    'partner_price', 'from_price', 'deposit_percent', 'free_cancellation_hours', 'highlights', 'included', 'excluded',
+    'from_price', 'deposit_percent', 'free_cancellation_hours', 'highlights', 'included', 'excluded',
     'meeting_point', 'lat', 'lng', 'vessel_name', 'itinerary_from', 'itinerary_to', 'vessel_facilities', 'meal_type',
     'cover_image', 'status', 'seo', 'featured', 'sort', 'unit_label', 'faq', 'what_to_bring', 'guide_languages',
     'cancellation_policy', 'cabins',
 ])]
-class Trip extends Model
+class Trip extends Model implements Priceable
 {
     /** @use HasFactory<TripFactory> */
-    use HasAddons, HasChildPolicy, HasFactory, HasSeasonPrices, HasTranslations;
+    use HasAddons, HasChildPolicy, HasFactory, HasProductPrices, HasSeasonPrices, HasTranslations;
 
     /**
      * @var list<string>
@@ -53,7 +55,6 @@ class Trip extends Model
             'duration_hours' => 'decimal:2',
             'base_price' => 'decimal:2',
             'base_child_price' => 'decimal:2',
-            'partner_price' => 'decimal:2',
             'from_price' => 'decimal:2',
             'deposit_percent' => 'decimal:2',
             'lat' => 'decimal:7',
@@ -147,5 +148,41 @@ class Trip extends Model
             BookingType::cases(),
             fn (BookingType $type): bool => $this->supportsBookingType($type),
         ));
+    }
+
+    public function basePriceFor(string $field): ?float
+    {
+        $value = match (true) {
+            $field === 'adult_price' => $this->base_price,
+            $field === 'child_price' => $this->base_child_price,
+            str_starts_with($field, 'tier_prices.') => $this->privateTiers->firstWhere('id', (int) substr($field, 12))?->price_per_person,
+            str_starts_with($field, 'unit_prices.') => $this->unitOptions->firstWhere('id', (int) substr($field, 12))?->price,
+            default => null,
+        };
+
+        return $value !== null ? (float) $value : null;
+    }
+
+    public function priceFields(): array
+    {
+        if ($this->pricing_mode === PricingMode::PerUnit) {
+            return $this->unitOptions->mapWithKeys(fn (TripUnitOption $option): array => ["unit_prices.{$option->id}" => (string) $option->name])->all();
+        }
+
+        $fields = [];
+
+        if ($this->group_enabled) {
+            $fields['adult_price'] = 'Adult';
+            $fields['child_price'] = 'Child';
+        }
+
+        if ($this->private_enabled) {
+            foreach ($this->privateTiers as $tier) {
+                $range = $tier->min_people.($tier->max_people ? '–'.$tier->max_people : '+');
+                $fields["tier_prices.{$tier->id}"] = "Private {$range} pax";
+            }
+        }
+
+        return $fields;
     }
 }

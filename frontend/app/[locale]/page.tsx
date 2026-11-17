@@ -17,6 +17,8 @@ import { SITE_NAME, SITE_URL } from "@/lib/site";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { locale as rootLocale } from "next/root-params";
+import { getNationality } from "@/lib/api/nationality-server";
+import { Suspense } from "react";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await rootLocale();
@@ -26,12 +28,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function HomePage() {
   const locale = (await rootLocale()) as Locale;
-  const [home, t] = await Promise.all([getHome(locale), getTranslations("home")]);
-  const catalog = await getTransferCatalog(locale);
+  // Non-price content (hero, destinations, reviews) is prerendered; the priced sections
+  // depend on the visitor's nationality cookie and stream in behind <Suspense>.
+  const [home, catalog] = await Promise.all([getHome(locale), getTransferCatalog(locale)]);
   const hubs = catalog.hubs;
   const hotels = [...new Map(home.rooms.map((r) => [r.building.slug, { slug: r.building.slug, name: r.building.name, stars: r.building.stars, city: r.building.location }])).values()];
-  const classic = home.packages[0];
-  const cruise = home.nile.find((n) => (n.days ?? 0) > 1) ?? home.nile[0];
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -49,7 +50,23 @@ export default async function HomePage() {
       <HomeHero destinations={home.destinations} hubs={hubs} hotels={hotels} rating={home.hero_stats.rating} />
       <CategoryTiles />
       <DestinationGrid destinations={home.destinations} />
+      <Suspense fallback={<PricedSkeleton />}>
+        <PricedSections locale={locale} />
+      </Suspense>
+      <TransfersSection catalog={catalog} />
+      <WhyBookWithUs />
+      <GoogleReviewsSection data={home.google_reviews} />
+    </>
+  );
+}
 
+/** Featured trips, rooms, Nile cruise and packages, priced for the visitor's nationality. */
+async function PricedSections({ locale }: { locale: Locale }) {
+  const [home, t] = await Promise.all([getHome(locale, await getNationality()), getTranslations("home")]);
+  const classic = home.packages[0];
+  const cruise = home.nile.find((n) => (n.days ?? 0) > 1) ?? home.nile[0];
+  return (
+    <>
       <section className="section-y" aria-labelledby="featured-title">
         <div className="container-page">
           <div id="featured-title">
@@ -95,10 +112,18 @@ export default async function HomePage() {
           </ul>
         </div>
       </section>
-
-      <TransfersSection catalog={catalog} />
-      <WhyBookWithUs />
-      <GoogleReviewsSection data={home.google_reviews} />
     </>
+  );
+}
+
+function PricedSkeleton() {
+  return (
+    <div className="section-y" aria-hidden>
+      <div className="container-page grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="h-[420px] animate-pulse rounded-card bg-ink-100" />
+        ))}
+      </div>
+    </div>
   );
 }

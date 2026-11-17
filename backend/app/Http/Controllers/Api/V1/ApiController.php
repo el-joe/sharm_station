@@ -5,20 +5,22 @@ namespace App\Http\Controllers\Api\V1;
 use App\DTOs\Pricing\QuoteResultData;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\QuoteResource;
-use App\Models\Partner;
+use App\Services\NationalityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 abstract class ApiController extends Controller
 {
     /**
-     * Approved partner resolved by the SetLocaleAndCurrency middleware, if any.
+     * Nationality of the request (?nationality= / X-Nationality / profile) and the group it prices with.
+     *
+     * @return array{0: string|null, 1: int}
      */
-    protected function partner(Request $request): ?Partner
+    protected function nationality(): array
     {
-        $partner = $request->attributes->get('partner');
+        $nationalities = app(NationalityService::class);
 
-        return $partner instanceof Partner ? $partner : null;
+        return [$nationalities->currentCode(), $nationalities->currentGroup()->id];
     }
 
     /**

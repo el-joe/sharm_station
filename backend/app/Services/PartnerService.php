@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Partner applications, approval and the commission matrix (SRS 9).
+ * Partner applications, approval and the commission override matrix (SRS 9).
  */
 class PartnerService
 {
@@ -74,15 +74,17 @@ class PartnerService
         });
     }
 
-    public function approve(Partner $partner, User $approver, ?float $defaultCommission = null): Partner
+    /**
+     * Activates the partner; its commissions come from the global settings unless overridden on its profile.
+     */
+    public function approve(Partner $partner, User $approver): Partner
     {
-        return DB::transaction(function () use ($partner, $approver, $defaultCommission): Partner {
-            $this->partners->update($partner, array_filter([
+        return DB::transaction(function () use ($partner, $approver): Partner {
+            $this->partners->update($partner, [
                 'status' => PartnerStatus::Active,
                 'approved_at' => now(),
                 'approved_by' => $approver->id,
-                'default_commission' => $defaultCommission,
-            ], fn ($value): bool => $value !== null));
+            ]);
 
             $this->users->update($partner->user, ['role' => UserRole::Partner]);
 
@@ -96,24 +98,14 @@ class PartnerService
     }
 
     /**
-     * @param  array<string, float|int|string|null>  $commissions  category value => percent (null removes it)
+     * @param  array<string, float|int|string|null>  $commissions  category value => percent override (null removes it)
      */
-    public function setCommissions(Partner $partner, array $commissions, float|int|string|null $defaultCommission = null): Partner
+    public function setCommissions(Partner $partner, array $commissions): Partner
     {
-        return DB::transaction(function () use ($partner, $commissions, $defaultCommission): Partner {
+        return DB::transaction(function () use ($partner, $commissions): Partner {
             foreach ($commissions as $category => $percent) {
-                $category = CommissionCategory::from($category);
-
-                if ($percent === null || $percent === '') {
-                    $partner->categoryCommissions()->where('category', $category)->delete();
-
-                    continue;
-                }
-
-                $partner->categoryCommissions()->updateOrCreate(['category' => $category], ['commission_percent' => (float) $percent]);
+                $this->partners->setCategoryCommission($partner, CommissionCategory::from($category), $percent === null || $percent === '' ? null : (float) $percent);
             }
-
-            $this->partners->update($partner, ['default_commission' => $defaultCommission !== null && $defaultCommission !== '' ? (float) $defaultCommission : null]);
 
             return $partner->load('categoryCommissions');
         });
@@ -143,13 +135,13 @@ class PartnerService
     public function saveCommissionMatrix(CommissionMatrixData $matrix): int
     {
         return DB::transaction(function () use ($matrix): int {
-            $partners = $this->partners->query()->whereKey(array_keys($matrix->rows))->get()->keyBy('id');
+            $partners = $this->partners->findMany(array_keys($matrix->rows))->keyBy('id');
 
             foreach ($matrix->rows as $partnerId => $row) {
                 $partner = $partners->get($partnerId)
                     ?? throw DomainValidationException::withErrors(['partners' => ["Partner #{$partnerId} does not exist."]]);
 
-                $this->setCommissions($partner, $row['categories'], $row['default']);
+                $this->setCommissions($partner, $row['categories']);
             }
 
             return count($matrix->rows);

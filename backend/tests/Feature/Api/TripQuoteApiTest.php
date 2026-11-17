@@ -70,18 +70,18 @@ test('the request body is validated', function () {
         ->assertJsonValidationErrors(['booking_type', 'travel_date', 'adults']);
 });
 
-test('partners receive partner totals in the quote', function () {
+test('public quotes use customer prices even with a partner token', function () {
     $trip = buggyTrip();
-    $partner = Partner::factory()->create(['default_commission' => 10]);
+    $partner = Partner::factory()->create();
     Sanctum::actingAs($partner->user);
 
     $this->postJson('/api/v1/trips/desert-buggy-safari/quote', buggyQuoteBody($trip))
         ->assertOk()
         ->assertJsonPath('data.retail_total', 85)
-        ->assertJsonPath('data.partner_total', 76.5)
-        ->assertJsonPath('data.commission_amount', 8.5)
-        ->assertJsonPath('data.price_rule', 'default_commission')
-        ->assertJsonPath('data.total', 76.5);
+        ->assertJsonPath('data.total', 85)
+        ->assertJsonMissingPath('data.partner_total')
+        ->assertJsonMissingPath('data.commission_amount')
+        ->assertJsonMissingPath('data.lines.0.partner_total');
 });
 
 test('quoting an unknown trip returns 404', function () {

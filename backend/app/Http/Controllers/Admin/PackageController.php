@@ -13,6 +13,7 @@ use App\Repositories\Contracts\AddonRepositoryInterface;
 use App\Repositories\Contracts\DestinationRepositoryInterface;
 use App\Repositories\Contracts\TripRepositoryInterface;
 use App\Services\PackageService;
+use App\Services\PriceMatrixService;
 use App\Services\SeasonPriceService;
 use App\Services\SettingsService;
 use Illuminate\Http\JsonResponse;
@@ -29,6 +30,7 @@ class PackageController extends Controller
     public function __construct(
         private readonly PackageService $packages,
         private readonly SeasonPriceService $seasons,
+        private readonly PriceMatrixService $matrix,
         private readonly DestinationRepositoryInterface $destinations,
         private readonly TripRepositoryInterface $trips,
         private readonly AddonRepositoryInterface $addons,
@@ -103,7 +105,7 @@ class PackageController extends Controller
             'destinations' => $this->destinations->selectOptions(),
             'trips' => $this->trips->selectOptions('title'),
             'addons' => $this->addons->selectOptions(),
-            'seasons' => $package->exists ? $this->seasons->allFor($package) : collect(),
+            'matrix' => $package->exists ? $this->matrix->editorData($package) : null,
             'commission' => $this->settings->previewCommission(),
         ];
     }

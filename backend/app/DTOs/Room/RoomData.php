@@ -24,7 +24,6 @@ final readonly class RoomData
         public int $maxTotal,
         public RoomPricingMode $pricingMode,
         public float $basePrice,
-        public ?float $partnerPrice = null,
         public int $minNights = 1,
         public ?int $maxNights = null,
         public array $attributes = [],
@@ -35,7 +34,7 @@ final readonly class RoomData
      */
     public static function fromArray(array $data): self
     {
-        $known = ['building_id', 'name', 'room_type', 'max_adults', 'max_children', 'max_total', 'pricing_mode', 'base_price', 'partner_price', 'min_nights', 'max_nights'];
+        $known = ['building_id', 'name', 'room_type', 'max_adults', 'max_children', 'max_total', 'pricing_mode', 'base_price', 'min_nights', 'max_nights'];
 
         return new self(
             buildingId: (int) $data['building_id'],
@@ -46,7 +45,6 @@ final readonly class RoomData
             maxTotal: (int) $data['max_total'],
             pricingMode: RoomPricingMode::from($data['pricing_mode'] ?? RoomPricingMode::PerRoom->value),
             basePrice: (float) $data['base_price'],
-            partnerPrice: isset($data['partner_price']) && $data['partner_price'] !== '' ? (float) $data['partner_price'] : null,
             minNights: (int) ($data['min_nights'] ?? 1),
             maxNights: isset($data['max_nights']) && $data['max_nights'] !== '' ? (int) $data['max_nights'] : null,
             attributes: array_diff_key($data, array_flip($known)),
@@ -73,7 +71,6 @@ final readonly class RoomData
             'max_total' => $this->maxTotal,
             'pricing_mode' => $this->pricingMode,
             'base_price' => $this->basePrice,
-            'partner_price' => $this->partnerPrice,
             'min_nights' => $this->minNights,
             'max_nights' => $this->maxNights,
         ];

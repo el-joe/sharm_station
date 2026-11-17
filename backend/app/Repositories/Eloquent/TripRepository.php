@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Eloquent;
 
+use App\DTOs\Ai\CatalogueQueryData;
 use App\DTOs\Trip\TripAdminFilterData;
 use App\DTOs\Trip\TripFilterData;
 use App\Enums\BookingStatus;
@@ -28,11 +29,16 @@ class TripRepository extends BaseRepository implements TripRepositoryInterface
         return Trip::class;
     }
 
+    /**
+     * Relations the group "from" price needs (cards).
+     */
+    private const PRICE_RELATIONS = ['unitOptions', 'privateTiers', 'seasonPrices', 'productPrices'];
+
     public function paginatePublished(TripFilterData $filters): LengthAwarePaginator
     {
         $query = $this->query()
             ->published()
-            ->with('destination')
+            ->with(['destination', ...self::PRICE_RELATIONS])
             ->when($filters->types !== [], fn (Builder $query) => $query->whereIn('type', $filters->types))
             ->when($filters->destination, fn (Builder $query, string $slug) => $query->whereHas('destination', fn (Builder $destination) => $destination->where('slug', $slug)))
             ->when($filters->bookingType === BookingType::Private, fn (Builder $query) => $query->where('private_enabled', true))
@@ -86,7 +92,7 @@ class TripRepository extends BaseRepository implements TripRepositoryInterface
         return $this->query()
             ->published()
             ->whereIn('type', $types)
-            ->with('destination')
+            ->with(['destination', ...self::PRICE_RELATIONS])
             ->orderByDesc('featured')
             ->orderBy('sort')
             ->limit($limit)
@@ -109,7 +115,7 @@ class TripRepository extends BaseRepository implements TripRepositoryInterface
     public function findForEditor(int $id): Trip
     {
         return $this->query()
-            ->with(['destination', 'unitOptions', 'privateTiers', 'availabilityRules', 'tripDays.items', 'addons'])
+            ->with(['destination', 'unitOptions', 'privateTiers', 'availabilityRules', 'tripDays.items', 'addons', 'seasonPrices', 'productPrices'])
             ->findOrFail($id);
     }
 
@@ -124,5 +130,38 @@ class TripRepository extends BaseRepository implements TripRepositoryInterface
         $this->matchTokens($query, $tokens, ['title', 'destination.name']);
 
         return $query->orderByDesc('featured')->orderBy('sort')->limit($limit)->get();
+    }
+
+    public function forCatalogue(array $types, ?string $destination, array $tokens): Collection
+    {
+        $query = $this->query()
+            ->published()
+            ->whereIn('type', $types)
+            ->with(['destination', ...self::PRICE_RELATIONS])
+            ->when($destination, fn (Builder $query, string $slug) => $query->whereHas('destination', fn (Builder $destination) => $destination->where('slug', $slug)));
+
+        if ($tokens !== []) {
+            $this->matchTokens($query, $tokens, ['title', 'destination.name']);
+        }
+
+        return $query->orderBy('type')->orderByDesc('featured')->orderBy('sort')->get();
+    }
+
+    public function paginateForMcp(CatalogueQueryData $query): LengthAwarePaginator
+    {
+        $builder = $this->query()
+            ->with(['destination:id,name,slug', ...self::PRICE_RELATIONS])
+            ->when($query->type, fn (Builder $builder, TripType $type) => $builder->where('type', $type))
+            ->when($query->destination, fn (Builder $builder, string $slug) => $builder->whereHas('destination', fn (Builder $destination) => $destination->where('slug', $slug)));
+        $this->matchTokens($builder, $query->tokens, ['title', 'slug', 'destination.name']);
+
+        return $builder->orderBy('type')->orderBy('sort')->orderBy('id')->paginate($query->perPage, ['*'], 'page', $query->page);
+    }
+
+    public function findForMcp(int $id): ?Trip
+    {
+        return $this->query()
+            ->with(['destination', 'unitOptions', 'privateTiers', 'tripDays.items', 'seasonPrices', 'productPrices'])
+            ->find($id);
     }
 }

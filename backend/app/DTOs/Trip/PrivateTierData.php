@@ -8,7 +8,6 @@ final readonly class PrivateTierData
         public int $minPeople,
         public ?int $maxPeople,
         public float $pricePerPerson,
-        public ?float $partnerPrice = null,
         public ?int $id = null,
     ) {}
 
@@ -21,7 +20,6 @@ final readonly class PrivateTierData
             minPeople: (int) $data['min_people'],
             maxPeople: isset($data['max_people']) && $data['max_people'] !== '' ? (int) $data['max_people'] : null,
             pricePerPerson: (float) $data['price_per_person'],
-            partnerPrice: isset($data['partner_price']) && $data['partner_price'] !== '' ? (float) $data['partner_price'] : null,
             id: isset($data['id']) ? (int) $data['id'] : null,
         );
     }
@@ -35,7 +33,6 @@ final readonly class PrivateTierData
             'min_people' => $this->minPeople,
             'max_people' => $this->maxPeople,
             'price_per_person' => $this->pricePerPerson,
-            'partner_price' => $this->partnerPrice,
         ];
     }
 }

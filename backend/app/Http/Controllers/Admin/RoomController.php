@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RoomRequest;
 use App\Models\Room;
 use App\Services\BuildingService;
+use App\Services\PriceMatrixService;
 use App\Services\RoomService;
 use App\Services\SeasonPriceService;
 use App\Services\SettingsService;
@@ -26,6 +27,7 @@ class RoomController extends Controller
         private readonly RoomService $rooms,
         private readonly BuildingService $buildings,
         private readonly SeasonPriceService $seasons,
+        private readonly PriceMatrixService $matrix,
         private readonly SettingsService $settings,
     ) {}
 
@@ -93,7 +95,7 @@ class RoomController extends Controller
             'room' => $room,
             'buildings' => $this->buildings->options(),
             'amenities' => BuildingController::AMENITIES,
-            'seasons' => $room->exists ? $this->seasons->allFor($room) : collect(),
+            'matrix' => $room->exists ? $this->matrix->editorData($room) : null,
             'canPrice' => Gate::allows('manage-prices'),
             'commission' => $this->settings->previewCommission(),
         ];

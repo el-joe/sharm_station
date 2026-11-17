@@ -60,4 +60,11 @@ class DestinationRepository extends BaseRepository implements DestinationReposit
 
         return $query->orderByDesc('trips_count')->limit($limit)->get();
     }
+
+    public function activeIdBySlug(string $slug): ?int
+    {
+        $id = $this->query()->where('is_active', true)->where('slug', $slug)->value('id');
+
+        return $id !== null ? (int) $id : null;
+    }
 }

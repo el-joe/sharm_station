@@ -60,6 +60,7 @@ function packageBookingBody(array $overrides = []): array
         'booking_type' => 'group',
         'travel_date' => '2026-11-25',
         'adults' => 2,
+        'nationality_code' => 'IT',
         'lead' => ['name' => 'Giulia Rossi', 'email' => 'giulia@example.com'],
         'travelers' => [
             ['first_name' => 'Giulia', 'last_name' => 'Rossi', 'type' => 'adult'],
@@ -156,17 +157,16 @@ test('package quotes validate party size, booking type and date', function () {
         ->assertJsonValidationErrors(['booking_type', 'travel_date', 'adults']);
 });
 
-test('partners get the partner total on package quotes', function () {
-    classicPackage(['partner_price' => 900]);
-    $partner = Partner::factory()->create(['default_commission' => 10]);
+test('public package quotes use customer prices even for partners', function () {
+    classicPackage();
+    $partner = Partner::factory()->create();
     Sanctum::actingAs($partner->user);
 
     $this->postJson('/api/v1/packages/classic-egypt/quote', ['booking_type' => 'group', 'travel_date' => '2026-11-25', 'adults' => 2])
         ->assertOk()
-        ->assertJsonPath('data.total', 1800)
-        ->assertJsonPath('data.partner_total', 1800)
+        ->assertJsonPath('data.total', 1980)
         ->assertJsonPath('data.retail_total', 1980)
-        ->assertJsonPath('data.price_rule', 'partner_price');
+        ->assertJsonMissingPath('data.partner_total');
 });
 
 test('a package booking creates included-transfer tasks without price', function () {

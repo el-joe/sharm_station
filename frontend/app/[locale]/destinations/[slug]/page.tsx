@@ -1,4 +1,5 @@
 import { DestinationView } from "@/components/destinations/DestinationView";
+import { getNationality } from "@/lib/api/nationality-server";
 import { getDestination, getDestinations, getPackages, getRooms } from "@/lib/api/server";
 import type { Locale } from "@/lib/api/types";
 import { destinationGuide } from "@/lib/content/destinations";
@@ -31,9 +32,10 @@ export default function Page({ params }: PageProps<"/[locale]/destinations/[slug
 async function Content({ params }: { params: PageProps<"/[locale]/destinations/[slug]">["params"] }) {
   const { locale: l, slug } = await params;
   const locale = l as Locale;
-  const destination = await getDestination(slug, locale);
+  const nationality = await getNationality();
+  const destination = await getDestination(slug, locale, nationality);
   if (!destination) notFound();
-  const [rooms, packages, all] = await Promise.all([getRooms({ destination: slug }, locale), getPackages({ per_page: 48 }, locale), getDestinations(locale)]);
+  const [rooms, packages, all] = await Promise.all([getRooms({ destination: slug }, locale, nationality), getPackages({ per_page: 48 }, locale, nationality), getDestinations(locale)]);
   const name = destination.name.toLowerCase();
   const pkgs = packages.data.filter((p) => p.destination.slug === slug || p.route?.some((r) => r.name.toLowerCase().includes(name) || name.includes(r.name.toLowerCase())));
   const related = all.filter((d) => d.slug !== slug).slice(0, 3);

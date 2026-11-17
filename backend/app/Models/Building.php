@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'name', 'slug', 'type', 'destination_id', 'address', 'lat', 'lng', 'stars', 'description', 'amenities', 'cover_image',
     'check_in_from', 'check_out_until', 'deposit_percent', 'cancellation_policy', 'free_cancellation_hours', 'taxes_included', 'tax_per_night',
-    'google_place_id', 'phone', 'email', 'status', 'featured',
+    'google_place_id', 'phone', 'email', 'status', 'featured', 'seo',
 ])]
 class Building extends Model
 {
@@ -39,6 +39,7 @@ class Building extends Model
             'type' => BuildingType::class,
             'status' => PublishStatus::class,
             'amenities' => 'array',
+            'seo' => 'array',
             'stars' => 'integer',
             'free_cancellation_hours' => 'integer',
             'deposit_percent' => 'decimal:2',

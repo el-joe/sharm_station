@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['trip_id', 'min_people', 'max_people', 'price_per_person', 'partner_price'])]
+#[Fillable(['trip_id', 'min_people', 'max_people', 'price_per_person'])]
 class TripPrivateTier extends Model
 {
     /** @use HasFactory<TripPrivateTierFactory> */
@@ -23,7 +23,6 @@ class TripPrivateTier extends Model
             'min_people' => 'integer',
             'max_people' => 'integer',
             'price_per_person' => 'decimal:2',
-            'partner_price' => 'decimal:2',
         ];
     }
 

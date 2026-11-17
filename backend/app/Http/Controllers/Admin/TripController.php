@@ -12,6 +12,7 @@ use App\Http\Requests\Admin\TripRequest;
 use App\Models\Trip;
 use App\Repositories\Contracts\AddonRepositoryInterface;
 use App\Repositories\Contracts\DestinationRepositoryInterface;
+use App\Services\PriceMatrixService;
 use App\Services\SeasonPriceService;
 use App\Services\SettingsService;
 use App\Services\TripService;
@@ -29,6 +30,7 @@ class TripController extends Controller
     public function __construct(
         private readonly TripService $trips,
         private readonly SeasonPriceService $seasons,
+        private readonly PriceMatrixService $matrix,
         private readonly DestinationRepositoryInterface $destinations,
         private readonly AddonRepositoryInterface $addons,
         private readonly SettingsService $settings,
@@ -98,7 +100,7 @@ class TripController extends Controller
             'trip' => $trip,
             'destinations' => $this->destinations->selectOptions(),
             'addons' => $this->addons->selectOptions(),
-            'seasons' => $trip->exists ? $this->seasons->allFor($trip) : collect(),
+            'matrix' => $trip->exists ? $this->matrix->editorData($trip) : null,
             'canPrice' => Gate::allows('manage-prices'),
             'commission' => $this->settings->previewCommission(),
         ];

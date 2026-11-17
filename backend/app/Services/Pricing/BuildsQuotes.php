@@ -3,6 +3,7 @@
 namespace App\Services\Pricing;
 
 use App\DTOs\Pricing\AddonSelectionData;
+use App\DTOs\Pricing\CommissionData;
 use App\DTOs\Pricing\QuoteLineData;
 use App\DTOs\Pricing\QuoteRequestData;
 use App\DTOs\Pricing\QuoteResultData;
@@ -11,13 +12,15 @@ use App\Enums\CommissionCategory;
 use App\Enums\PriceRule;
 use App\Enums\ServiceType;
 use App\Models\Addon;
+use App\Models\NationalityGroup;
 use App\Models\Partner;
 use Illuminate\Support\Collection;
 
 /**
  * Shared line, error and totals handling for the pricing engines.
  *
- * Requires $partnerPricing (PartnerPricingService) and $currencies (CurrencyService) on the using class.
+ * Requires $commissions (CommissionResolver), $nationalities (NationalityService) and $currencies (CurrencyService)
+ * on the using class.
  */
 trait BuildsQuotes
 {
@@ -25,6 +28,14 @@ trait BuildsQuotes
      * @var array<string, list<string>>
      */
     private array $errors = [];
+
+    private bool $partnerQuote = false;
+
+    private ?CommissionData $commission = null;
+
+    private ?NationalityGroup $nationalityGroup = null;
+
+    private ?string $nationalityCode = null;
 
     private function resetErrors(): void
     {
@@ -44,19 +55,41 @@ trait BuildsQuotes
     }
 
     /**
-     * Builds a priced line: retail rounded per line, partner price resolved by priority.
+     * Starts a quote: partner prices are only computed for partner-panel quotes (CR-15), with the
+     * commission of the product's type resolved once (accommodation: null category, 0 %).
+     */
+    private function beginQuote(?Partner $partner, ?CommissionCategory $category, ?int $nationalityGroupId, ?string $nationalityCode): void
+    {
+        $this->resetErrors();
+        $this->partnerQuote = $partner !== null && $partner->isActive();
+        $this->commission = $this->partnerQuote ? $this->commissions->resolve($partner, $category) : null;
+        $this->nationalityGroup = $this->nationalities->groupFor(null);
+
+        if ($nationalityGroupId !== null) {
+            $this->nationalityGroup = $this->nationalities->groups()->firstWhere('id', $nationalityGroupId) ?? $this->nationalityGroup;
+        } elseif ($nationalityCode !== null) {
+            $this->nationalityGroup = $this->nationalities->groupFor($nationalityCode);
+        }
+
+        $this->nationalityCode = $nationalityCode;
+    }
+
+    /**
+     * Builds a priced line: customer price rounded per line; on partner quotes the commission
+     * percentage is applied to the unit price and to the line total (each rounded to cents).
      *
      * @param  array<string, mixed>  $meta
      */
-    private function line(string $type, string $label, int $quantity, float $unitPrice, ?float $explicitPartnerPrice, ?Partner $partner, CommissionCategory $category, array $meta = [], bool $commissionable = true): QuoteLineData
+    private function line(string $type, string $label, int $quantity, float $unitPrice, array $meta = [], bool $commissionable = true): QuoteLineData
     {
         $unitPrice = round($unitPrice, 2);
         $total = round($unitPrice * $quantity, 2);
-        $rule = $commissionable ? $this->partnerPricing->resolve($partner, $category, $explicitPartnerPrice) : null;
 
-        if ($partner !== null && $rule === null) {
-            return new QuoteLineData($type, $label, $quantity, $unitPrice, $total, $unitPrice, $total, PriceRule::Retail, $meta);
+        if (! $this->partnerQuote) {
+            return new QuoteLineData($type, $label, $quantity, $unitPrice, $total, meta: $meta);
         }
+
+        $commission = $commissionable && $this->commission !== null ? $this->commission : CommissionData::none();
 
         return new QuoteLineData(
             type: $type,
@@ -64,9 +97,9 @@ trait BuildsQuotes
             quantity: $quantity,
             unitPrice: $unitPrice,
             total: $total,
-            partnerUnitPrice: $rule?->unitPrice($unitPrice),
-            partnerTotal: $rule?->lineTotal($total, $quantity),
-            priceRule: $rule?->rule,
+            partnerUnitPrice: $commission->apply($unitPrice),
+            partnerTotal: $commission->apply($total),
+            commissionPercent: $commission->percent,
             meta: $meta,
         );
     }
@@ -75,24 +108,12 @@ trait BuildsQuotes
      * @param  list<QuoteLineData>  $lines
      * @param  array<string, mixed>  $context
      */
-    private function buildResult(ServiceType $serviceType, array $lines, ?string $seasonName, ?Partner $partner, float $depositPercent, string $currency, array $context): QuoteResultData
+    private function buildResult(ServiceType $serviceType, array $lines, ?string $seasonName, float $depositPercent, string $currency, array $context): QuoteResultData
     {
         $retailTotal = round(array_sum(array_map(fn (QuoteLineData $line): float => $line->total, $lines)), 2);
-        $partnerTotal = null;
-        $priceRule = PriceRule::Retail;
-
-        if ($partner !== null) {
-            $partnerTotal = round(array_sum(array_map(fn (QuoteLineData $line): float => (float) $line->partnerTotal, $lines)), 2);
-            $rules = array_values(array_unique(array_map(
-                fn (QuoteLineData $line): string => ($line->priceRule ?? PriceRule::Retail)->value,
-                array_filter($lines, fn (QuoteLineData $line): bool => $line->type !== QuoteLineData::TYPE_TAX),
-            )));
-            $priceRule = match (count($rules)) {
-                0 => PriceRule::Retail,
-                1 => PriceRule::from($rules[0]),
-                default => PriceRule::Mixed,
-            };
-        }
+        $partnerTotal = $this->partnerQuote
+            ? round(array_sum(array_map(fn (QuoteLineData $line): float => (float) $line->partnerTotal, $lines)), 2)
+            : null;
 
         $total = $partnerTotal ?? $retailTotal;
         $depositAmount = round($total * $depositPercent / 100, 2);
@@ -106,7 +127,8 @@ trait BuildsQuotes
             retailTotal: $retailTotal,
             partnerTotal: $partnerTotal,
             commissionAmount: $partnerTotal !== null ? round($retailTotal - $partnerTotal, 2) : 0.0,
-            priceRule: $priceRule,
+            priceRule: $this->commission?->source ?? PriceRule::None,
+            commissionPercent: $this->commission?->percent,
             total: $total,
             depositPercent: $depositPercent,
             depositAmount: $depositAmount,
@@ -120,6 +142,7 @@ trait BuildsQuotes
             ],
             errors: $this->errors,
             context: $context,
+            nationality: ['code' => $this->nationalityCode, 'group' => $this->nationalityGroup?->summary()],
         );
     }
 
@@ -129,7 +152,7 @@ trait BuildsQuotes
      * @param  Collection<int, Addon>  $addons
      * @return list<QuoteLineData>
      */
-    private function productAddonLines(Collection $addons, QuoteRequestData $request, int $persons, int $unitCount, ?Partner $partner, CommissionCategory $category, string $productLabel = 'trip'): array
+    private function productAddonLines(Collection $addons, QuoteRequestData $request, int $persons, int $unitCount, string $productLabel = 'trip'): array
     {
         $available = $addons->filter(fn (Addon $addon): bool => $addon->is_active)->keyBy('id');
 
@@ -175,7 +198,7 @@ trait BuildsQuotes
                 continue;
             }
 
-            $lines[] = $this->line(QuoteLineData::TYPE_ADDON, (string) $addon->name, $quantity, (float) $addon->price, $this->nullableFloat($addon->partner_price), $partner, $category, [
+            $lines[] = $this->line(QuoteLineData::TYPE_ADDON, (string) $addon->name, $quantity, (float) $addon->price, [
                 'addon_id' => $addon->id,
                 'pricing_basis' => $addon->pricing_basis->value,
                 'required' => $addon->required,

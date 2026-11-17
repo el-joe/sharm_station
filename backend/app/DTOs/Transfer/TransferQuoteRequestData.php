@@ -29,12 +29,14 @@ final readonly class TransferQuoteRequestData
         public ?string $flightNumber = null,
         public ?Partner $partner = null,
         public string $currency = 'EUR',
+        public ?string $nationalityCode = null,
+        public ?int $nationalityGroupId = null,
     ) {}
 
     /**
      * @param  array<string, mixed>  $data
      */
-    public static function fromArray(array $data, ?Partner $partner = null, string $currency = 'EUR'): self
+    public static function fromArray(array $data, ?Partner $partner = null, string $currency = 'EUR', ?string $nationalityCode = null, ?int $nationalityGroupId = null): self
     {
         $roundTrip = (bool) ($data['round_trip'] ?? false);
 
@@ -55,11 +57,13 @@ final readonly class TransferQuoteRequestData
             flightNumber: $data['flight_number'] ?? null,
             partner: $partner,
             currency: $currency,
+            nationalityCode: $nationalityCode,
+            nationalityGroupId: $nationalityGroupId,
         );
     }
 
-    public static function fromRequest(FormRequest $request, ?Partner $partner = null, string $currency = 'EUR'): self
+    public static function fromRequest(FormRequest $request, ?Partner $partner = null, string $currency = 'EUR', ?string $nationalityCode = null, ?int $nationalityGroupId = null): self
     {
-        return self::fromArray($request->validated(), $partner, $currency);
+        return self::fromArray($request->validated(), $partner, $currency, $nationalityCode, $nationalityGroupId);
     }
 }

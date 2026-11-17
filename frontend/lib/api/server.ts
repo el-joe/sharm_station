@@ -1,8 +1,13 @@
 /**
  * Cached server-side data access (Cache Components). Every function takes the
  * locale explicitly so it becomes part of the cache key. Prices are fetched in
- * EUR and converted in the browser (currency is a per-visitor cookie), which
- * keeps the catalogue pages in the static shell.
+ * EUR and converted in the browser (currency is a per-visitor cookie).
+ *
+ * Priced getters also take the visitor's nationality (CR-10): it is read from the
+ * `ssv_nationality` cookie inside a <Suspense> boundary (see ./nationality-server.ts)
+ * and passed in as an argument, so it is part of the cache key and prices are never
+ * shared between nationalities. Calls without it (metadata, static params) get the
+ * default-group prices and must not render prices.
  */
 import { cacheLife, cacheTag } from "next/cache";
 import { api } from "./client";
@@ -16,53 +21,53 @@ export async function getMeta(locale: Locale) {
   return api.meta({ locale });
 }
 
-export async function getHome(locale: Locale) {
+export async function getHome(locale: Locale, nationality?: string) {
   "use cache";
   cacheLife("minutes");
   cacheTag("home");
-  return api.home({ locale });
+  return api.home({ locale, nationality });
 }
 
-export async function getTrips(filters: TripFilters, locale: Locale) {
+export async function getTrips(filters: TripFilters, locale: Locale, nationality?: string) {
   "use cache";
   cacheLife("minutes");
   cacheTag("trips");
-  return api.trips(filters, { locale });
+  return api.trips(filters, { locale, nationality });
 }
 
-export async function getPackages(filters: TripFilters, locale: Locale) {
+export async function getPackages(filters: TripFilters, locale: Locale, nationality?: string) {
   "use cache";
   cacheLife("minutes");
   cacheTag("packages");
-  return api.packages(filters, { locale });
+  return api.packages(filters, { locale, nationality });
 }
 
-export async function getTrip(slug: string, locale: Locale) {
+export async function getTrip(slug: string, locale: Locale, nationality?: string) {
   "use cache";
   cacheLife("minutes");
   cacheTag("trips", `trip:${slug}`);
-  return api.trip(slug, { locale });
+  return api.trip(slug, { locale, nationality });
 }
 
-export async function getPackage(slug: string, locale: Locale) {
+export async function getPackage(slug: string, locale: Locale, nationality?: string) {
   "use cache";
   cacheLife("minutes");
   cacheTag("packages", `package:${slug}`);
-  return api.packageDetail(slug, { locale });
+  return api.packageDetail(slug, { locale, nationality });
 }
 
-export async function getRooms(filters: RoomFilters, locale: Locale) {
+export async function getRooms(filters: RoomFilters, locale: Locale, nationality?: string) {
   "use cache";
   cacheLife("minutes");
   cacheTag("rooms");
-  return api.rooms(filters, { locale });
+  return api.rooms(filters, { locale, nationality });
 }
 
-export async function getRoom(id: number, locale: Locale) {
+export async function getRoom(id: number, locale: Locale, nationality?: string) {
   "use cache";
   cacheLife("minutes");
   cacheTag("rooms", `room:${id}`);
-  return api.room(id, { locale });
+  return api.room(id, { locale, nationality });
 }
 
 export async function getGoogleReviews(locale: Locale) {
@@ -106,11 +111,18 @@ export async function getDestinations(locale: Locale) {
   return api.destinations({ locale });
 }
 
-export async function getDestination(slug: string, locale: Locale) {
+export async function getDestination(slug: string, locale: Locale, nationality?: string) {
   "use cache";
   cacheLife("minutes");
   cacheTag("destinations", `destination:${slug}`);
-  return api.destinationDetail(slug, { locale });
+  return api.destinationDetail(slug, { locale, nationality });
+}
+
+export async function getBuilding(slug: string, locale: Locale, nationality?: string) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("rooms", `building:${slug}`);
+  return api.building(slug, { locale, nationality });
 }
 
 export async function getTransferCatalog(locale: Locale) {

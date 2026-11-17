@@ -20,7 +20,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Trip detail. Partner fields are present only for approved partners.
+ * Trip detail with the customer prices of the request's nationality group (never partner prices).
  *
  * @mixin Trip
  */
@@ -33,9 +33,6 @@ class TripResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $category = $this->type->commissionCategory();
-        $isPartner = $this->partner($request) !== null;
-
         return [
             ...(new TripCardResource($this->resource))->toArray($request),
             'description' => $this->description,
@@ -46,26 +43,23 @@ class TripResource extends JsonResource
             'location' => $this->lat !== null ? ['lat' => (float) $this->lat, 'lng' => (float) $this->lng] : null,
             'deposit_percent' => (float) $this->deposit_percent,
             'group_prices' => $this->group_enabled && $this->pricing_mode === PricingMode::PerPerson ? [
-                'adult' => $this->money($this->base_price),
-                'child' => $this->money($this->base_child_price),
+                'adult' => $this->groupBasePrice($this->resource, 'adult_price'),
+                'child' => $this->groupBasePrice($this->resource, 'child_price'),
             ] : null,
-            'partner_group_price' => $this->when($isPartner && $this->group_enabled, fn (): ?array => $this->partnerMoney($request, $category, $this->base_price, $this->partner_price)),
             'private_tiers' => $this->privateTiers->map(fn (TripPrivateTier $tier): array => [
                 'id' => $tier->id,
                 'label' => $tier->label(),
                 'min_people' => $tier->min_people,
                 'max_people' => $tier->max_people,
-                'price_per_person' => $this->money($tier->price_per_person),
-                ...($isPartner ? ['partner_price_per_person' => $this->partnerMoney($request, $category, $tier->price_per_person, $tier->partner_price)] : []),
+                'price_per_person' => $this->groupBasePrice($this->resource, "tier_prices.{$tier->id}"),
             ])->values(),
             'unit_options' => $this->unitOptions->map(fn (TripUnitOption $option): array => [
                 'id' => $option->id,
                 'name' => $option->name,
                 'seats' => $option->seats,
-                'price' => $this->money($option->price),
+                'price' => $this->groupBasePrice($this->resource, "unit_prices.{$option->id}"),
                 'max_quantity' => $option->max_quantity,
                 'children_allowed' => $option->children_allowed,
-                ...($isPartner ? ['partner_price' => $this->partnerMoney($request, $category, $option->price, $option->partner_price)] : []),
             ])->values(),
             'price_list' => $this->priceList($this->resource),
             'child_policy' => $this->childPolicy ? [
@@ -105,7 +99,6 @@ class TripResource extends JsonResource
                 'required' => $addon->required,
                 'max_quantity' => $addon->max_quantity,
                 'booking_types' => $addon->booking_types ?? [],
-                ...($isPartner ? ['partner_price' => $this->partnerMoney($request, $category, $addon->price, $addon->partner_price)] : []),
             ])->values(),
             'nile' => $this->when($this->type === TripType::Nile, fn (): array => [
                 'vessel_name' => $this->vessel_name,

@@ -80,18 +80,17 @@ test('destinations are created, updated and protected from deletion while in use
     expect(Destination::query()->find($destination->id))->not->toBeNull();
 });
 
-test('add-ons are created with booking types and validated partner price', function () {
+test('add-ons are created with booking types and no partner price', function () {
     $this->actingAs($this->admin)->post(route('admin.addons.store'), [
         'name' => ['en' => 'Hotel pick-up'], 'price' => 10, 'partner_price' => 8, 'pricing_basis' => 'per_booking',
         'max_quantity' => 1, 'booking_types' => ['private'], 'is_active' => '1',
     ])->assertRedirect(route('admin.addons.index'));
 
     $addon = Addon::query()->latest('id')->firstOrFail();
-    expect($addon->booking_types)->toBe(['private'])->and((float) $addon->partner_price)->toBe(8.0);
+    expect($addon->booking_types)->toBe(['private'])->and((float) $addon->price)->toBe(10.0)
+        ->and(array_key_exists('partner_price', $addon->getAttributes()))->toBeFalse();
 
-    $this->actingAs($this->admin)->put(route('admin.addons.update', $addon), [
-        'name' => ['en' => 'Hotel pick-up'], 'price' => 10, 'partner_price' => 12, 'pricing_basis' => 'per_booking', 'max_quantity' => 1,
-    ])->assertSessionHasErrors(['partner_price' => 'The partner price cannot be higher than the retail price.']);
+    $this->actingAs($this->admin)->get(route('admin.addons.edit', $addon))->assertOk()->assertDontSee('Partner price');
 });
 
 test('currencies and settings are saved through their services', function () {

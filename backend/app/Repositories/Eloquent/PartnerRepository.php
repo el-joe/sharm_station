@@ -3,6 +3,7 @@
 namespace App\Repositories\Eloquent;
 
 use App\Enums\BookingStatus;
+use App\Enums\CommissionCategory;
 use App\Enums\PartnerStatus;
 use App\Models\Partner;
 use App\Repositories\Contracts\PartnerRepositoryInterface;
@@ -51,5 +52,26 @@ class PartnerRepository extends BaseRepository implements PartnerRepositoryInter
     public function options(): array
     {
         return $this->query()->orderBy('company')->pluck('company', 'id')->all();
+    }
+
+    public function setCategoryCommission(Partner $partner, CommissionCategory $category, ?float $percent): void
+    {
+        if ($percent === null) {
+            $partner->categoryCommissions()->where('category', $category)->delete();
+
+            return;
+        }
+
+        $partner->categoryCommissions()->updateOrCreate(['category' => $category], ['commission_percent' => round($percent, 2)]);
+    }
+
+    public function withCommissionOverrides(): Collection
+    {
+        return $this->query()->whereHas('categoryCommissions')->with('categoryCommissions')->orderBy('company')->get();
+    }
+
+    public function findMany(array $ids): Collection
+    {
+        return $this->query()->whereKey($ids)->get();
     }
 }

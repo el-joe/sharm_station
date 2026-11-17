@@ -16,13 +16,11 @@ use App\Models\Package;
 use App\Models\PackageIncludedTransfer;
 use App\Models\PackageStage;
 use App\Models\PackageStageTrip;
-use App\Models\Partner;
 use App\Models\Trip;
 use App\Models\TripPrivateTier;
 use App\Models\TripUnitOption;
 use App\Services\CurrencyService;
-use App\Services\PartnerPricingService;
-use App\Services\SeasonPriceService;
+use App\Services\NationalityService;
 use Carbon\CarbonImmutable;
 
 /**
@@ -35,8 +33,9 @@ class PackagePricingEngine
     use BuildsQuotes;
 
     public function __construct(
-        private readonly SeasonPriceService $seasons,
-        private readonly PartnerPricingService $partnerPricing,
+        private readonly PriceResolver $prices,
+        private readonly CommissionResolver $commissions,
+        private readonly NationalityService $nationalities,
         private readonly CurrencyService $currencies,
     ) {}
 
@@ -44,28 +43,25 @@ class PackagePricingEngine
     {
         $package->loadMissing([
             'stages.destination', 'stages.stageTrips.trip.privateTiers', 'stages.stageTrips.trip.unitOptions',
-            'stages.stageTrips.trip.seasonPrices', 'includedTransfers', 'childPolicy.bands', 'addons', 'seasonPrices',
+            'stages.stageTrips.trip.seasonPrices', 'stages.stageTrips.trip.productPrices', 'includedTransfers', 'childPolicy.bands',
+            'addons', 'seasonPrices', 'productPrices',
         ]);
 
-        $this->resetErrors();
-        $category = CommissionCategory::Packages;
-        $partner = $request->partner?->isActive() ? $request->partner : null;
+        $this->beginQuote($request->partner, CommissionCategory::Packages, $request->nationalityGroupId, $request->nationalityCode);
         $persons = $request->persons();
 
         $this->validateRequest($package, $request);
 
-        $season = null;
+        $seasonName = null;
 
         if ($package->price_mode === PackagePriceMode::Computed) {
             [$adultPrice, $childPrice] = $this->computedPrices($package, $request);
-            $adultPartnerPrice = null;
             $adultLabel = $request->bookingType === BookingType::Private ? 'Adult (private)' : 'Adult';
         } else {
-            $season = $this->seasons->forDate($package, $request->travelDate);
-            $seasonAdultPrice = $this->nullableFloat($season?->adult_price);
-            $adultPrice = $seasonAdultPrice ?? $this->nullableFloat($package->base_price);
-            $adultPartnerPrice = $seasonAdultPrice !== null ? $this->nullableFloat($season->partner_price) : $this->nullableFloat($package->partner_price);
-            $childPrice = $this->nullableFloat($season?->child_price) ?? $this->nullableFloat($package->base_child_price) ?? $adultPrice;
+            $prices = $this->prices->resolve($package, $this->nationalityGroup?->id, $request->travelDate);
+            $seasonName = $prices->seasonName();
+            $adultPrice = $prices->adult();
+            $childPrice = $prices->child() ?? $adultPrice;
             $adultLabel = 'Adult';
         }
 
@@ -74,16 +70,15 @@ class PackagePricingEngine
         if ($adultPrice === null) {
             $this->addError('booking_type', 'No price is set for this package.');
         } else {
-            $lines = $this->personLines($request, $adultPrice, $adultPartnerPrice, (float) $childPrice, $adultLabel, $package->childPolicy, $partner, $category);
+            $lines = $this->personLines($request, $adultPrice, (float) $childPrice, $adultLabel, $package->childPolicy);
         }
 
-        $lines = [...$lines, ...$this->productAddonLines($package->addons, $request, $persons, 0, $partner, $category, 'package')];
+        $lines = [...$lines, ...$this->productAddonLines($package->addons, $request, $persons, 0, 'package')];
 
         return $this->buildResult(
             serviceType: ServiceType::Package,
             lines: $lines,
-            seasonName: $season?->name,
-            partner: $partner,
+            seasonName: $seasonName,
             depositPercent: (float) $package->deposit_percent,
             currency: $request->currency,
             context: [
@@ -196,11 +191,11 @@ class PackagePricingEngine
      */
     private function tripPersonPrices(Trip $trip, BookingType $bookingType, int $persons, CarbonImmutable $date): array
     {
-        $season = $this->seasons->forDate($trip, $date);
+        $prices = $this->prices->resolve($trip, $this->nationalityGroup?->id, $date);
 
         if ($trip->pricing_mode === PricingMode::PerUnit) {
             $perSeat = $trip->unitOptions
-                ->map(fn (TripUnitOption $option): float => ($season?->unitPriceFor($option->id) ?? (float) $option->price) / max(1, $option->seats))
+                ->map(fn (TripUnitOption $option): float => (float) $prices->unit($option->id) / max(1, $option->seats))
                 ->min();
 
             return [(float) $perSeat, (float) $perSeat];
@@ -210,14 +205,14 @@ class PackagePricingEngine
             $tier = $trip->privateTiers->first(fn (TripPrivateTier $tier): bool => $tier->covers($persons));
 
             if ($tier !== null) {
-                $price = $season?->tierPriceFor($tier->id) ?? (float) $tier->price_per_person;
+                $price = (float) $prices->tier($tier->id);
 
                 return [$price, $price];
             }
         }
 
-        $adult = $this->nullableFloat($season?->adult_price) ?? $this->nullableFloat($trip->base_price) ?? (float) $trip->from_price;
-        $child = $this->nullableFloat($season?->child_price) ?? $this->nullableFloat($trip->base_child_price) ?? $adult;
+        $adult = $prices->adult() ?? (float) $trip->from_price;
+        $child = $prices->child() ?? $adult;
 
         return [$adult, $child];
     }
@@ -227,7 +222,7 @@ class PackagePricingEngine
      *
      * @return list<QuoteLineData>
      */
-    private function personLines(QuoteRequestData $request, float $adultPrice, ?float $adultPartnerPrice, float $childPrice, string $adultLabel, ?ChildPolicy $policy, ?Partner $partner, CommissionCategory $category): array
+    private function personLines(QuoteRequestData $request, float $adultPrice, float $childPrice, string $adultLabel, ?ChildPolicy $policy): array
     {
         $adultQuantity = $request->adults;
         $childGroups = [];
@@ -249,13 +244,12 @@ class PackagePricingEngine
                 $childGroups[$key] ??= [
                     'label' => 'Child '.$band->label(),
                     'price' => $band->applyTo($adultPrice),
-                    'partner' => $adultPartnerPrice !== null ? $band->applyTo($adultPartnerPrice) : null,
                     'quantity' => 0,
                     'meta' => ['child_age_band_id' => $band->id, 'age' => $age, 'ages' => []],
                 ];
             } else {
                 $key = 'child';
-                $childGroups[$key] ??= ['label' => 'Child', 'price' => $childPrice, 'partner' => null, 'quantity' => 0, 'meta' => ['age' => $age, 'ages' => []]];
+                $childGroups[$key] ??= ['label' => 'Child', 'price' => $childPrice, 'quantity' => 0, 'meta' => ['age' => $age, 'ages' => []]];
             }
 
             $childGroups[$key]['quantity']++;
@@ -265,11 +259,11 @@ class PackagePricingEngine
         $lines = [];
 
         if ($adultQuantity > 0) {
-            $lines[] = $this->line(QuoteLineData::TYPE_ADULT, $adultLabel, $adultQuantity, $adultPrice, $adultPartnerPrice, $partner, $category);
+            $lines[] = $this->line(QuoteLineData::TYPE_ADULT, $adultLabel, $adultQuantity, $adultPrice);
         }
 
         foreach ($childGroups as $group) {
-            $lines[] = $this->line(QuoteLineData::TYPE_CHILD, $group['label'], $group['quantity'], $group['price'], $group['partner'], $partner, $category, $group['meta']);
+            $lines[] = $this->line(QuoteLineData::TYPE_CHILD, $group['label'], $group['quantity'], $group['price'], $group['meta']);
         }
 
         return $lines;

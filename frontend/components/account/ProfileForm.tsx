@@ -1,6 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
+import { NationalityCombobox } from "@/components/nationality/NationalityCombobox";
+import { useNationality } from "@/lib/nationality";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api/client";
@@ -11,7 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, Info } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState, type ReactNode } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 type Notice = { tone: "success" | "info" | "error"; text: string } | null;
@@ -55,6 +57,7 @@ export function ProfileForm() {
   const locale = useLocale() as Locale;
   const { user, token, setUser, signOut } = useAuth();
   const { currency, currencies, setCurrency } = useCurrency();
+  const nationality = useNationality();
   const router = useRouter();
   const pathname = usePathname();
   const [notice, setNotice] = useState<Notice>(null);
@@ -68,6 +71,7 @@ export function ProfileForm() {
         locale: z.enum(["en", "it"]),
         currency: z.enum(["EUR", "USD", "GBP", "EGP"]),
         newsletter: z.boolean(),
+        nationality_code: z.string().regex(/^[A-Z]{2}$/, tv("required")),
       }),
     [tv],
   );
@@ -75,7 +79,7 @@ export function ProfileForm() {
   const profile = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
     mode: "onTouched",
-    values: { name: user?.name ?? "", phone: user?.phone ?? "", locale, currency, newsletter: false },
+    values: { name: user?.name ?? "", phone: user?.phone ?? "", locale, currency, newsletter: false, nationality_code: user?.nationality_code ?? nationality.code ?? "" },
     resetOptions: { keepDirtyValues: true },
   });
 
@@ -95,13 +99,17 @@ export function ProfileForm() {
 
   const applyLocal = (v: ProfileValues) => {
     if (v.currency !== currency) setCurrency(v.currency as CurrencyCode);
+    if (v.nationality_code !== nationality.code) void nationality.setNationality(v.nationality_code);
     if (v.locale !== locale) router.replace(pathname, { locale: v.locale });
   };
 
   const onProfile = profile.handleSubmit(async (v) => {
     setNotice(null);
     try {
-      const res = await api.updateProfile({ name: v.name, phone: v.phone || undefined, locale: v.locale, currency: v.currency, newsletter: v.newsletter }, { locale, token: token! });
+      const res = await api.updateProfile(
+        { name: v.name, phone: v.phone || undefined, locale: v.locale, currency: v.currency, newsletter: v.newsletter, nationality_code: v.nationality_code },
+        { locale, token: token! },
+      );
       if (res.status === "ok") {
         setUser(res.data);
         setNotice({ tone: "success", text: t("saved") });
@@ -109,7 +117,7 @@ export function ProfileForm() {
       applyLocal(v);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return void signOut();
-      if (!fieldErrors<ProfileValues>(err, profile.setError, ["name", "phone"])) setNotice({ tone: "error", text: t("error") });
+      if (!fieldErrors<ProfileValues>(err, profile.setError, ["name", "phone", "nationality_code"])) setNotice({ tone: "error", text: t("error") });
     }
   });
 
@@ -128,6 +136,8 @@ export function ProfileForm() {
   });
 
   const pe = profile.formState.errors;
+  const nationalityValue = useWatch({ control: profile.control, name: "nationality_code" });
+  const selectedCountry = nationality.data?.countries.find((c) => c.code === nationalityValue);
   const we = pw.formState.errors;
 
   return (
@@ -145,6 +155,26 @@ export function ProfileForm() {
               <Field label={t("phone")} htmlFor="p-phone" error={pe.phone?.message}>
                 <Input id="p-phone" type="tel" autoComplete="tel" invalid={Boolean(pe.phone)} {...profile.register("phone")} />
               </Field>
+              <div className="flex flex-col gap-1 sm:col-span-2">
+                <NationalityCombobox
+                  id="p-nationality"
+                  label={t("nationality")}
+                  countries={nationality.data?.countries ?? []}
+                  value={nationalityValue || null}
+                  onChange={(c) => profile.setValue("nationality_code", c ?? "", { shouldDirty: true, shouldValidate: true })}
+                  suggestions={[nationality.code]}
+                  invalid={Boolean(pe.nationality_code)}
+                  describedBy="p-nationality-hint"
+                  required
+                />
+                {pe.nationality_code ? (
+                  <p id="p-nationality-hint" className="text-sm text-error" role="alert">{pe.nationality_code.message}</p>
+                ) : (
+                  <p id="p-nationality-hint" className="text-xs text-ink-500">
+                    {selectedCountry ? t("nationalityGroup", { group: selectedCountry.group.name }) : t("nationalityHint")}
+                  </p>
+                )}
+              </div>
             </div>
             <h3 className="mt-2 font-semibold text-ink-900">{t("preferences")}</h3>
             <div className="grid gap-4 sm:grid-cols-2">

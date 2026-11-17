@@ -28,6 +28,7 @@
                     <div><dt class="text-ink-500">Party</dt><dd class="font-medium">{{ $booking->adults }} {{ str('adult')->plural($booking->adults) }}, {{ $booking->children }} {{ str('child')->plural($booking->children) }}</dd></div>
                     <div><dt class="text-ink-500">Season</dt><dd class="font-medium">{{ $booking->season_name ?? 'Base price' }}</dd></div>
                     <div><dt class="text-ink-500">Partner</dt><dd class="font-medium">{{ $booking->partner?->company ?? 'Direct' }}</dd></div>
+                    <div><dt class="text-ink-500">Nationality</dt><dd class="font-medium">{{ $booking->nationality_code ?? '—' }}{{ $booking->nationalityGroup ? ' · '.$booking->nationalityGroup->name : '' }}</dd></div>
                     <div><dt class="text-ink-500">Customer currency</dt><dd class="font-medium">{{ $booking->currency }} {{ number_format((float) $booking->total_in_currency, 2) }} <span class="text-ink-500">@ {{ (float) $booking->exchange_rate }}</span></dd></div>
                 </dl>
                 @if ($booking->notes)
@@ -38,7 +39,7 @@
             <x-admin.card title="Price lines" :padding="false">
                 <div class="overflow-x-auto">
                     <table class="admin-table min-w-[640px]">
-                        <thead><tr><th scope="col">Item</th><th scope="col" class="text-right">Qty</th><th scope="col" class="text-right">Unit</th><th scope="col" class="text-right">Total</th><th scope="col" class="text-right">Partner</th><th scope="col">Rule</th></tr></thead>
+                        <thead><tr><th scope="col">Item</th><th scope="col" class="text-right">Qty</th><th scope="col" class="text-right">Unit</th><th scope="col" class="text-right">Total</th><th scope="col" class="text-right">Partner</th><th scope="col">Commission</th></tr></thead>
                         <tbody>
                             @forelse ($lines as $line)
                                 <tr>
@@ -50,7 +51,7 @@
                                     <td class="text-right tabular-nums">{{ $eur($line['unit_price'] ?? null) }}</td>
                                     <td class="text-right tabular-nums">{{ $eur($line['total'] ?? null) }}</td>
                                     <td class="text-right tabular-nums">{{ $eur($line['partner_total'] ?? null) }}</td>
-                                    <td class="text-xs text-ink-500">{{ isset($line['price_rule']) ? \App\Enums\PriceRule::tryFrom($line['price_rule'])?->label() : '' }}</td>
+                                    <td class="text-xs text-ink-500">{{ isset($line['commission_percent']) ? (float) $line['commission_percent'].'%' : '' }}</td>
                                 </tr>
                             @empty
                                 <tr><td colspan="6" class="py-6 text-center text-ink-500">No price lines stored.</td></tr>
@@ -61,7 +62,7 @@
                 <dl class="grid grid-cols-2 gap-3 border-t border-ink-100 p-5 text-sm sm:grid-cols-4">
                     <div><dt class="text-ink-500">Retail total</dt><dd class="font-semibold tabular-nums">{{ $eur($booking->retail_total) }}</dd></div>
                     <div><dt class="text-ink-500">Partner total</dt><dd class="font-semibold tabular-nums">{{ $eur($booking->partner_total) }}</dd></div>
-                    <div><dt class="text-ink-500">Commission</dt><dd class="font-semibold tabular-nums">{{ $eur($booking->commission_amount) }}</dd></div>
+                    <div><dt class="text-ink-500">Commission{{ $booking->commission_percent !== null ? ' '.(float) $booking->commission_percent.'%' : '' }}</dt><dd class="font-semibold tabular-nums">{{ $eur($booking->commission_amount) }}</dd></div>
                     <div><dt class="text-ink-500">Charged ({{ $booking->price_rule->label() }})</dt><dd class="text-lg font-bold tabular-nums">{{ $eur($booking->total) }}</dd></div>
                 </dl>
             </x-admin.card>

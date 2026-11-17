@@ -428,6 +428,8 @@ export interface CreateBookingRequest {
   currency: CurrencyCode;
   /** Set for packages: the booking is created with `package_slug`. */
   product_type?: TripType;
+  /** ISO-2 nationality of the booker (required by POST /bookings, CR-10). */
+  nationality_code: string;
 }
 
 export interface BookingTotals {
@@ -485,6 +487,8 @@ export interface AuthUser {
   phone?: string | null;
   locale?: Locale | null;
   currency?: CurrencyCode | null;
+  /** ISO-2 nationality saved on the account (CR-10). */
+  nationality_code?: string | null;
   partner?: { id: number; company: string; status: PartnerStatus; show_retail_price: boolean } | null;
 }
 
@@ -588,6 +592,7 @@ export interface ProfileUpdate {
   locale: Locale;
   currency: CurrencyCode;
   newsletter?: boolean;
+  nationality_code?: string | null;
 }
 
 export interface PasswordUpdate {
@@ -596,10 +601,50 @@ export interface PasswordUpdate {
   password_confirmation: string;
 }
 
+/* ------------------------------------------------------------------ nationality (CR-10) */
+
+export interface NationalityGroup {
+  id: number;
+  code: string;
+  name: string;
+  is_default: boolean;
+}
+
+export interface Country {
+  code: string;
+  name: string;
+  group: NationalityGroup;
+}
+
+/** GET /nationalities */
+export interface Nationalities {
+  countries: Country[];
+  /** ISO-2 detected from the connection (CF-IPCountry / X-Country-Code), when known. */
+  detected: string | null;
+  detected_group: NationalityGroup | null;
+  default_group: NationalityGroup | null;
+  groups: NationalityGroup[];
+}
+
+/* ------------------------------------------------------------------ partner panel (CR-11..CR-15) */
+
+export type CommissionSource = "partner_override" | "global_setting" | "none";
+export type CommissionCategory = "single_day_trips" | "multi_day_trips" | "nile_trips" | "packages" | "transfers";
+export type CatalogueService = CommissionCategory | "accommodation";
+
+export interface PartnerCommission {
+  category: CommissionCategory;
+  label: string;
+  percent: number;
+  source: CommissionSource;
+  standard_percent: number;
+  override_percent: number | null;
+}
+
 export interface PartnerKpis {
   bookings_month: number;
   sales_month: number;
-  commission_saved_month: number;
+  commission_earned_month: number;
   balance_due: number;
   pending_proofs: number;
 }
@@ -610,6 +655,7 @@ export interface PartnerBooking {
   product_title: string;
   travel_date: string | null;
   lead_name: string;
+  nationality_code: string | null;
   partner_total: number;
   retail_total: number;
   paid: number;
@@ -621,6 +667,7 @@ export interface PartnerBooking {
 
 export interface PartnerDashboard {
   kpis: PartnerKpis;
+  commissions: PartnerCommission[];
   recent_bookings: PartnerBooking[];
 }
 
@@ -630,6 +677,8 @@ export interface PartnerStatement {
   period_start: string;
   period_end: string;
   bookings_count: number;
+  retail_total: number;
+  commission_amount: number;
   partner_total: number;
   paid: number;
   balance: number;
@@ -639,13 +688,20 @@ export interface PartnerStatement {
 }
 
 export interface PartnerPriceRow {
+  service: CatalogueService | string;
   service_type: string;
   title: string;
   slug: string | null;
+  /** "base" (outside every season), "season" (one season of the client's group) or "from" (computed packages). */
+  row_type: "base" | "season" | "from";
   season: string | null;
+  starts_on: string | null;
+  ends_on: string | null;
   pricing_mode: string | null;
   retail_price: number;
   partner_price: number;
+  commission: { percent: number; source: CommissionSource };
+  nationality_group: NationalityGroup | null;
 }
 
 export interface PartnerProfile {
@@ -659,6 +715,145 @@ export interface PartnerProfile {
   status: PartnerStatus;
   notify_bookings: boolean;
   notify_statements: boolean;
+  price_list_enabled?: boolean;
+  show_retail_price?: boolean;
+  commissions?: PartnerCommission[];
+}
+
+export type PartnerProductType = "trip" | "package" | "room" | "transfer";
+
+/** GET /partner/catalogue item. */
+export interface PartnerCatalogueItem {
+  service: CatalogueService;
+  service_type: string;
+  product_type: PartnerProductType;
+  id: number;
+  slug: string | null;
+  title: string;
+  subtitle: string | null;
+  cover_image: string | null;
+  price_unit: string | null;
+  /** "from": lowest price of the active/upcoming seasons (no date chosen); "date": the chosen date's price. */
+  price_basis: "from" | "date";
+  /** Season of the chosen date (null: base price, or no date chosen). */
+  season: string | null;
+  customer_price: number;
+  partner_price: number;
+  commission: { percent: number; source: CommissionSource };
+  nationality_group: NationalityGroup | null;
+  hub_id: number | null;
+  vehicle_type_id: number | null;
+  location: { lat: number; lng: number } | null;
+}
+
+export interface PartnerCatalogueFilters {
+  service: CatalogueService;
+  nationality: string;
+  destination?: string;
+  q?: string;
+  date?: string;
+}
+
+export interface PartnerTransferFields {
+  hub_id: number;
+  vehicle_type_id: number;
+  destination: { name: string; lat: number; lng: number };
+  pickup_at: string;
+  passengers: number;
+  round_trip?: boolean;
+  return_at?: string;
+  flight_number?: string;
+}
+
+/** POST /partner/quotes */
+export interface PartnerQuoteRequest {
+  product_type: PartnerProductType;
+  slug?: string;
+  id?: number;
+  nationality_code: string;
+  booking_type?: BookingType;
+  travel_date?: string;
+  check_in?: string;
+  check_out?: string;
+  adults?: number;
+  children?: number;
+  child_ages?: number[];
+  units?: { unit_option_id: number; quantity: number }[];
+  addons?: { addon_id: number; quantity: number }[];
+  transfer?: PartnerTransferFields;
+}
+
+export interface PartnerQuoteLine {
+  type: string;
+  label: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+  partner_unit_price: number;
+  partner_total: number;
+  commission_percent: number;
+}
+
+export interface PartnerQuote {
+  valid: boolean;
+  season_name: string | null;
+  nationality: { code: string; group: NationalityGroup | null };
+  lines: PartnerQuoteLine[];
+  retail_total: number;
+  partner_total: number;
+  commission_amount: number;
+  commission_percent: number;
+  commission_source: CommissionSource;
+  deposit_percent: number;
+  deposit_amount: number;
+  balance_amount: number;
+  nights?: number;
+}
+
+/** POST /partner/bookings */
+export interface PartnerBookingRequest extends PartnerQuoteRequest {
+  lead: { name: string; email: string; phone?: string };
+  travelers?: { first_name: string; last_name: string; type: "adult" | "child"; age?: number | null }[];
+  payment_method?: string;
+  notes?: string;
+}
+
+/** BookingResource as seen by the partner who made it (partner totals included). */
+export interface PartnerBookingDetail {
+  reference: string;
+  access_token?: string;
+  status: BookingStatus;
+  payment_status: PaymentStatus;
+  service_type: string;
+  booking_type: BookingType | null;
+  season_name: string | null;
+  nationality: { code: string | null; group: NationalityGroup | null };
+  product_title: string;
+  travel_date: string | null;
+  check_in: string | null;
+  check_out: string | null;
+  lead: { name: string; email: string; phone: string };
+  adults: number;
+  children: number;
+  travellers: { first_name: string; last_name: string; type: string; age: number | null }[];
+  lines: { label: string; quantity: number; unit_price: number; total: number; partner_unit_price?: number; partner_total?: number }[];
+  totals: {
+    retail_total: number;
+    total: number;
+    partner_total: number;
+    commission_amount: number;
+    commission_percent: number | null;
+    commission_source: CommissionSource | null;
+    deposit_percent: number;
+    deposit_amount: number;
+    balance_amount: number;
+  };
+  paid: number;
+  due: number;
+  payments: { type: string; status: string; amount: number; method: string | null; paid_at: string | null }[];
+  payment_options: { id?: number; code?: string; type?: string; name: string; proof_required?: boolean }[];
+  transfer: { destination: { name: string }; pickup_at: string; passengers: number } | null;
+  created_at: string;
 }
 
 export interface PaymentMethod {

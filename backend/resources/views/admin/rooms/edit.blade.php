@@ -19,7 +19,7 @@
         <div role="tablist" aria-label="Room editor sections" class="mb-5 flex overflow-x-auto overflow-y-hidden border-b border-ink-300/60">
             <button type="button" role="tab" id="tab-details-tab" aria-controls="tab-details" aria-selected="true" class="tab-link">Details</button>
             <button type="button" role="tab" id="tab-pricing-tab" aria-controls="tab-pricing" aria-selected="false" class="tab-link">Pricing</button>
-            <button type="button" role="tab" id="tab-prices-tab" aria-controls="tab-prices" aria-selected="false" class="tab-link">Price list</button>
+            <button type="button" role="tab" id="tab-prices-tab" aria-controls="tab-prices" aria-selected="false" class="tab-link">Price matrix</button>
         </div>
 
         <form id="room-form" method="POST" action="{{ $room->exists ? route('admin.rooms.update', $room) : route('admin.rooms.store') }}" novalidate>
@@ -51,13 +51,12 @@
 
             <div role="tabpanel" id="tab-pricing" aria-labelledby="tab-pricing-tab" class="space-y-4" hidden>
                 @if ($canPrice)
-                    <x-admin.form-section title="Base price per night" description="Used when no season matches the night. Tax-inclusive when the building's Taxes included flag is on.">
+                    <x-admin.form-section title="Base price per night" description="Product base price, used when neither a season nor the nationality group's base price (Price matrix tab) is set. Partners pay the customer price (no commission on accommodation). Tax-inclusive when the building's Taxes included flag is on.">
                         <x-admin.segmented name="pricing_mode" :selected="$room->pricing_mode ?? RoomPricingMode::PerRoom" :options="[
                             'per_room' => ['Per room', 'One price per night for the room'],
                             'per_person' => ['Per person', 'Price per guest per night'],
                         ]" />
-                        <x-admin.money name="base_price" label="Base price" :value="$room->base_price" retail-for="room" span="md:col-span-2" />
-                        <x-admin.money name="partner_price" label="Partner price (optional)" :value="$room->partner_price" partner-for="room" :commission="$commission" hint="Overrides the commission rule" span="md:col-span-2" />
+                        <x-admin.money name="base_price" label="Base price" :value="$room->base_price" span="md:col-span-2" />
                         <x-admin.money name="extra_bed_price" label="Extra bed" :value="$room->extra_bed_price" span="md:col-span-2" />
                         <x-admin.input name="min_nights" label="Minimum nights" type="number" min="1" :value="$room->min_nights" span="md:col-span-2" />
                         <x-admin.input name="max_nights" label="Maximum nights" type="number" min="1" :value="$room->max_nights" span="md:col-span-2" />
@@ -73,14 +72,11 @@
 
         <div role="tabpanel" id="tab-prices" aria-labelledby="tab-prices-tab" hidden>
             @if (! $room->exists)
-                <x-admin.card><p class="text-sm text-ink-700">Save the room first, then add its seasons.</p></x-admin.card>
+                <x-admin.card><p class="text-sm text-ink-700">Save the room first, then set its prices per nationality group and season.</p></x-admin.card>
             @elseif (! $canPrice)
-                <x-admin.card><p class="text-sm text-ink-700">The price list is managed by agents and super admins.</p></x-admin.card>
+                <x-admin.card><p class="text-sm text-ink-700">The price matrix is managed by agents and super admins.</p></x-admin.card>
             @else
-                @include('admin.partials.season-editor', ['action' => route('admin.rooms.seasons.update', $room), 'seasons' => $seasons, 'columns' => [
-                    ['label' => 'Price per night', 'key' => 'price_per_night'],
-                    ['label' => 'Partner price', 'key' => 'partner_price', 'partner' => true],
-                ]])
+                @include('admin.partials.price-matrix', ['action' => route('admin.rooms.seasons.update', $room), 'matrix' => $matrix])
             @endif
         </div>
     </div>

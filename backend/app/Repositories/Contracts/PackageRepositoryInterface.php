@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Contracts;
 
+use App\DTOs\Ai\CatalogueQueryData;
 use App\DTOs\Package\PackageFilterData;
 use App\Models\Package;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -36,4 +37,19 @@ interface PackageRepositoryInterface extends BaseRepositoryInterface
      * @return Collection<int, Package>
      */
     public function suggest(array $tokens, int $limit): Collection;
+
+    /**
+     * Published packages for the partner catalogue.
+     *
+     * @param  list<string>  $tokens
+     * @return Collection<int, Package>
+     */
+    public function forCatalogue(?string $destination, array $tokens): Collection;
+
+    /**
+     * Packages of every status for the MCP read tools.
+     */
+    public function paginateForMcp(CatalogueQueryData $query): LengthAwarePaginator;
+
+    public function findForMcp(int $id): ?Package;
 }

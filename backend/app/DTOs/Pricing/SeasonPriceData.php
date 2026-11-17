@@ -20,10 +20,11 @@ final readonly class SeasonPriceData
         public bool $isActive = true,
         public ?float $adultPrice = null,
         public ?float $childPrice = null,
-        public ?float $partnerPrice = null,
         public ?array $unitPrices = null,
         public ?array $tierPrices = null,
         public ?float $pricePerNight = null,
+        public ?int $nationalityGroupId = null,
+        public ?float $price = null,
     ) {}
 
     /**
@@ -41,10 +42,11 @@ final readonly class SeasonPriceData
             isActive: (bool) ($data['is_active'] ?? true),
             adultPrice: $nullableFloat('adult_price'),
             childPrice: $nullableFloat('child_price'),
-            partnerPrice: $nullableFloat('partner_price'),
             unitPrices: self::priceMap($data['unit_prices'] ?? null),
             tierPrices: self::priceMap($data['tier_prices'] ?? null),
             pricePerNight: $nullableFloat('price_per_night'),
+            nationalityGroupId: isset($data['nationality_group_id']) && $data['nationality_group_id'] !== '' ? (int) $data['nationality_group_id'] : null,
+            price: $nullableFloat('price'),
         );
     }
 
@@ -64,14 +66,10 @@ final readonly class SeasonPriceData
 
         foreach ($map as $id => $value) {
             if (is_array($value)) {
-                $value = array_filter($value, fn ($price): bool => $price !== null && $price !== '');
+                $value = $value['price'] ?? null;
+            }
 
-                if (! isset($value['price'])) {
-                    continue;
-                }
-
-                $clean[$id] = array_map('floatval', $value);
-            } elseif ($value !== null && $value !== '') {
+            if ($value !== null && $value !== '') {
                 $clean[$id] = (float) $value;
             }
         }
@@ -102,10 +100,11 @@ final readonly class SeasonPriceData
             'is_active' => $this->isActive,
             'adult_price' => $this->adultPrice,
             'child_price' => $this->childPrice,
-            'partner_price' => $this->partnerPrice,
+            'nationality_group_id' => $this->nationalityGroupId,
             'unit_prices' => $this->unitPrices,
             'tier_prices' => $this->tierPrices,
             'price_per_night' => $this->pricePerNight,
+            'price' => $this->price,
         ];
     }
 }

@@ -14,6 +14,10 @@ class UpdateProfileRequest extends FormRequest
         if (is_string($this->input('currency'))) {
             $this->merge(['currency' => strtoupper($this->input('currency'))]);
         }
+
+        if (is_string($this->input('nationality_code'))) {
+            $this->merge(['nationality_code' => strtoupper($this->input('nationality_code'))]);
+        }
     }
 
     public function authorize(): bool
@@ -32,6 +36,7 @@ class UpdateProfileRequest extends FormRequest
             'locale' => ['sometimes', 'required', Rule::in(SetLocaleAndCurrency::LOCALES)],
             'currency' => ['sometimes', 'required', Rule::enum(Currency::class)],
             'newsletter' => ['sometimes', 'boolean'],
+            'nationality_code' => ['sometimes', 'nullable', 'string', 'size:2', Rule::exists('countries', 'code')],
         ];
     }
 }

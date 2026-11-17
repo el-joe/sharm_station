@@ -5,6 +5,8 @@ import { Header } from "@/components/layout/Header";
 import { NewsletterBand } from "@/components/layout/NewsletterBand";
 import { Providers } from "@/components/layout/Providers";
 import { WhatsAppFab } from "@/components/layout/WhatsAppFab";
+import { NationalityGate } from "@/components/nationality/NationalityGate";
+import { Suspense } from "react";
 import { getDirection, routing } from "@/i18n/routing";
 import { getMeta } from "@/lib/api/server";
 import type { Locale } from "@/lib/api/types";
@@ -58,6 +60,9 @@ export default async function LocaleLayout({ children }: LayoutProps<"/[locale]"
             <Footer />
             <WhatsAppFab />
             <CookieBanner />
+            <Suspense fallback={null}>
+              <NationalityGate />
+            </Suspense>
           </Providers>
         </NextIntlClientProvider>
       </body>

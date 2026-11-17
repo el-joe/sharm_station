@@ -7,6 +7,7 @@ use App\Http\Requests\Api\StoreBookingRequest;
 use App\Http\Resources\V1\BookingResource;
 use App\Services\BookingService;
 use App\Services\CurrencyService;
+use App\Services\NationalityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,10 +15,15 @@ class BookingController extends ApiController
 {
     public function __construct(private readonly BookingService $bookings) {}
 
-    public function store(StoreBookingRequest $request, CurrencyService $currencies): JsonResponse
+    /**
+     * Public checkout: always at customer prices, never as a partner booking (CR-15).
+     */
+    public function store(StoreBookingRequest $request, CurrencyService $currencies, NationalityService $nationalities): JsonResponse
     {
+        $groupId = $nationalities->groupFor($request->validated('nationality_code'))->id;
+
         $booking = $this->bookings->createFromQuote(
-            CreateBookingData::fromRequest($request, $this->partner($request), $currencies->current()),
+            CreateBookingData::fromRequest($request, null, $currencies->current(), $groupId),
         );
 
         $resource = new BookingResource($booking);

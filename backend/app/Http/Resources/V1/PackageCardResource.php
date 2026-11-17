@@ -3,7 +3,6 @@
 namespace App\Http\Resources\V1;
 
 use App\Enums\BookingType;
-use App\Enums\CommissionCategory;
 use App\Http\Resources\V1\Concerns\PresentsPrices;
 use App\Models\Package;
 use App\Models\PackageStage;
@@ -35,12 +34,8 @@ class PackageCardResource extends JsonResource
             'pricing_mode' => $this->pricing_mode->value,
             'min_persons' => $this->min_persons,
             'max_persons' => $this->max_persons,
-            'from_price' => $this->money($this->from_price ?? $this->base_price),
+            'from_price' => $this->groupFromPrice($this->resource, $this->from_price ?? $this->base_price),
             'price_unit' => 'per_person',
-            'partner_from_price' => $this->when(
-                $this->partner($request) !== null,
-                fn (): ?array => $this->partnerMoney($request, CommissionCategory::Packages, $this->from_price ?? $this->base_price, $this->partner_price),
-            ),
             'stages' => $this->whenLoaded('stages', fn () => $this->stages->map(fn (PackageStage $stage): array => [
                 'destination' => $stage->destination?->name,
                 'destination_slug' => $stage->destination?->slug,

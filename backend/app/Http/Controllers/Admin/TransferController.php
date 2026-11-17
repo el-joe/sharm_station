@@ -21,6 +21,7 @@ use App\Models\TransferHub;
 use App\Models\TransferRequest;
 use App\Models\VehicleType;
 use App\Repositories\Contracts\DestinationRepositoryInterface;
+use App\Services\PriceMatrixService;
 use App\Services\Pricing\TransferPricingService;
 use App\Services\TransferService;
 use Illuminate\Http\JsonResponse;
@@ -200,7 +201,6 @@ class TransferController extends Controller
                 ['data' => 'hub', 'name' => 'hub', 'title' => 'Hub', 'orderable' => false, 'searchable' => false],
                 ['data' => 'vehicle', 'name' => 'vehicle', 'title' => 'Vehicle', 'orderable' => false, 'searchable' => false],
                 ['data' => 'price', 'name' => 'price', 'title' => 'Price', 'searchable' => false, 'className' => 'text-right tabular-nums'],
-                ['data' => 'partner_price', 'name' => 'partner_price', 'title' => 'Partner', 'searchable' => false, 'className' => 'text-right tabular-nums'],
                 ['data' => 'is_enabled', 'name' => 'is_enabled', 'title' => 'Status', 'searchable' => false],
                 ['data' => 'actions', 'name' => 'actions', 'title' => '', 'orderable' => false, 'searchable' => false, 'className' => 'text-right'],
             ],
@@ -279,6 +279,7 @@ class TransferController extends Controller
             'route' => $route,
             'hubs' => $this->transfers->hubOptions(),
             'vehicles' => $this->transfers->vehicleOptions(),
+            'matrix' => $route->exists ? app(PriceMatrixService::class)->editorData($route) : null,
         ]);
     }
 }

@@ -4,24 +4,23 @@ namespace App\Enums;
 
 use App\Enums\Concerns\HasOptions;
 
+/**
+ * Source of the commission percentage applied to a partner price (CR-11).
+ */
 enum PriceRule: string
 {
     use HasOptions;
 
-    case Retail = 'retail';
-    case PartnerPrice = 'partner_price';
-    case CategoryCommission = 'category_commission';
-    case DefaultCommission = 'default_commission';
-    case Mixed = 'mixed';
+    case PartnerOverride = 'partner_override';
+    case GlobalSetting = 'global_setting';
+    case None = 'none';
 
     public function label(): string
     {
         return match ($this) {
-            self::Retail => 'Retail price',
-            self::PartnerPrice => 'Explicit partner price',
-            self::CategoryCommission => 'Partner category commission',
-            self::DefaultCommission => 'Partner default commission',
-            self::Mixed => 'Mixed rules',
+            self::PartnerOverride => 'Partner override',
+            self::GlobalSetting => 'Global setting',
+            self::None => 'No commission',
         };
     }
 }

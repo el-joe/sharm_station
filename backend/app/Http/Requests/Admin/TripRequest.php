@@ -22,7 +22,7 @@ class TripRequest extends FormRequest
      *
      * @var list<string>
      */
-    public const PRICE_FIELDS = ['pricing_mode', 'min_persons', 'max_persons', 'base_price', 'base_child_price', 'partner_price', 'deposit_percent'];
+    public const PRICE_FIELDS = ['pricing_mode', 'min_persons', 'max_persons', 'base_price', 'base_child_price', 'deposit_percent'];
 
     public function authorize(): bool
     {
@@ -105,13 +105,11 @@ class TripRequest extends FormRequest
             'deposit_percent' => ['required', 'numeric', 'min:0', 'max:100'],
             'base_price' => ['nullable', 'numeric', 'min:0', Rule::requiredIf($canPrice && ! $perUnit && $this->boolean('group_enabled'))],
             'base_child_price' => ['nullable', 'numeric', 'min:0'],
-            'partner_price' => ['nullable', 'numeric', 'min:0'],
             'private_tiers' => ['sometimes', 'array', Rule::requiredIf($canPrice && ! $perUnit && $this->boolean('private_enabled'))],
             'private_tiers.*.id' => ['nullable', 'integer'],
             'private_tiers.*.min_people' => ['required', 'integer', 'min:1'],
             'private_tiers.*.max_people' => ['nullable', 'integer', 'gte:private_tiers.*.min_people'],
             'private_tiers.*.price_per_person' => ['required', 'numeric', 'min:0'],
-            'private_tiers.*.partner_price' => ['nullable', 'numeric', 'min:0'],
             'unit_options' => ['sometimes', 'array', Rule::requiredIf($canPrice && $perUnit)],
             'unit_options.*.id' => ['nullable', 'integer'],
             'unit_options.*.name' => ['required', 'array'],
@@ -119,7 +117,6 @@ class TripRequest extends FormRequest
             'unit_options.*.name.it' => ['nullable', 'string', 'max:80'],
             'unit_options.*.seats' => ['required', 'integer', 'min:1', 'max:50'],
             'unit_options.*.price' => ['required', 'numeric', 'min:0'],
-            'unit_options.*.partner_price' => ['nullable', 'numeric', 'min:0', 'lte:unit_options.*.price'],
             'unit_options.*.max_quantity' => ['required', 'integer', 'min:1', 'max:999'],
             'unit_options.*.children_allowed' => ['boolean'],
             'unit_options.*.sort' => ['nullable', 'integer'],
@@ -190,7 +187,6 @@ class TripRequest extends FormRequest
             'unit_options.required' => 'Add at least one unit option for a per-unit trip.',
             'private_tiers.required' => 'Add at least one private price tier, or disable private bookings.',
             'base_price.required' => 'Enter the group adult price, or disable group bookings.',
-            'unit_options.*.partner_price.lte' => 'The partner price cannot be higher than the retail price.',
             'max_persons.gte' => 'The maximum persons must be at least the minimum.',
         ];
     }

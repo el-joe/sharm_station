@@ -121,7 +121,6 @@ test('rooms are created and get a price list per night', function () {
         'max_total' => 3,
         'pricing_mode' => 'per_room',
         'base_price' => 85,
-        'partner_price' => 70,
         'min_nights' => 2,
         'amenities' => ['wifi'],
     ])->assertSessionHasNoErrors();

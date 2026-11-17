@@ -3,10 +3,13 @@
 namespace App\Http\Resources\V1;
 
 use App\Models\Partner;
+use App\Services\Pricing\CommissionResolver;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
+ * Partner company profile; commissions are read-only (percent per type with its source).
+ *
  * @mixin Partner
  */
 class PartnerProfileResource extends JsonResource
@@ -28,6 +31,8 @@ class PartnerProfileResource extends JsonResource
             'notify_bookings' => (bool) $this->notify_bookings,
             'notify_statements' => (bool) $this->notify_statements,
             'price_list_enabled' => (bool) $this->price_list_enabled,
+            'show_retail_price' => (bool) $this->show_retail_price,
+            'commissions' => app(CommissionResolver::class)->effectiveFor($this->resource),
         ];
     }
 }

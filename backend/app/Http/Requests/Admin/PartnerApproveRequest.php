@@ -16,6 +16,6 @@ class PartnerApproveRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['default_commission' => ['nullable', 'numeric', 'min:0', 'max:100']];
+        return [];
     }
 }

@@ -6,12 +6,12 @@ use App\Enums\CommissionCategory;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Partners x categories commission matrix (SRS 8.5). Empty cells remove the category override.
+ * Partners x commission types override matrix (CR-11). Empty cells remove the override (global setting applies).
  */
 final readonly class CommissionMatrixData
 {
     /**
-     * @param  array<int, array{default: float|null, categories: array<string, float|null>}>  $rows  keyed by partner id
+     * @param  array<int, array{categories: array<string, float|null>}>  $rows  keyed by partner id
      */
     public function __construct(public array $rows) {}
 
@@ -30,7 +30,7 @@ final readonly class CommissionMatrixData
                 $categories[$category->value] = $percent($row['categories'][$category->value] ?? null);
             }
 
-            $rows[(int) $partnerId] = ['default' => $percent($row['default'] ?? null), 'categories' => $categories];
+            $rows[(int) $partnerId] = ['categories' => $categories];
         }
 
         return new self($rows);

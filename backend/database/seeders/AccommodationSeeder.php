@@ -63,7 +63,7 @@ class AccommodationSeeder extends Seeder
             ['Family suite', 'Suite familiare', '401', RoomType::Suite, 4, 2, 5, '1 king bed and 2 single beds', '1 letto king e 2 singoli', 48, 140, 125, 'Nile view', 'Vista Nilo'],
         ];
 
-        foreach ($rooms as $sort => [$nameEn, $nameIt, $number, $type, $maxAdults, $maxChildren, $maxTotal, $bedsEn, $bedsIt, $size, $price, $partnerPrice, $viewEn, $viewIt]) {
+        foreach ($rooms as $sort => [$nameEn, $nameIt, $number, $type, $maxAdults, $maxChildren, $maxTotal, $bedsEn, $bedsIt, $size, $price, , $viewEn, $viewIt]) {
             $room = $nileView->rooms()->create([
                 'name' => ['en' => $nameEn, 'it' => $nameIt],
                 'number' => $number,
@@ -79,7 +79,6 @@ class AccommodationSeeder extends Seeder
                 'cover_image' => '/images/placeholders/room-'.($sort + 1).'.jpg',
                 'pricing_mode' => RoomPricingMode::PerRoom,
                 'base_price' => $price,
-                'partner_price' => $partnerPrice,
                 'extra_bed_price' => $maxTotal > $maxAdults ? 15 : null,
                 'min_nights' => 1,
                 'max_nights' => 21,

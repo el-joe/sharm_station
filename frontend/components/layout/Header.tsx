@@ -2,7 +2,7 @@ import { Link } from "@/i18n/navigation";
 import { Logo } from "@/components/ui/Logo";
 import { PHONE_DISPLAY, whatsappHref } from "@/lib/site";
 import { AccountMenu, FavouritesLink } from "@/components/account/AccountMenu";
-import { PartnerModeBar } from "@/components/partner/PartnerModeBar";
+import { NationalityChip } from "@/components/nationality/NationalityChip";
 import { MessageCircle, Phone } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
@@ -28,7 +28,8 @@ export async function Header() {
               <MessageCircle className="size-4" aria-hidden /> {t("header.whatsapp")}
             </a>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <NationalityChip />
             <Suspense fallback={<LanguageSwitcherFallback />}>
               <LanguageSwitcher />
             </Suspense>
@@ -61,7 +62,6 @@ export async function Header() {
           </div>
         </div>
       </div>
-      <PartnerModeBar />
     </header>
   );
 }

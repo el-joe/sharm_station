@@ -2,8 +2,6 @@
 
 namespace App\DTOs\Pricing;
 
-use App\Enums\PriceRule;
-
 final readonly class QuoteLineData
 {
     public const TYPE_ADULT = 'adult';
@@ -29,7 +27,7 @@ final readonly class QuoteLineData
         public float $total,
         public ?float $partnerUnitPrice = null,
         public ?float $partnerTotal = null,
-        public ?PriceRule $priceRule = null,
+        public ?float $commissionPercent = null,
         public array $meta = [],
     ) {}
 
@@ -46,7 +44,7 @@ final readonly class QuoteLineData
             total: (float) $data['total'],
             partnerUnitPrice: isset($data['partner_unit_price']) ? (float) $data['partner_unit_price'] : null,
             partnerTotal: isset($data['partner_total']) ? (float) $data['partner_total'] : null,
-            priceRule: isset($data['price_rule']) ? PriceRule::from($data['price_rule']) : null,
+            commissionPercent: isset($data['commission_percent']) ? (float) $data['commission_percent'] : null,
             meta: $data['meta'] ?? [],
         );
     }
@@ -68,7 +66,7 @@ final readonly class QuoteLineData
         if ($includePartner) {
             $line['partner_unit_price'] = $this->partnerUnitPrice;
             $line['partner_total'] = $this->partnerTotal;
-            $line['price_rule'] = $this->priceRule?->value;
+            $line['commission_percent'] = $this->commissionPercent;
         }
 
         return $line;

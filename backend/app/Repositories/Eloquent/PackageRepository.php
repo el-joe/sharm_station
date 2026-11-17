@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Eloquent;
 
+use App\DTOs\Ai\CatalogueQueryData;
 use App\DTOs\Package\PackageFilterData;
 use App\Enums\ServiceType;
 use App\Models\Booking;
@@ -28,7 +29,7 @@ class PackageRepository extends BaseRepository implements PackageRepositoryInter
     {
         return $this->query()
             ->published()
-            ->with(['destination', 'stages.destination'])
+            ->with(['destination', 'stages.destination', 'seasonPrices', 'productPrices'])
             ->orderByDesc('featured')
             ->latest('id')
             ->limit($limit)
@@ -39,7 +40,7 @@ class PackageRepository extends BaseRepository implements PackageRepositoryInter
     {
         $query = $this->query()
             ->published()
-            ->with(['destination', 'stages.destination'])
+            ->with(['destination', 'stages.destination', 'seasonPrices', 'productPrices'])
             ->when($filters->destination, fn (Builder $query, string $slug) => $query->where(fn (Builder $query) => $query
                 ->whereHas('destination', fn (Builder $destination) => $destination->where('slug', $slug))
                 ->orWhereHas('stages.destination', fn (Builder $destination) => $destination->where('slug', $slug))))
@@ -106,5 +107,40 @@ class PackageRepository extends BaseRepository implements PackageRepositoryInter
         $this->matchTokens($query, $tokens, ['title', 'destination.name']);
 
         return $query->orderByDesc('featured')->orderBy('sort')->limit($limit)->get();
+    }
+
+    public function forCatalogue(?string $destination, array $tokens): Collection
+    {
+        $query = $this->query()
+            ->published()
+            ->with(['destination', 'seasonPrices', 'productPrices', ...Package::COMPUTED_PRICE_RELATIONS])
+            ->when($destination, fn (Builder $query, string $slug) => $query->where(fn (Builder $query) => $query
+                ->whereHas('destination', fn (Builder $destination) => $destination->where('slug', $slug))
+                ->orWhereHas('stages.destination', fn (Builder $destination) => $destination->where('slug', $slug))));
+
+        if ($tokens !== []) {
+            $this->matchTokens($query, $tokens, ['title', 'destination.name']);
+        }
+
+        return $query->orderByDesc('featured')->orderBy('sort')->get();
+    }
+
+    public function paginateForMcp(CatalogueQueryData $query): LengthAwarePaginator
+    {
+        $builder = $this->query()
+            ->with(['destination:id,name,slug', 'stages.destination:id,name,slug', 'seasonPrices', 'productPrices'])
+            ->when($query->destination, fn (Builder $builder, string $slug) => $builder->where(fn (Builder $any) => $any
+                ->whereHas('destination', fn (Builder $destination) => $destination->where('slug', $slug))
+                ->orWhereHas('stages.destination', fn (Builder $destination) => $destination->where('slug', $slug))));
+        $this->matchTokens($builder, $query->tokens, ['title', 'slug', 'destination.name']);
+
+        return $builder->orderBy('sort')->orderBy('id')->paginate($query->perPage, ['*'], 'page', $query->page);
+    }
+
+    public function findForMcp(int $id): ?Package
+    {
+        return $this->query()
+            ->with(['destination', 'stages.destination', 'stages.stageTrips.trip:id,title,slug,type', 'includedTransfers', 'seasonPrices', 'productPrices'])
+            ->find($id);
     }
 }

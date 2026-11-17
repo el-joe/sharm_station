@@ -36,6 +36,8 @@ class BookingResource extends JsonResource
         $viewer = $request->user('sanctum');
         $showPartner = $this->partner_id !== null && $viewer !== null
             && ($viewer->isStaff() || $viewer->partner?->id === $this->partner_id);
+        // The end client of a partner booking never sees what the partner pays (payments and options are at partner price).
+        $pricesHidden = $this->partner_id !== null && ! $showPartner;
 
         return [
             'reference' => $this->reference,
@@ -47,6 +49,10 @@ class BookingResource extends JsonResource
             'booking_type' => $this->booking_type?->value,
             'pricing_mode' => $this->pricing_mode?->value,
             'season_name' => $this->season_name,
+            'nationality' => [
+                'code' => $this->nationality_code,
+                'group' => $this->nationalityGroup?->summary(),
+            ],
             'product' => $this->bookable ? [
                 'type' => $this->bookable_type,
                 'id' => $this->bookable_id,
@@ -87,10 +93,10 @@ class BookingResource extends JsonResource
                 'total' => (float) $room->total,
             ])->values(),
             'lines' => array_map(
-                fn (array $line): array => $showPartner ? $line : array_diff_key($line, array_flip(['partner_unit_price', 'partner_total', 'price_rule'])),
+                fn (array $line): array => $showPartner ? $line : array_diff_key($line, array_flip(['partner_unit_price', 'partner_total', 'price_rule', 'commission_percent'])),
                 $this->price_lines ?? [],
             ),
-            'totals' => $this->partner_id !== null && ! $showPartner
+            'totals' => $pricesHidden
                 ? ['retail_total' => (float) $this->retail_total, 'base_currency' => 'EUR', 'prices_hidden' => true]
                 : [
                     'retail_total' => (float) $this->retail_total,
@@ -105,17 +111,19 @@ class BookingResource extends JsonResource
                     ...($showPartner ? [
                         'partner_total' => (float) $this->partner_total,
                         'commission_amount' => (float) $this->commission_amount,
+                        'commission_percent' => $this->commission_percent !== null ? (float) $this->commission_percent : null,
+                        'commission_source' => $this->price_rule?->value,
                         'price_rule' => $this->price_rule?->value,
                     ] : []),
                 ],
-            'payment_options' => $this->when($this->paymentOptions !== null, $this->paymentOptions),
-            'payment_summary' => $this->partner_id !== null && ! $showPartner ? null : [
+            'payment_options' => $this->when($this->paymentOptions !== null && ! $pricesHidden, $this->paymentOptions),
+            'payment_summary' => $pricesHidden ? null : [
                 'paid' => $this->paidAmount(),
                 'due' => $this->dueAmount(),
                 'deposit_due' => in_array($this->payment_status, [PaymentStatus::AwaitingPayment, PaymentStatus::ProofRejected, PaymentStatus::Failed, PaymentStatus::AwaitingReceiptReview], true),
                 'currency' => $this->currency,
             ],
-            'payments' => $this->payments->map(fn (Payment $payment): array => [
+            'payments' => $pricesHidden ? [] : $this->payments->map(fn (Payment $payment): array => [
                 'type' => $payment->type->value,
                 'status' => $payment->status->value,
                 'amount' => (float) $payment->amount,

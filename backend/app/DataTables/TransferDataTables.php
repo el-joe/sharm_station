@@ -62,14 +62,13 @@ class TransferDataTables
             ->addColumn('hub', fn (TransferFixedRoute $route): string => e((string) ($route->hub?->name ?? '—')))
             ->addColumn('vehicle', fn (TransferFixedRoute $route): string => e($route->vehicleType ? (string) $route->vehicleType->name : 'All (× multiplier)'))
             ->editColumn('price', fn (TransferFixedRoute $route): string => $this->money($route->price))
-            ->editColumn('partner_price', fn (TransferFixedRoute $route): string => $this->money($route->partner_price))
             ->editColumn('is_enabled', fn (TransferFixedRoute $route): string => StatusChip::html($route->is_enabled ? 'enabled' : 'disabled'))
             ->addColumn('actions', fn (TransferFixedRoute $route): string => $this->actions(
                 $this->editLink(route('admin.transfers.routes.edit', $route)),
                 $this->deleteForm(route('admin.transfers.routes.destroy', $route), 'Delete this fixed route?'),
             ))
             ->filterColumn('destination', fn (Builder $query, string $keyword) => $query->where('transfer_fixed_routes.destination_name->en', 'like', "%{$keyword}%"))
-            ->rawColumns(['destination', 'hub', 'vehicle', 'price', 'partner_price', 'is_enabled', 'actions'])
+            ->rawColumns(['destination', 'hub', 'vehicle', 'price', 'is_enabled', 'actions'])
             ->toJson();
     }
 

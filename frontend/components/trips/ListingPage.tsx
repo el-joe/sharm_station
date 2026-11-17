@@ -1,4 +1,5 @@
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { getNationality } from "@/lib/api/nationality-server";
 import { getMeta, getPackages, getTrips } from "@/lib/api/server";
 import type { Locale } from "@/lib/api/types";
 import { SearchX } from "lucide-react";
@@ -38,8 +39,9 @@ export async function ListingPage({ kind, locale, searchParams }: { kind: Listin
 async function ListingResults({ kind, locale, searchParams }: { kind: ListingKind; locale: Locale; searchParams: SearchParams }) {
   const state = parseListingState(await searchParams);
   const filters = toApiFilters(kind, state);
+  const nationality = await getNationality();
   const [result, meta, t] = await Promise.all([
-    kind === "packages" ? getPackages(filters, locale) : getTrips(filters, locale),
+    kind === "packages" ? getPackages(filters, locale, nationality) : getTrips(filters, locale, nationality),
     getMeta(locale),
     getTranslations("filters"),
   ]);

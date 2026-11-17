@@ -21,7 +21,6 @@ class TripPrivateTierFactory extends Factory
             'min_people' => 1,
             'max_people' => 2,
             'price_per_person' => 60,
-            'partner_price' => null,
         ];
     }
 }

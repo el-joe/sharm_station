@@ -3,11 +3,11 @@
 use App\DTOs\Pricing\RoomQuoteRequestData;
 use App\Enums\CommissionCategory;
 use App\Enums\DiscountType;
+use App\Enums\PriceRule;
 use App\Enums\RoomAvailabilityStatus;
 use App\Enums\RoomPricingMode;
 use App\Models\Building;
 use App\Models\Partner;
-use App\Models\PartnerCategoryCommission;
 use App\Models\Room;
 use App\Models\RoomAvailability;
 use App\Models\SeasonPrice;
@@ -98,12 +98,14 @@ test('per person rooms charge every guest with child band discounts', function (
     expect($quote->retailTotal)->toBe(125.0);
 });
 
-test('partners get the accommodation commission', function () {
-    $partner = Partner::factory()->create(['default_commission' => 10]);
-    PartnerCategoryCommission::factory()->for($partner)->create(['category' => CommissionCategory::Accommodation, 'commission_percent' => 8]);
+test('partners pay the customer price for accommodation (no commission)', function () {
+    $partner = Partner::factory()->create();
+    partnerOverride($partner, CommissionCategory::SingleDayTrips, 30);
 
     $quote = $this->engine->quote($this->room, stay(partner: $partner));
 
-    expect($quote->partnerTotal)->toBe(220.8)
-        ->and($quote->depositAmount)->toBe(66.24);
+    expect($quote->partnerTotal)->toBe($quote->retailTotal)
+        ->and($quote->commissionAmount)->toBe(0.0)
+        ->and($quote->priceRule)->toBe(PriceRule::None)
+        ->and($quote->depositAmount)->toBe(round($quote->retailTotal * 0.3, 2));
 });

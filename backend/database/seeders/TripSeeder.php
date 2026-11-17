@@ -50,13 +50,12 @@ class TripSeeder extends Seeder
             'park_fee' => [['Marine park fee', 'Tassa parco marino'], 5, null, AddonPricingBasis::PerPerson, true, 50],
         ];
 
-        foreach ($definitions as $key => [$name, $price, $partnerPrice, $basis, $required, $maxQuantity]) {
+        foreach ($definitions as $key => [$name, $price, , $basis, $required, $maxQuantity]) {
             $this->addons[$key] = Addon::query()->create([
                 'name' => ['en' => $name[0], 'it' => $name[1]],
                 'description' => ['en' => $name[0].' added to your booking.', 'it' => $name[1].' aggiunto alla prenotazione.'],
                 'image' => '/images/placeholders/addon-'.$key.'.jpg',
                 'price' => $price,
-                'partner_price' => $partnerPrice,
                 'pricing_basis' => $basis,
                 'required' => $required,
                 'max_quantity' => $maxQuantity,
@@ -184,7 +183,7 @@ class TripSeeder extends Seeder
             'sort' => 1,
         ]);
 
-        $single = $trip->unitOptions()->create(['name' => ['en' => 'Single buggy', 'it' => 'Buggy singolo'], 'seats' => 1, 'price' => 35, 'partner_price' => 30, 'max_quantity' => 10, 'children_allowed' => false, 'sort' => 0]);
+        $single = $trip->unitOptions()->create(['name' => ['en' => 'Single buggy', 'it' => 'Buggy singolo'], 'seats' => 1, 'price' => 35, 'max_quantity' => 10, 'children_allowed' => false, 'sort' => 0]);
         $double = $trip->unitOptions()->create(['name' => ['en' => 'Double buggy', 'it' => 'Buggy doppio'], 'seats' => 2, 'price' => 50, 'max_quantity' => 10, 'children_allowed' => true, 'sort' => 1]);
         $family = $trip->unitOptions()->create(['name' => ['en' => 'Family buggy', 'it' => 'Buggy familiare'], 'seats' => 4, 'price' => 90, 'max_quantity' => 5, 'children_allowed' => true, 'sort' => 2]);
 
@@ -201,7 +200,7 @@ class TripSeeder extends Seeder
 
         $this->seedSeasons($trip, [
             'low' => ['unit_prices' => [$single->id => 30, $double->id => 45, $family->id => 80]],
-            'high' => ['unit_prices' => [$single->id => ['price' => 40, 'partner_price' => 34], $double->id => 58, $family->id => 100]],
+            'high' => ['unit_prices' => [$single->id => 40, $double->id => 58, $family->id => 100]],
             'christmas' => ['unit_prices' => [$single->id => 45, $double->id => 65, $family->id => 110]],
         ]);
     }
@@ -223,7 +222,6 @@ class TripSeeder extends Seeder
             'max_persons' => 12,
             'base_price' => 25,
             'base_child_price' => 15,
-            'partner_price' => 21,
             'highlights' => ['en' => ['Two snorkelling stops', 'Lunch on board', 'Marine biologist guide'], 'it' => ['Due soste di snorkeling', 'Pranzo a bordo', 'Guida biologo marino']],
             'included' => ['en' => ['Hotel transfers', 'Mask and fins', 'Lunch and soft drinks'], 'it' => ['Transfer dall\'hotel', 'Maschera e pinne', 'Pranzo e bibite']],
             'excluded' => ['en' => ['Diving', 'Tips'], 'it' => ['Immersioni', 'Mance']],
@@ -237,7 +235,7 @@ class TripSeeder extends Seeder
 
         $tiers = collect([
             [1, 2, 70, 60], [3, 4, 55, 47], [5, 8, 45, null], [9, 12, 40, null],
-        ])->map(fn (array $tier) => $trip->privateTiers()->create(['min_people' => $tier[0], 'max_people' => $tier[1], 'price_per_person' => $tier[2], 'partner_price' => $tier[3]]));
+        ])->map(fn (array $tier) => $trip->privateTiers()->create(['min_people' => $tier[0], 'max_people' => $tier[1], 'price_per_person' => $tier[2]]));
 
         $this->childBands($trip);
         $this->rules($trip, null, 24, ['2026-12-25']);
@@ -256,7 +254,7 @@ class TripSeeder extends Seeder
         $this->seedSeasons($trip, [
             'low' => ['adult_price' => 22, 'child_price' => 13],
             'summer' => ['adult_price' => 28, 'child_price' => 16],
-            'high' => ['adult_price' => 30, 'child_price' => 18, 'partner_price' => 25, 'tier_prices' => array_combine($tierIds, [80, 62, 50, 45])],
+            'high' => ['adult_price' => 30, 'child_price' => 18, 'tier_prices' => array_combine($tierIds, [80, 62, 50, 45])],
             'christmas' => ['adult_price' => 35, 'child_price' => 20, 'tier_prices' => array_combine($tierIds, [90, 70, 58, 50])],
         ]);
     }
@@ -464,7 +462,7 @@ class TripSeeder extends Seeder
             'low' => ['adult_price' => 430, 'child_price' => 260],
             'spring' => ['adult_price' => 460, 'child_price' => 280],
             'summer' => ['adult_price' => 390, 'child_price' => 230],
-            'high' => ['adult_price' => 540, 'child_price' => 320, 'partner_price' => 470],
+            'high' => ['adult_price' => 540, 'child_price' => 320],
             'christmas' => ['adult_price' => 620, 'child_price' => 370],
         ]);
     }

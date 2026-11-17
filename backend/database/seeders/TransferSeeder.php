@@ -69,14 +69,13 @@ class TransferSeeder extends Seeder
                 'sort' => $sort,
             ]);
 
-            foreach ($routes as [$place, $routeLat, $routeLng, $price, $partnerPrice]) {
+            foreach ($routes as [$place, $routeLat, $routeLng, $price]) {
                 $hub->fixedRoutes()->create([
                     'destination_name' => ['en' => $place, 'it' => $place],
                     'lat' => $routeLat,
                     'lng' => $routeLng,
                     'match_radius_km' => 2,
                     'price' => $price,
-                    'partner_price' => $partnerPrice,
                 ]);
             }
         }

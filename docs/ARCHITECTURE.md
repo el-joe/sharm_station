@@ -1,6 +1,6 @@
 # Sharm Station Viaggi: Build Plan and Architecture
 
-Source of truth: `SRS v2.1 - Travel Booking Platform (English).md` (business rules, CR-1 to CR-9) and the Figma file
+Source of truth: `SRS v2.2 - Travel Booking Platform (English).md` (business rules, CR-1 to CR-9) and the Figma file
 [Egypt Travel - Platform UI/UX](https://www.figma.com/design/WGqsCzbjhWYrsLXqFranBq/Egypt-Travel---Platform-UI-UX)
 (pages Customer Site Desktop/Mobile, Admin Desktop/Mobile, Components).
 

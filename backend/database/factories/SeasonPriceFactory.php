@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\NationalityGroup;
 use App\Models\SeasonPrice;
 use App\Models\Trip;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -26,7 +27,6 @@ class SeasonPriceFactory extends Factory
             'is_active' => true,
             'adult_price' => 30,
             'child_price' => null,
-            'partner_price' => null,
             'unit_prices' => null,
             'tier_prices' => null,
             'price_per_night' => null,
@@ -45,6 +45,11 @@ class SeasonPriceFactory extends Factory
     public function recurring(): static
     {
         return $this->state(fn (array $attributes) => ['recurring_yearly' => true]);
+    }
+
+    public function forGroup(?NationalityGroup $group): static
+    {
+        return $this->state(fn (array $attributes) => ['nationality_group_id' => $group?->id]);
     }
 
     public function inactive(): static

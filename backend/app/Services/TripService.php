@@ -66,7 +66,14 @@ class TripService
     public function update(Trip $trip, TripData $data): Trip
     {
         return DB::transaction(function () use ($trip, $data): Trip {
-            $trip = $this->trips->update($trip, $data->toAttributes());
+            $attributes = $data->toAttributes();
+
+            if (array_key_exists('seo', $attributes)) {
+                // The SEO tab edits the English meta only: keep the per-locale values (CR-14 suggestions).
+                $attributes['seo'] = SeoService::mergeFormSeo($trip->seo, $attributes['seo']);
+            }
+
+            $trip = $this->trips->update($trip, $attributes);
             $this->syncRelations($trip, $data);
 
             return $trip;

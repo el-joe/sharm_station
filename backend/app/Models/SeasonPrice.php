@@ -2,28 +2,30 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPriceMaps;
 use App\Models\Concerns\HasTranslations;
 use Carbon\CarbonInterface;
 use Database\Factories\SeasonPriceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
- * A price period of a trip, package or room.
+ * A price period of a trip, package, room or transfer fixed route, for one nationality group
+ * (nationality_group_id) or for all groups (null).
  *
- * unit_prices / tier_prices map option or tier ids to either a retail number
- * or an object {"price": 40, "partner_price": 34}.
+ * unit_prices / tier_prices map option or tier ids to the customer price.
  */
 #[Fillable([
-    'priceable_type', 'priceable_id', 'name', 'starts_on', 'ends_on', 'recurring_yearly', 'is_active',
-    'adult_price', 'child_price', 'partner_price', 'unit_prices', 'tier_prices', 'price_per_night',
+    'priceable_type', 'priceable_id', 'nationality_group_id', 'name', 'starts_on', 'ends_on', 'recurring_yearly', 'is_active',
+    'adult_price', 'child_price', 'unit_prices', 'tier_prices', 'price_per_night', 'price',
 ])]
 class SeasonPrice extends Model
 {
     /** @use HasFactory<SeasonPriceFactory> */
-    use HasFactory, HasTranslations;
+    use HasFactory, HasPriceMaps, HasTranslations;
 
     /**
      * @var list<string>
@@ -42,8 +44,8 @@ class SeasonPrice extends Model
             'is_active' => 'boolean',
             'adult_price' => 'decimal:2',
             'child_price' => 'decimal:2',
-            'partner_price' => 'decimal:2',
             'price_per_night' => 'decimal:2',
+            'price' => 'decimal:2',
             'unit_prices' => 'array',
             'tier_prices' => 'array',
         ];
@@ -55,6 +57,22 @@ class SeasonPrice extends Model
     public function priceable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    /**
+     * @return BelongsTo<NationalityGroup, $this>
+     */
+    public function nationalityGroup(): BelongsTo
+    {
+        return $this->belongsTo(NationalityGroup::class);
+    }
+
+    /**
+     * Whether this season can apply to the given group (all-groups seasons apply to every group).
+     */
+    public function appliesToGroup(?int $groupId): bool
+    {
+        return $this->nationality_group_id === null || $this->nationality_group_id === $groupId;
     }
 
     /**
@@ -88,63 +106,16 @@ class SeasonPrice extends Model
         return $this->recurring_yearly || $this->ends_on->format('Y-m-d') >= $today->format('Y-m-d');
     }
 
-    public function unitPriceFor(int $unitOptionId): ?float
-    {
-        return $this->mapPrice($this->unit_prices, $unitOptionId, 'price');
-    }
-
-    public function unitPartnerPriceFor(int $unitOptionId): ?float
-    {
-        return $this->mapPrice($this->unit_prices, $unitOptionId, 'partner_price');
-    }
-
-    public function tierPriceFor(int $tierId): ?float
-    {
-        return $this->mapPrice($this->tier_prices, $tierId, 'price');
-    }
-
-    public function tierPartnerPriceFor(int $tierId): ?float
-    {
-        return $this->mapPrice($this->tier_prices, $tierId, 'partner_price');
-    }
-
     /**
-     * @param  array<int|string, mixed>|null  $map
-     */
-    private function mapPrice(?array $map, int $id, string $field): ?float
-    {
-        $value = $map[$id] ?? $map[(string) $id] ?? null;
-
-        if (is_array($value)) {
-            $value = $value[$field] ?? null;
-        } elseif ($field !== 'price') {
-            return null;
-        }
-
-        return is_numeric($value) ? (float) $value : null;
-    }
-
-    /**
-     * Normalised row for the admin SeasonPriceEditor (maps become {id: {price, partner_price}}).
+     * Row for the admin price matrix season editor.
      *
      * @return array<string, mixed>
      */
     public function toEditorRow(): array
     {
-        $map = function (?array $prices): array {
-            $rows = [];
-
-            foreach ($prices ?? [] as $id => $value) {
-                $rows[$id] = is_array($value)
-                    ? ['price' => $value['price'] ?? null, 'partner_price' => $value['partner_price'] ?? null]
-                    : ['price' => $value, 'partner_price' => null];
-            }
-
-            return $rows;
-        };
-
         return [
             'id' => $this->id,
+            'nationality_group_id' => $this->nationality_group_id,
             'name' => $this->getTranslations('name'),
             'starts_on' => $this->starts_on?->toDateString(),
             'ends_on' => $this->ends_on?->toDateString(),
@@ -152,10 +123,10 @@ class SeasonPrice extends Model
             'is_active' => $this->is_active,
             'adult_price' => $this->adult_price,
             'child_price' => $this->child_price,
-            'partner_price' => $this->partner_price,
             'price_per_night' => $this->price_per_night,
-            'unit_prices' => $map($this->unit_prices),
-            'tier_prices' => $map($this->tier_prices),
+            'price' => $this->price,
+            'unit_prices' => $this->unit_prices ?? [],
+            'tier_prices' => $this->tier_prices ?? [],
         ];
     }
 }

@@ -32,4 +32,9 @@ interface DestinationRepositoryInterface extends BaseRepositoryInterface
      * @return Collection<int, Destination>
      */
     public function suggest(array $tokens, int $limit): Collection;
+
+    /**
+     * Id of an active destination by slug.
+     */
+    public function activeIdBySlug(string $slug): ?int;
 }

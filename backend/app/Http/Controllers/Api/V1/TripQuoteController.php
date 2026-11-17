@@ -17,7 +17,7 @@ class TripQuoteController extends ApiController
         $trip = $trips->findPublishedBySlug($slug);
         abort_if($trip === null, 404, 'Trip not found.');
 
-        $quote = $engine->quote($trip, QuoteRequestData::fromRequest($request, $this->partner($request), $currencies->current()));
+        $quote = $engine->quote($trip, QuoteRequestData::fromRequest($request, null, $currencies->current(), ...$this->nationality()));
         $payload = (new QuoteResource($quote))->resolve($request);
 
         if (! $quote->isValid()) {

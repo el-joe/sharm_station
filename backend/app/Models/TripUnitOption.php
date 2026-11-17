@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['trip_id', 'name', 'seats', 'price', 'partner_price', 'max_quantity', 'children_allowed', 'sort'])]
+#[Fillable(['trip_id', 'name', 'seats', 'price', 'max_quantity', 'children_allowed', 'sort'])]
 class TripUnitOption extends Model
 {
     /** @use HasFactory<TripUnitOptionFactory> */
@@ -29,7 +29,6 @@ class TripUnitOption extends Model
             'seats' => 'integer',
             'max_quantity' => 'integer',
             'price' => 'decimal:2',
-            'partner_price' => 'decimal:2',
             'children_allowed' => 'boolean',
         ];
     }

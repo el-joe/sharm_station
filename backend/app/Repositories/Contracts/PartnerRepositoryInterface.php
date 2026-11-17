@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Contracts;
 
+use App\Enums\CommissionCategory;
 use App\Enums\PartnerStatus;
 use App\Models\Partner;
 use Illuminate\Database\Eloquent\Builder;
@@ -34,4 +35,22 @@ interface PartnerRepositoryInterface extends BaseRepositoryInterface
      * @return array<int, string>
      */
     public function options(): array;
+
+    /**
+     * Sets (or, with null, removes) a partner's commission override for one type.
+     */
+    public function setCategoryCommission(Partner $partner, CommissionCategory $category, ?float $percent): void;
+
+    /**
+     * Partners with at least one commission override, by company.
+     *
+     * @return Collection<int, Partner>
+     */
+    public function withCommissionOverrides(): Collection;
+
+    /**
+     * @param  list<int>  $ids
+     * @return Collection<int, Partner>
+     */
+    public function findMany(array $ids): Collection;
 }

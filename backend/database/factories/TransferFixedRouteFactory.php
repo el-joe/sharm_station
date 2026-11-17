@@ -24,7 +24,6 @@ class TransferFixedRouteFactory extends Factory
             'lng' => 34.3299,
             'match_radius_km' => 1.5,
             'price' => 20,
-            'partner_price' => null,
             'is_enabled' => true,
         ];
     }

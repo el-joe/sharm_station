@@ -42,7 +42,6 @@ class TripFactory extends Factory
             'max_persons' => 12,
             'base_price' => 25,
             'base_child_price' => null,
-            'partner_price' => null,
             'from_price' => 25,
             'deposit_percent' => 30,
             'free_cancellation_hours' => 24,

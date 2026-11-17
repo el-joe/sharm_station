@@ -13,9 +13,17 @@
             <x-admin.input name="lat" label="Latitude" type="number" step="0.0000001" :value="$route->lat" span="md:col-span-2" />
             <x-admin.input name="lng" label="Longitude" type="number" step="0.0000001" :value="$route->lng" span="md:col-span-2" />
             <x-admin.input name="match_radius_km" label="Match radius (km)" type="number" step="0.1" min="0.1" :value="$route->match_radius_km" span="md:col-span-2" />
-            <x-admin.money name="price" label="Price" :value="$route->price" span="md:col-span-2" />
-            <x-admin.money name="partner_price" label="Partner price (optional)" :value="$route->partner_price" span="md:col-span-2" />
+            <x-admin.money name="price" label="Base price" :value="$route->price" hint="Used when no group or season price is set" span="md:col-span-2" />
             <x-admin.switch name="is_enabled" label="Enabled" :checked="$route->is_enabled" span="md:col-span-2" />
         </x-admin.form-section>
     </form>
+
+    <section id="price-matrix" class="mt-6">
+        <h2 class="mb-3 font-display text-xl text-ink-900">Price matrix</h2>
+        @if (! $route->exists)
+            <x-admin.card><p class="text-sm text-ink-700">Save the route first, then set its prices per nationality group and season.</p></x-admin.card>
+        @else
+            @include('admin.partials.price-matrix', ['action' => route('admin.transfers.routes.seasons.update', $route), 'matrix' => $matrix])
+        @endif
+    </section>
 </x-admin.layout>

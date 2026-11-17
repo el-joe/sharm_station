@@ -11,9 +11,9 @@
 
     $unitRows = old('unit_options') !== null ? array_values(old('unit_options')) : $trip->unitOptions->map(fn ($option) => [
         'id' => $option->id, 'name' => $option->getTranslations('name'), 'seats' => $option->seats, 'price' => $option->price,
-        'partner_price' => $option->partner_price, 'max_quantity' => $option->max_quantity, 'children_allowed' => $option->children_allowed, 'sort' => $option->sort,
+        'max_quantity' => $option->max_quantity, 'children_allowed' => $option->children_allowed, 'sort' => $option->sort,
     ])->all();
-    $tierRows = old('private_tiers') !== null ? array_values(old('private_tiers')) : $trip->privateTiers->map(fn ($tier) => $tier->only(['id', 'min_people', 'max_people', 'price_per_person', 'partner_price']))->all();
+    $tierRows = old('private_tiers') !== null ? array_values(old('private_tiers')) : $trip->privateTiers->map(fn ($tier) => $tier->only(['id', 'min_people', 'max_people', 'price_per_person']))->all();
     $dayRows = old('itinerary') !== null ? array_values(old('itinerary')) : $trip->tripDays->map(fn ($day) => [
         'title' => $day->getTranslations('title'), 'description' => $day->getTranslations('description'), 'overnight' => $day->overnight,
         'items' => $day->items->map(fn ($item) => [
@@ -27,32 +27,10 @@
     $weekdayNames = [1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat', 7 => 'Sun'];
     $groupWeekdays = array_map('intval', old('availability.group.weekdays', $groupRule?->weekdays ?? []));
 
-    // Season editor columns follow the product's price structure (SRS 3.8).
-    $seasonColumns = [];
-    if ($trip->pricing_mode === PricingMode::PerUnit) {
-        foreach ($trip->unitOptions as $option) {
-            $seasonColumns[] = ['label' => (string) $option->name, 'key' => "unit_prices.{$option->id}.price"];
-            $seasonColumns[] = ['label' => $option->name.' partner', 'key' => "unit_prices.{$option->id}.partner_price", 'partner' => true];
-        }
-    } else {
-        if ($trip->group_enabled) {
-            $seasonColumns[] = ['label' => 'Group adult', 'key' => 'adult_price'];
-            $seasonColumns[] = ['label' => 'Group child', 'key' => 'child_price'];
-            $seasonColumns[] = ['label' => 'Group partner', 'key' => 'partner_price', 'partner' => true];
-        }
-        if ($trip->private_enabled) {
-            foreach ($trip->privateTiers as $tier) {
-                $range = $tier->min_people.($tier->max_people ? '–'.$tier->max_people : '+');
-                $seasonColumns[] = ['label' => "Private {$range} pax", 'key' => "tier_prices.{$tier->id}.price"];
-                $seasonColumns[] = ['label' => "Private {$range} partner", 'key' => "tier_prices.{$tier->id}.partner_price", 'partner' => true];
-            }
-        }
-    }
-
     $tabs = array_filter([
         'tab-basics' => 'Basics',
         'tab-pricing' => 'Pricing',
-        'tab-prices' => 'Price list',
+        'tab-prices' => 'Price matrix',
         'tab-availability' => 'Availability',
         'tab-itinerary' => $isNile || $trip->type === TripType::MultiDay ? 'Itinerary' : 'Timeline',
         'tab-addons' => 'Add-ons',
@@ -133,10 +111,10 @@
                     </x-admin.form-section>
 
                     <div data-show-when="[name=pricing_mode]=per_unit">
-                        <x-admin.card title="Unit options" subtitle="Each unit has its own seats and price. A partner price overrides the commission rule.">
+                        <x-admin.card title="Unit options" subtitle="Each unit has its own seats and product base price. Prices per nationality group and season are set in the Price matrix tab.">
                             <div data-repeater data-sortable>
-                                <div class="hidden grid-cols-[24px_minmax(0,2.2fr)_70px_minmax(0,1fr)_minmax(0,1.3fr)_80px_64px_40px] gap-2 rounded-control bg-sand-50 px-0 py-2.5 text-xs font-semibold text-ink-700 md:grid">
-                                    <span></span><span>Option name (EN / IT)</span><span>Seats</span><span>Retail (EUR)</span><span>Partner price (EUR)</span><span>Max qty</span><span class="text-center">Children</span><span></span>
+                                <div class="hidden grid-cols-[24px_minmax(0,2.2fr)_70px_minmax(0,1fr)_80px_64px_40px] gap-2 rounded-control bg-sand-50 px-0 py-2.5 text-xs font-semibold text-ink-700 md:grid">
+                                    <span></span><span>Option name (EN / IT)</span><span>Seats</span><span>Base price (EUR)</span><span>Max qty</span><span class="text-center">Children</span><span></span>
                                 </div>
                                 <div data-repeater-list>
                                     @foreach ($unitRows as $index => $row)
@@ -170,15 +148,14 @@
                             </div>
                         </x-admin.card>
 
-                        <x-admin.form-section title="Group prices" description="Used when no season matches the travel date. Child age bands come from the children policy.">
-                            <x-admin.money name="base_price" label="Adult price" :value="$trip->base_price" retail-for="base" span="md:col-span-2" />
+                        <x-admin.form-section title="Group prices" description="Product base price, used when neither a season nor the nationality group's base price (Price matrix tab) is set. Child age bands come from the children policy.">
+                            <x-admin.money name="base_price" label="Adult price" :value="$trip->base_price" span="md:col-span-2" />
                             <x-admin.money name="base_child_price" label="Child price" :value="$trip->base_child_price" span="md:col-span-2" />
-                            <x-admin.money name="partner_price" label="Partner price (optional)" :value="$trip->partner_price" partner-for="base" :commission="$commission" hint="Overrides the commission rule" span="md:col-span-2" />
                         </x-admin.form-section>
                     </div>
                 @else
                     <x-admin.card>
-                        <p class="text-sm text-ink-700">Prices and partner prices are managed by agents and super admins. Current mode: <strong>{{ ($trip->pricing_mode ?? PricingMode::PerPerson)->label() }}</strong>.</p>
+                        <p class="text-sm text-ink-700">Prices are managed by agents and super admins. Current mode: <strong>{{ ($trip->pricing_mode ?? PricingMode::PerPerson)->label() }}</strong>.</p>
                     </x-admin.card>
                 @endif
             </div>
@@ -260,16 +237,16 @@
             </div>
         </form>
 
-        {{-- Price list: separate form (SeasonPriceService) --}}
+        {{-- Price matrix: separate form (PriceMatrixService) --}}
         <div role="tabpanel" id="tab-prices" aria-labelledby="tab-prices-tab" hidden>
             @if (! $trip->exists)
-                <x-admin.card><p class="text-sm text-ink-700">Save the trip first, then add its seasons.</p></x-admin.card>
+                <x-admin.card><p class="text-sm text-ink-700">Save the trip first, then set its prices per nationality group and season.</p></x-admin.card>
             @elseif (! $canPrice)
-                <x-admin.card><p class="text-sm text-ink-700">The price list is managed by agents and super admins.</p></x-admin.card>
-            @elseif ($seasonColumns === [])
-                <x-admin.card><p class="text-sm text-ink-700">Add {{ $trip->pricing_mode === PricingMode::PerUnit ? 'unit options' : 'private tiers or enable group bookings' }} in the Pricing tab and save, then set seasonal prices here.</p></x-admin.card>
+                <x-admin.card><p class="text-sm text-ink-700">The price matrix is managed by agents and super admins.</p></x-admin.card>
+            @elseif ($matrix === null || $matrix['fields'] === [])
+                <x-admin.card><p class="text-sm text-ink-700">Add {{ $trip->pricing_mode === PricingMode::PerUnit ? 'unit options' : 'private tiers or enable group bookings' }} in the Pricing tab and save, then set the price matrix here.</p></x-admin.card>
             @else
-                @include('admin.partials.season-editor', ['action' => route('admin.trips.seasons.update', $trip), 'seasons' => $seasons, 'columns' => $seasonColumns])
+                @include('admin.partials.price-matrix', ['action' => route('admin.trips.seasons.update', $trip), 'matrix' => $matrix])
             @endif
         </div>
     </div>

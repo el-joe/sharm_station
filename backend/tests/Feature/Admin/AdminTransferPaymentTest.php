@@ -91,7 +91,7 @@ test('hubs, vehicles and fixed routes are managed from the admin', function () {
 
     $this->actingAs($this->admin)->post(route('admin.transfers.routes.store'), [
         'transfer_hub_id' => $hub->id, 'destination_name' => ['en' => 'El Gouna'], 'lat' => 27.39, 'lng' => 33.68,
-        'match_radius_km' => 2, 'price' => 30, 'partner_price' => 25, 'is_enabled' => '1',
+        'match_radius_km' => 2, 'price' => 30, 'is_enabled' => '1',
     ])->assertSessionHasNoErrors();
 
     $this->actingAs($this->admin)->get(route('admin.transfers.simulator', [

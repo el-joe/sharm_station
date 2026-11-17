@@ -16,7 +16,7 @@ class PackageQuoteController extends ApiController
         $package = $packages->findPublishedBySlug($slug);
         abort_if($package === null, 404, 'Package not found.');
 
-        $quote = $engine->quote($package, QuoteRequestData::fromRequest($request, $this->partner($request), $currencies->current()));
+        $quote = $engine->quote($package, QuoteRequestData::fromRequest($request, null, $currencies->current(), ...$this->nationality()));
 
         return $this->quoteResponse($request, $quote);
     }

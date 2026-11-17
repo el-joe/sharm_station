@@ -1,16 +1,20 @@
 <?php
 
 use App\Http\Controllers\Admin\AddonController;
+use App\Http\Controllers\Admin\AiSuggestionController;
 use App\Http\Controllers\Admin\Auth\LoginController;
 use App\Http\Controllers\Admin\BookingController;
 use App\Http\Controllers\Admin\BuildingController;
 use App\Http\Controllers\Admin\ComingSoonController;
 use App\Http\Controllers\Admin\CommissionMatrixController;
+use App\Http\Controllers\Admin\CommissionSettingController;
 use App\Http\Controllers\Admin\ContactMessageController;
 use App\Http\Controllers\Admin\CurrencyController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DestinationController;
 use App\Http\Controllers\Admin\GoogleReviewController;
+use App\Http\Controllers\Admin\McpAccessController;
+use App\Http\Controllers\Admin\NationalityGroupController;
 use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\Admin\PartnerController;
 use App\Http\Controllers\Admin\PaymentController;
@@ -64,6 +68,7 @@ Route::middleware(['auth', 'staff'])->group(function (): void {
         Route::put('trips/{trip}/seasons', [SeasonPriceController::class, 'updateTrip'])->name('trips.seasons.update');
         Route::put('rooms/{room}/seasons', [SeasonPriceController::class, 'updateRoom'])->name('rooms.seasons.update');
         Route::put('packages/{package}/seasons', [SeasonPriceController::class, 'updatePackage'])->name('packages.seasons.update');
+        Route::put('transfers/routes/{fixedRoute}/seasons', [SeasonPriceController::class, 'updateFixedRoute'])->name('transfers.routes.seasons.update');
         Route::post('seasons/{season}/copy-next-year', [SeasonPriceController::class, 'copyToNextYear'])->name('seasons.copy-next-year');
     });
 
@@ -72,6 +77,16 @@ Route::middleware(['auth', 'staff'])->group(function (): void {
     Route::put('google-reviews/place', [GoogleReviewController::class, 'updatePlace'])->name('google-reviews.place');
     Route::post('google-reviews/sync', [GoogleReviewController::class, 'sync'])->middleware('throttle:10,1')->name('google-reviews.sync');
     Route::patch('google-reviews/{review}', [GoogleReviewController::class, 'update'])->name('google-reviews.update');
+
+    // AI suggestions from Claude (CR-14): every staff role reviews; creating accommodation needs "manage-prices".
+    Route::prefix('ai-suggestions')->name('ai-suggestions.')->controller(AiSuggestionController::class)->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('data', 'data')->name('data');
+        Route::get('{suggestion}', 'show')->whereNumber('suggestion')->name('show');
+        Route::post('{suggestion}/approve-seo', 'approveSeo')->whereNumber('suggestion')->name('approve-seo');
+        Route::post('{suggestion}/approve-accommodation', 'approveAccommodation')->whereNumber('suggestion')->name('approve-accommodation');
+        Route::post('{suggestion}/reject', 'reject')->whereNumber('suggestion')->name('reject');
+    });
 
     // Sales and finance: super admins and agents only
     Route::middleware('staff:super_admin,agent')->group(function (): void {
@@ -109,6 +124,16 @@ Route::middleware(['auth', 'staff'])->group(function (): void {
         Route::get('partners/commissions', [CommissionMatrixController::class, 'edit'])->name('partners.commissions.edit');
         Route::put('partners/commissions', [CommissionMatrixController::class, 'update'])->name('partners.commissions.update');
         Route::get('partners', [PartnerController::class, 'index'])->name('partners.index');
+        Route::get('partners/{partner}', [PartnerController::class, 'show'])->name('partners.show');
+        Route::put('partners/{partner}/commissions', [PartnerController::class, 'updateCommissions'])->name('partners.commissions.override');
+
+        // Pricing configuration (CR-10, CR-11)
+        Route::get('settings/commissions', [CommissionSettingController::class, 'edit'])->name('commissions.edit');
+        Route::put('settings/commissions', [CommissionSettingController::class, 'update'])->name('commissions.update');
+        Route::get('nationality-groups', [NationalityGroupController::class, 'index'])->name('nationality-groups.index');
+        Route::post('nationality-groups', [NationalityGroupController::class, 'store'])->name('nationality-groups.store');
+        Route::put('nationality-groups/{nationalityGroup}', [NationalityGroupController::class, 'update'])->name('nationality-groups.update');
+        Route::delete('nationality-groups/{nationalityGroup}', [NationalityGroupController::class, 'destroy'])->name('nationality-groups.destroy');
         Route::post('partners/{partner}/approve', [PartnerController::class, 'approve'])->name('partners.approve');
         Route::post('partners/{partner}/suspend', [PartnerController::class, 'suspend'])->name('partners.suspend');
 
@@ -153,6 +178,11 @@ Route::middleware(['auth', 'staff'])->group(function (): void {
     Route::middleware('staff:super_admin')->group(function (): void {
         Route::get('settings', [SettingController::class, 'edit'])->name('settings.edit');
         Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
+
+        // Claude MCP access tokens (CR-14)
+        Route::get('settings/mcp', [McpAccessController::class, 'index'])->name('mcp.index');
+        Route::post('settings/mcp', [McpAccessController::class, 'store'])->name('mcp.store');
+        Route::delete('settings/mcp/{token}', [McpAccessController::class, 'destroy'])->whereNumber('token')->name('mcp.destroy');
     });
 
     // Modules from the SRS that are not built yet render an honest placeholder page.

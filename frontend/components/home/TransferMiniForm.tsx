@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
+import { useNationalityCode } from "@/lib/nationality";
 import { Combobox } from "@/components/ui/Combobox";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { useLocationGroups } from "@/components/ui/locationGroups";
@@ -13,7 +14,7 @@ import { addDays, cn, parseISODate, toISODate } from "@/lib/utils";
 import { useMutation } from "@tanstack/react-query";
 import { Car, CheckCircle2, MapPin, MessageCircle, Plane } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 
 /** Figma TransferMiniForm (62:14811): From, To, Date, Vehicle + Get price. */
 export function TransferMiniForm({
@@ -31,6 +32,7 @@ export function TransferMiniForm({
   const id = useId();
   const today = useToday();
   const locale = useLocale() as Locale;
+  const nationality = useNationalityCode();
   const { hubs, vehicles, live } = catalog;
   const [hub, setHub] = useState(hubs.some((h) => h.code === initial?.hub) ? initial!.hub! : (hubs[0]?.code ?? ""));
   const groups = useLocationGroups();
@@ -44,8 +46,11 @@ export function TransferMiniForm({
   const Heading = headingLevel;
 
   const quote = useMutation({
-    mutationFn: (body: TransferQuoteRequest) => api.quoteTransfer(body, { locale }, catalog),
+    mutationFn: (body: TransferQuoteRequest) => api.quoteTransfer(body, { locale, nationality }, catalog),
   });
+  // A quote is priced for one nationality: drop it when the visitor changes nationality.
+  const resetQuote = quote.reset;
+  useEffect(() => resetQuote(), [nationality, resetQuote]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -71,7 +76,7 @@ export function TransferMiniForm({
       <Heading className="font-display text-[22px] font-semibold leading-[30px] text-ink-900 md:text-[28px] md:leading-9">{t("formTitle")}</Heading>
       <p className="mt-2 text-ink-700">{t("formSubtitle")}</p>
       <form onSubmit={submit} noValidate className="mt-5 flex flex-col gap-4">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Combobox
             id={`${id}-from`}
             variant="field"

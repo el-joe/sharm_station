@@ -31,7 +31,6 @@ class TransferFixedRouteRequest extends FormRequest
             'lng' => ['required', 'numeric', 'between:-180,180'],
             'match_radius_km' => ['required', 'numeric', 'min:0.1', 'max:50'],
             'price' => ['required', 'numeric', 'min:0'],
-            'partner_price' => ['nullable', 'numeric', 'min:0', 'lte:price'],
             'is_enabled' => ['boolean'],
         ];
     }

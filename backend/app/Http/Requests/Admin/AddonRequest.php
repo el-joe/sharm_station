@@ -35,7 +35,6 @@ class AddonRequest extends FormRequest
             'description' => ['nullable', 'array'],
             'description.*' => ['nullable', 'string', 'max:2000'],
             'price' => ['required', 'numeric', 'min:0'],
-            'partner_price' => ['nullable', 'numeric', 'min:0', 'lte:price'],
             'pricing_basis' => ['required', Rule::enum(AddonPricingBasis::class)],
             'required' => ['boolean'],
             'max_quantity' => ['required', 'integer', 'min:1', 'max:999'],
@@ -43,13 +42,5 @@ class AddonRequest extends FormRequest
             'booking_types.*' => [Rule::enum(BookingType::class)],
             'is_active' => ['boolean'],
         ];
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public function messages(): array
-    {
-        return ['partner_price.lte' => 'The partner price cannot be higher than the retail price.'];
     }
 }

@@ -25,6 +25,7 @@ class UserResource extends JsonResource
             'locale' => $this->locale,
             'currency' => $this->currency,
             'newsletter' => (bool) $this->newsletter,
+            'nationality_code' => $this->nationality_code,
             'partner' => $this->whenLoaded('partner', fn (): ?array => $this->partner ? [
                 'id' => $this->partner->id,
                 'company' => $this->partner->company,

@@ -17,18 +17,12 @@
         'to_place' => $transfer->to_place, 'vehicle_type' => $transfer->vehicle_type?->value,
     ])->all();
 
-    $seasonColumns = [
-        ['label' => 'Adult', 'key' => 'adult_price'],
-        ['label' => 'Child', 'key' => 'child_price'],
-        ['label' => 'Partner', 'key' => 'partner_price', 'partner' => true],
-    ];
-
     $tabs = [
         'tab-basics' => 'Basics',
         'tab-programme' => 'Stages and days',
         'tab-transfers' => 'Included transfers',
         'tab-pricing' => 'Pricing',
-        'tab-prices' => 'Price list',
+        'tab-prices' => 'Price matrix',
         'tab-addons' => 'Add-ons',
     ];
 @endphp
@@ -133,15 +127,14 @@
                     <x-admin.input name="deposit_percent" label="Deposit" type="number" step="0.01" min="0" max="100" suffix="%" :value="$package->deposit_percent" span="md:col-span-2" />
                 </x-admin.form-section>
 
-                <x-admin.form-section title="Price mode" description="A fixed price per person (seasons in the Price list tab), or computed from the linked trips minus a manual discount.">
+                <x-admin.form-section title="Price mode" description="A fixed price per person (per nationality group and season in the Price matrix tab), or computed from the linked trips minus a manual discount.">
                     <x-admin.segmented name="price_mode" :selected="$package->price_mode ?? PackagePriceMode::Fixed" :options="[
                         'fixed' => ['Fixed price', 'Adult and child price per person'],
                         'computed' => ['Computed from trips', 'Sum of the trips on their dates, minus a discount'],
                     ]" />
                     <div data-show-when="[name=price_mode]=fixed" class="grid grid-cols-1 gap-5 md:col-span-6 md:grid-cols-6">
-                        <x-admin.money name="base_price" label="Adult price" :value="$package->base_price" retail-for="base" span="md:col-span-2" />
+                        <x-admin.money name="base_price" label="Adult price" :value="$package->base_price" hint="Product base price" span="md:col-span-2" />
                         <x-admin.money name="base_child_price" label="Child price" :value="$package->base_child_price" span="md:col-span-2" />
-                        <x-admin.money name="partner_price" label="Partner price (optional)" :value="$package->partner_price" partner-for="base" :commission="$commission" hint="Overrides the commission rule" span="md:col-span-2" />
                     </div>
                     <div data-show-when="[name=price_mode]=computed" class="grid grid-cols-1 gap-5 md:col-span-6 md:grid-cols-6">
                         <x-admin.input name="discount_percent" label="Discount on the trips" type="number" step="0.01" min="0" max="100" suffix="%" :value="$package->discount_percent" span="md:col-span-2" />
@@ -157,14 +150,14 @@
             </div>
         </form>
 
-        {{-- Price list: separate form (SeasonPriceService) --}}
+        {{-- Price matrix: separate form (PriceMatrixService) --}}
         <div role="tabpanel" id="tab-prices" aria-labelledby="tab-prices-tab" hidden>
             @if (! $package->exists)
-                <x-admin.card><p class="text-sm text-ink-700">Save the package first, then add its seasons.</p></x-admin.card>
+                <x-admin.card><p class="text-sm text-ink-700">Save the package first, then set its prices per nationality group and season.</p></x-admin.card>
             @elseif ($package->price_mode === PackagePriceMode::Computed)
-                <x-admin.card><p class="text-sm text-ink-700">This package is priced from its trips: each trip's own price list applies on the date of its day.</p></x-admin.card>
+                <x-admin.card><p class="text-sm text-ink-700">This package is priced from its trips: each trip's own price matrix applies (for the customer's nationality group) on the date of its day.</p></x-admin.card>
             @else
-                @include('admin.partials.season-editor', ['action' => route('admin.packages.seasons.update', $package), 'seasons' => $seasons, 'columns' => $seasonColumns])
+                @include('admin.partials.price-matrix', ['action' => route('admin.packages.seasons.update', $package), 'matrix' => $matrix])
             @endif
         </div>
     </div>

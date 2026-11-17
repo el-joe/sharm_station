@@ -1,6 +1,7 @@
 "use client";
 
 import { SelectMenu } from "@/components/ui/SelectMenu";
+import { useNationalityCode } from "@/lib/nationality";
 import { Badge, BadgeIcons } from "@/components/ui/Badge";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
@@ -99,6 +100,7 @@ export function BookingWidget({ trip }: { trip: TripDetail }) {
   const t = useTranslations("booking");
   const locale = useLocale() as Locale;
   const { currency } = useCurrency();
+  const nationality = useNationalityCode();
   const router = useRouter();
   const state = useTripBooking(trip);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -109,8 +111,8 @@ export function BookingWidget({ trip }: { trip: TripDetail }) {
   // for a quote once a valid date is chosen and show its 422 messages as they come back.
   const canQuote = Boolean(debounced.travel_date) && state.dateOk;
   const quote = useQuery({
-    queryKey: ["trip-quote", trip.slug, debounced, currency, locale],
-    queryFn: ({ signal }) => api.quoteTrip(trip, debounced, { locale, currency, signal }),
+    queryKey: ["trip-quote", trip.slug, debounced, currency, locale, nationality],
+    queryFn: ({ signal }) => api.quoteTrip(trip, debounced, { locale, currency, signal, nationality }),
     enabled: canQuote,
     placeholderData: keepPreviousData,
     retry: (count, error) => !(error instanceof ApiError && error.isValidation) && count < 1,

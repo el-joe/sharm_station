@@ -2,10 +2,12 @@
 
 namespace App\Repositories\Eloquent;
 
+use App\DTOs\Ai\CatalogueQueryData;
 use App\Enums\RoomStatus;
 use App\Models\Building;
 use App\Repositories\Contracts\BuildingRepositoryInterface;
 use App\Repositories\Eloquent\Concerns\MatchesSearchTokens;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -29,7 +31,7 @@ class BuildingRepository extends BaseRepository implements BuildingRepositoryInt
             ->with([
                 'destination',
                 'childPolicy.bands',
-                'rooms' => fn ($query) => $query->where('status', RoomStatus::Active)->with(['seasonPrices' => fn ($seasons) => $seasons->where('is_active', true)]),
+                'rooms' => fn ($query) => $query->where('status', RoomStatus::Active)->with(['seasonPrices' => fn ($seasons) => $seasons->where('is_active', true), 'productPrices']),
             ])
             ->first();
     }
@@ -62,5 +64,22 @@ class BuildingRepository extends BaseRepository implements BuildingRepositoryInt
         $this->matchTokens($query, $tokens, ['name', 'address', 'destination.name']);
 
         return $query->orderByDesc('featured')->orderByDesc('stars')->limit($limit)->get();
+    }
+
+    public function paginateForMcp(CatalogueQueryData $query): LengthAwarePaginator
+    {
+        $builder = $this->query()
+            ->with(['destination:id,name,slug', 'rooms'])
+            ->when($query->destination, fn (Builder $builder, string $slug) => $builder->whereHas('destination', fn (Builder $destination) => $destination->where('slug', $slug)));
+        $this->matchTokens($builder, $query->tokens, ['name', 'slug', 'address', 'destination.name']);
+
+        return $builder->orderBy('id')->paginate($query->perPage, ['*'], 'page', $query->page);
+    }
+
+    public function findForMcp(int $id): ?Building
+    {
+        return $this->query()
+            ->with(['destination', 'rooms.seasonPrices', 'rooms.productPrices'])
+            ->find($id);
     }
 }

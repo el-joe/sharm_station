@@ -19,18 +19,20 @@ class PartnerDataTable
 
     public function json(?PartnerStatus $status): JsonResponse
     {
-        return (new EloquentDataTable($this->partners->adminQuery($status)))
-            ->editColumn('company', fn (Partner $partner): string => $this->titleCell($partner->company, trim(($partner->country ? $partner->country.' · ' : '').($partner->website ?? ''))))
+        return (new EloquentDataTable($this->partners->adminQuery($status)->with('categoryCommissions')))
+            ->editColumn('company', fn (Partner $partner): string => $this->titleCell($partner->company, trim(($partner->country ? $partner->country.' · ' : '').($partner->website ?? '')), route('admin.partners.show', $partner)))
             ->addColumn('contact', fn (Partner $partner): string => $this->titleCell((string) $partner->user?->name, $partner->user?->email))
             ->editColumn('status', fn (Partner $partner): string => StatusChip::html($partner->status))
-            ->editColumn('default_commission', fn (Partner $partner): string => $partner->default_commission !== null ? e((float) $partner->default_commission.'%') : '—')
+            ->addColumn('commissions', fn (Partner $partner): string => $partner->categoryCommissions->isEmpty()
+                ? '<span class="text-ink-500">Standard</span>'
+                : $partner->categoryCommissions->map(fn ($override): string => '<span class="chip bg-partner-100 text-partner-600">'.e($override->category->label().' '.(float) $override->commission_percent.'%').'</span>')->implode(' '))
             ->editColumn('sales_total', fn (Partner $partner): string => $this->money($partner->sales_total ?? 0))
             ->editColumn('created_at', fn (Partner $partner): string => e($partner->created_at?->format('j M Y') ?? ''))
             ->addColumn('actions', fn (Partner $partner): string => $this->actions(...$this->statusActions($partner)))
             ->filterColumn('company', fn (Builder $query, string $keyword) => $query->where(fn (Builder $query) => $query
                 ->where('partners.company', 'like', "%{$keyword}%")
                 ->orWhereHas('user', fn (Builder $user) => $user->where('email', 'like', "%{$keyword}%")->orWhere('name', 'like', "%{$keyword}%"))))
-            ->rawColumns(['company', 'contact', 'status', 'default_commission', 'sales_total', 'created_at', 'actions'])
+            ->rawColumns(['company', 'contact', 'status', 'commissions', 'sales_total', 'created_at', 'actions'])
             ->toJson();
     }
 

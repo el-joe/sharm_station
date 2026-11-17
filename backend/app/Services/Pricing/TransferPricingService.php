@@ -15,7 +15,7 @@ use App\Repositories\Contracts\TransferFixedRouteRepositoryInterface;
 use App\Repositories\Contracts\TransferHubRepositoryInterface;
 use App\Repositories\Contracts\VehicleTypeRepositoryInterface;
 use App\Services\CurrencyService;
-use App\Services\PartnerPricingService;
+use App\Services\NationalityService;
 use App\Services\Transfers\DistanceProvider;
 use App\Services\Transfers\HaversineDistanceProvider;
 use Carbon\CarbonImmutable;
@@ -26,8 +26,9 @@ use Illuminate\Support\Facades\Cache;
  *
  *   P = max(M, (B + Σ d_i·R_i + W + S) · V) + F
  *
- * per leg, where a matching fixed route overrides the formula, the return leg of a round trip gets the hub's
- * return discount, and selected extras are added once per booking. Partners get the Section 8 rule on the result.
+ * per leg, where a matching fixed route overrides the formula (its price comes from the nationality/season matrix),
+ * the return leg of a round trip gets the hub's return discount, and selected extras are added once per booking.
+ * Partner quotes apply the Transfers commission percentage (extras are not commissionable).
  */
 class TransferPricingService
 {
@@ -38,14 +39,15 @@ class TransferPricingService
         private readonly VehicleTypeRepositoryInterface $vehicles,
         private readonly TransferFixedRouteRepositoryInterface $fixedRoutes,
         private readonly DistanceProvider $distances,
-        private readonly PartnerPricingService $partnerPricing,
+        private readonly PriceResolver $prices,
+        private readonly CommissionResolver $commissions,
+        private readonly NationalityService $nationalities,
         private readonly CurrencyService $currencies,
     ) {}
 
     public function quote(TransferQuoteRequestData $request): QuoteResultData
     {
-        $this->resetErrors();
-        $partner = $request->partner?->isActive() ? $request->partner : null;
+        $this->beginQuote($request->partner, CommissionCategory::Transfers, $request->nationalityGroupId, $request->nationalityCode);
         $hub = $this->hubs->findEnabled($request->hubId);
         $vehicle = $this->vehicles->findEnabled($request->vehicleTypeId);
 
@@ -58,7 +60,7 @@ class TransferPricingService
         }
 
         if ($hub === null || $vehicle === null || $this->errors !== []) {
-            return $this->buildResult(ServiceType::Transfer, [], null, $partner, 100, $request->currency, $this->baseContext($request));
+            return $this->buildResult(ServiceType::Transfer, [], null, 100, $request->currency, $this->baseContext($request));
         }
 
         $this->validateRequest($hub, $vehicle, $request);
@@ -79,7 +81,7 @@ class TransferPricingService
         $lines = [];
         $outbound = $this->priceLeg($hub, $vehicle, $route, $fixedRoute, $request->pickupAt, $request->waitingMinutes);
         $legs[] = ['leg' => 'outbound', ...$outbound];
-        $lines[] = $this->line('transfer', "{$fromLabel} → {$toLabel}", 1, $outbound['price'], $outbound['partner_price'], $partner, CommissionCategory::Transfers, [
+        $lines[] = $this->line('transfer', "{$fromLabel} → {$toLabel}", 1, $outbound['price'], [
             'leg' => 'outbound',
             'pickup_at' => $request->pickupAt->format('Y-m-d H:i'),
             'breakdown' => $outbound['breakdown'],
@@ -89,9 +91,8 @@ class TransferPricingService
             $return = $this->priceLeg($hub, $vehicle, $route, $fixedRoute, $request->returnAt, 0);
             $discount = (float) $hub->return_discount_percent;
             $returnPrice = $this->roundUp($return['price'] * (1 - $discount / 100));
-            $returnPartner = $return['partner_price'] !== null ? round($return['partner_price'] * (1 - $discount / 100), 2) : null;
             $legs[] = ['leg' => 'return', ...$return, 'return_discount_percent' => $discount, 'price' => $returnPrice];
-            $lines[] = $this->line('transfer', "{$toLabel} → {$fromLabel} (return)", 1, $returnPrice, $returnPartner, $partner, CommissionCategory::Transfers, [
+            $lines[] = $this->line('transfer', "{$toLabel} → {$fromLabel} (return)", 1, $returnPrice, [
                 'leg' => 'return',
                 'pickup_at' => $request->returnAt->format('Y-m-d H:i'),
                 'return_discount_percent' => $discount,
@@ -108,14 +109,13 @@ class TransferPricingService
                 continue;
             }
 
-            $lines[] = $this->line('extra', $extra['label'], 1, $extra['price'], null, $partner, CommissionCategory::Transfers, ['code' => $code], commissionable: false);
+            $lines[] = $this->line('extra', $extra['label'], 1, $extra['price'], ['code' => $code], commissionable: false);
         }
 
         return $this->buildResult(
             serviceType: ServiceType::Transfer,
             lines: $lines,
-            seasonName: null,
-            partner: $partner,
+            seasonName: $fixedRoute !== null ? $this->prices->resolve($fixedRoute, $this->nationalityGroup?->id, $request->pickupAt)->seasonName() : null,
             depositPercent: $hub->deposit_percent !== null ? (float) $hub->deposit_percent : 100.0,
             currency: $request->currency,
             context: [
@@ -180,12 +180,32 @@ class TransferPricingService
 
     /**
      * Road distance, cached for repeated hub/destination pairs.
+     *
+     * The cache holds a plain array: the cache store refuses to unserialize objects
+     * (config cache.serializable_classes = false), so a cached RouteData would come back
+     * as __PHP_Incomplete_Class on the second quote for the same pair.
      */
     private function route(TransferHub $hub, TransferQuoteRequestData $request): RouteData
     {
-        $key = sprintf('transfer-route:%.4f,%.4f:%.4f,%.4f', $hub->lat, $hub->lng, $request->destinationLat, $request->destinationLng);
+        $key = sprintf('transfer-route:v2:%.4f,%.4f:%.4f,%.4f', $hub->lat, $hub->lng, $request->destinationLat, $request->destinationLng);
 
-        return Cache::remember($key, now()->addDay(), fn (): RouteData => $this->distances->route($hub->lat, $hub->lng, $request->destinationLat, $request->destinationLng));
+        $cached = Cache::remember($key, now()->addDay(), function () use ($hub, $request): array {
+            $route = $this->distances->route($hub->lat, $hub->lng, $request->destinationLat, $request->destinationLng);
+
+            return [
+                'distance_km' => $route->distanceKm,
+                'duration_minutes' => $route->durationMinutes,
+                'provider' => $route->provider,
+                'estimated' => $route->estimated,
+            ];
+        });
+
+        return new RouteData(
+            (float) $cached['distance_km'],
+            (int) $cached['duration_minutes'],
+            (string) $cached['provider'],
+            (bool) $cached['estimated'],
+        );
     }
 
     private function matchingFixedRoute(TransferHub $hub, VehicleType $vehicle, TransferQuoteRequestData $request): ?TransferFixedRoute
@@ -197,7 +217,7 @@ class TransferPricingService
     /**
      * One leg: fixed route price, or the distance formula with tiers, waiting, night surcharge, multiplier, minimum and fees.
      *
-     * @return array{price: float, partner_price: float|null, breakdown: array<string, mixed>}
+     * @return array{price: float, breakdown: array<string, mixed>}
      */
     private function priceLeg(TransferHub $hub, VehicleType $vehicle, RouteData $route, ?TransferFixedRoute $fixedRoute, CarbonImmutable $pickupAt, int $waitingMinutes): array
     {
@@ -205,15 +225,17 @@ class TransferPricingService
 
         if ($fixedRoute !== null) {
             $factor = $fixedRoute->vehicle_type_id === null ? $multiplier : 1.0;
-            $price = $this->roundUp((float) $fixedRoute->price * $factor);
+            $resolved = $this->prices->resolve($fixedRoute, $this->nationalityGroup?->id, $pickupAt);
+            $fixedPrice = $resolved->price('price') ?? (float) $fixedRoute->price;
+            $price = $this->roundUp($fixedPrice * $factor);
 
             return [
                 'price' => $price,
-                'partner_price' => $fixedRoute->partner_price !== null ? round((float) $fixedRoute->partner_price * $factor, 2) : null,
                 'breakdown' => [
                     'method' => 'fixed_route',
                     'fixed_route_id' => $fixedRoute->id,
-                    'fixed_price' => (float) $fixedRoute->price,
+                    'fixed_price' => $fixedPrice,
+                    'price_source' => $resolved->source('price')?->value,
                     'multiplier' => $factor,
                     'total' => $price,
                 ],
@@ -251,7 +273,6 @@ class TransferPricingService
 
         return [
             'price' => $price,
-            'partner_price' => null,
             'breakdown' => [
                 'method' => 'distance',
                 'distance_km' => $route->distanceKm,

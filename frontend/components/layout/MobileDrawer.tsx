@@ -10,6 +10,7 @@ import { LanguageSwitcher, LanguageSwitcherFallback } from "./LanguageSwitcher";
 import { DRAWER_EXTRA, NAV_ITEMS } from "./nav";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/ui/Logo";
+import { NationalityChip } from "@/components/nationality/NationalityChip";
 
 export function MobileDrawer() {
   const t = useTranslations();
@@ -57,7 +58,8 @@ export function MobileDrawer() {
             </ul>
           </nav>
           <div className="flex flex-col gap-4 border-t border-ink-100 p-4">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <NationalityChip className="border border-ink-300" />
               <Suspense fallback={<LanguageSwitcherFallback className="border border-ink-300" />}>
                 <LanguageSwitcher className="border border-ink-300" />
               </Suspense>

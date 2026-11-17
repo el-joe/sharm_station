@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['user_id', 'company', 'tax_number', 'country', 'website', 'phone', 'message', 'status', 'default_commission', 'show_retail_price', 'coupons_allowed', 'approved_at', 'approved_by', 'contact_name', 'notify_bookings', 'notify_statements', 'price_list_enabled'])]
+#[Fillable(['user_id', 'company', 'tax_number', 'country', 'website', 'phone', 'message', 'status', 'show_retail_price', 'coupons_allowed', 'approved_at', 'approved_by', 'contact_name', 'notify_bookings', 'notify_statements', 'price_list_enabled'])]
 class Partner extends Model
 {
     /** @use HasFactory<PartnerFactory> */
@@ -24,7 +24,6 @@ class Partner extends Model
     {
         return [
             'status' => PartnerStatus::class,
-            'default_commission' => 'decimal:2',
             'show_retail_price' => 'boolean',
             'coupons_allowed' => 'boolean',
             'notify_bookings' => 'boolean',
@@ -63,6 +62,9 @@ class Partner extends Model
         return $this->status === PartnerStatus::Active;
     }
 
+    /**
+     * The partner's own percentage for a type (override), or null when the global setting applies.
+     */
     public function commissionFor(CommissionCategory $category): ?float
     {
         $commission = $this->categoryCommissions->firstWhere('category', $category);

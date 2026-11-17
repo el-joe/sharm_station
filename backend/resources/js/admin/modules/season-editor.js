@@ -3,7 +3,7 @@
  * Overlaps are validated on the server by SeasonPriceService; the message is shown inline.
  *
  * <div data-season-editor> rows contain [data-season-name], [data-season-from], [data-season-to],
- * [data-season-active], [data-season-yearly]; <div data-season-timeline> receives the bar.
+ * [data-season-active], [data-season-yearly], [data-season-group]; <div data-season-timeline> receives the bar.
  */
 import { escapeHtml } from './http.js';
 
@@ -59,7 +59,9 @@ function render(editor) {
         const to = parse(row.querySelector('[data-season-to]')?.value);
         const active = row.querySelector('[data-season-active]')?.checked ?? true;
         const yearly = row.querySelector('[data-season-yearly]')?.checked ?? false;
-        const name = row.querySelector('[data-season-name]')?.value || `Season ${index + 1}`;
+        const group = row.querySelector('[data-season-group]');
+        const groupName = group && group.value ? group.options[group.selectedIndex]?.text : '';
+        const name = (row.querySelector('[data-season-name]')?.value || `Season ${index + 1}`) + (groupName ? ` · ${groupName}` : '');
 
         if (!from || !to || to < from || !active) {
             return;

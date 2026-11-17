@@ -30,17 +30,15 @@ class PartnerSeeder extends Seeder
             'website' => 'https://alphatravel.example',
             'phone' => '+39 02 0000 0000',
             'status' => PartnerStatus::Active,
-            'default_commission' => 10,
             'show_retail_price' => true,
             'approved_at' => now(),
             'approved_by' => $admin?->id,
         ]);
 
+        // Overrides on top of the global settings (single-day 15, multi-day 10, Nile 10, packages 10, transfers 8).
         foreach ([
-            CommissionCategory::Trips->value => 15,
+            CommissionCategory::MultiDayTrips->value => 12,
             CommissionCategory::NileTrips->value => 12,
-            CommissionCategory::Packages->value => 10,
-            CommissionCategory::Accommodation->value => 8,
         ] as $category => $percent) {
             $partner->categoryCommissions()->updateOrCreate(['category' => $category], ['commission_percent' => $percent]);
         }

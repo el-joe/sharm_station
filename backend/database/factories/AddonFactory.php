@@ -20,7 +20,6 @@ class AddonFactory extends Factory
             'name' => ['en' => 'Lunch upgrade', 'it' => 'Pranzo superiore'],
             'description' => ['en' => fake()->sentence(), 'it' => fake()->sentence()],
             'price' => 10,
-            'partner_price' => null,
             'pricing_basis' => AddonPricingBasis::PerPerson,
             'required' => false,
             'max_quantity' => 10,

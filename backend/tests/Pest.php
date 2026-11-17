@@ -2,9 +2,13 @@
 
 use App\DTOs\Pricing\QuoteRequestData;
 use App\Enums\BookingType;
+use App\Enums\CommissionCategory;
 use App\Enums\DiscountType;
 use App\Enums\UserRole;
 use App\Models\Currency;
+use App\Models\NationalityGroup;
+use App\Models\Partner;
+use App\Models\PartnerCategoryCommission;
 use App\Models\Trip;
 use App\Models\TripAvailabilityRule;
 use App\Models\TripUnitOption;
@@ -85,7 +89,7 @@ function snorkellingTrip(array $attributes = []): Trip
 /**
  * @param  array<string, mixed>  $overrides
  */
-function quoteRequest(array $overrides = [], mixed $partner = null, string $currency = 'EUR'): QuoteRequestData
+function quoteRequest(array $overrides = [], mixed $partner = null, string $currency = 'EUR', ?string $nationality = null): QuoteRequestData
 {
     return QuoteRequestData::fromArray([
         'booking_type' => 'group',
@@ -93,7 +97,20 @@ function quoteRequest(array $overrides = [], mixed $partner = null, string $curr
         'adults' => 2,
         'children' => 0,
         ...$overrides,
-    ], $partner, $currency);
+    ], $partner, $currency, $nationality);
+}
+
+/**
+ * Seeded nationality group by code: egyptian, arab_countries, europe, rest_of_world (default).
+ */
+function nationalityGroup(string $code): NationalityGroup
+{
+    return NationalityGroup::query()->where('code', $code)->firstOrFail();
+}
+
+function partnerOverride(Partner $partner, CommissionCategory $category, float $percent): void
+{
+    PartnerCategoryCommission::factory()->for($partner)->create(['category' => $category, 'commission_percent' => $percent]);
 }
 
 function seedCurrencies(): void

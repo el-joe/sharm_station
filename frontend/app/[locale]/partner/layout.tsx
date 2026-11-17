@@ -1,5 +1,9 @@
 import { AuthGuard } from "@/components/account/AuthGuard";
 import { PartnerNav } from "@/components/partner/PartnerNav";
+import type { Metadata } from "next";
+
+/** The whole partner panel stays out of search engines. */
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 /** /partner/*: active partners only (client guard; the API enforces it too). Pages are noindex. */
 export default function PartnerLayout({ children }: LayoutProps<"/[locale]/partner">) {

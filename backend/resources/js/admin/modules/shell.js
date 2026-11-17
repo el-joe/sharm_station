@@ -37,15 +37,29 @@ export function initShell() {
         });
     });
 
+    let drawerOpen = false;
     const setDrawer = (open) => {
+        drawerOpen = open;
         drawer?.classList.toggle('-translate-x-full', !open);
         backdrop?.classList.toggle('hidden', !open);
         document.body.classList.toggle('overflow-hidden', open);
+        if (!open) {
+            return;
+        }
+        drawer?.querySelector('a, button')?.focus();
     };
 
     document.querySelectorAll('[data-drawer-open]').forEach((button) => button.addEventListener('click', () => setDrawer(true)));
     document.querySelectorAll('[data-drawer-close]').forEach((button) => button.addEventListener('click', () => setDrawer(false)));
     backdrop?.addEventListener('click', () => setDrawer(false));
+    // Esc closes the mobile drawer and returns focus to the menu button.
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || !drawerOpen) {
+            return;
+        }
+        setDrawer(false);
+        document.querySelector('[data-drawer-open]')?.focus();
+    });
 
     document.querySelectorAll('[data-nav-group]').forEach((button) => {
         button.addEventListener('click', () => {

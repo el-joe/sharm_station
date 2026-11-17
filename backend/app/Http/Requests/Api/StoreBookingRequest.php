@@ -12,12 +12,20 @@ use Illuminate\Validation\Rule;
  * A trip booking (trip_slug + trip quote fields), a package booking (package_slug + per-person fields),
  * an accommodation booking (room_id + stay fields) or a transfer booking (transfer.{quote fields}).
  * "service" is optional and only used to pick the product when it cannot be inferred.
+ * "nationality_code" (ISO-2, required) sets the nationality group of the price (CR-10).
  */
 class StoreBookingRequest extends FormRequest
 {
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('nationality_code'))) {
+            $this->merge(['nationality_code' => strtoupper($this->input('nationality_code'))]);
+        }
     }
 
     /**
@@ -30,6 +38,7 @@ class StoreBookingRequest extends FormRequest
 
         $common = [
             'service' => ['nullable', Rule::enum(ServiceType::class)],
+            'nationality_code' => ['required', 'string', 'size:2', Rule::exists('countries', 'code')],
             'trip_slug' => ['required_without_all:room_id,package_slug,transfer', 'prohibits:room_id', 'string', 'max:255'],
             'room_id' => ['required_without_all:trip_slug,package_slug,transfer', 'integer'],
             'package_slug' => ['nullable', 'string', 'max:255'],

@@ -31,4 +31,14 @@ class TransferFixedRouteRepository extends BaseRepository implements TransferFix
     {
         return $this->query()->select('transfer_fixed_routes.*')->with(['hub:id,name', 'vehicleType:id,name']);
     }
+
+    public function forCatalogue(): Collection
+    {
+        return $this->query()
+            ->where('is_enabled', true)
+            ->whereHas('hub', fn (Builder $hub) => $hub->where('is_enabled', true))
+            ->with(['hub', 'vehicleType', 'seasonPrices', 'productPrices'])
+            ->orderBy('transfer_hub_id')
+            ->get();
+    }
 }

@@ -82,6 +82,8 @@ interface RawSeason {
   ends_on: string;
   recurring_yearly: boolean;
   is_current?: boolean;
+  /** null = season for all nationality groups (CR-10). */
+  nationality_group_id?: number | null;
   prices: {
     adult?: RawMoney;
     child?: RawMoney;
@@ -305,6 +307,17 @@ function cancellationText(hours: number | null, deposit: number, locale: Locale)
 }
 
 const TRANSFER_RE = /pick-?up|drop-?off|transfer|return to (the|your) hotel|prelievo|rientro|trasferimento/i;
+
+/**
+ * A priced response (?nationality=XX) lists the visitor's group seasons and the seasons for all groups.
+ * The group's own season wins where they overlap (SRS 3.9): list group seasons first (seasonForDate takes
+ * the first match) and drop an all-groups season that has a group twin with the same dates.
+ */
+function groupSeasons(list: RawSeason[]): RawSeason[] {
+  const own = list.filter((s) => s.nationality_group_id != null);
+  const shared = list.filter((s) => s.nationality_group_id == null && !own.some((o) => o.starts_on === s.starts_on && o.ends_on === s.ends_on));
+  return [...own, ...shared];
+}
 
 function season(raw: RawSeason, pricingMode: "per_person" | "per_unit" | "room"): SeasonPrice {
   const p = raw.prices ?? {};
@@ -563,7 +576,7 @@ export function mapTripDetail(raw: RawTripDetail, locale: Locale): TripDetail {
     base_child_price: raw.group_prices ? eur(raw.group_prices.child) : card.price_from,
     private_tiers: (raw.private_tiers ?? []).map((t) => ({ id: t.id, min_people: t.min_people, max_people: t.max_people, price_per_person: eur(t.price_per_person) })),
     unit_options: (raw.unit_options ?? []).map((u) => ({ id: u.id, name: u.name, seats: u.seats, price: eur(u.price), max_quantity: u.max_quantity, children_allowed: u.children_allowed })),
-    price_list: (raw.price_list ?? []).map((s) => season(s, mode)),
+    price_list: groupSeasons(raw.price_list ?? []).map((s) => season(s, mode)),
     addons: (raw.addons ?? []).map((a) => ({
       id: a.id,
       name: a.name,
@@ -682,7 +695,7 @@ export function mapRoomDetail(raw: RawRoomDetail, locale: Locale): RoomDetail {
       { url: roomImage(null, raw.room_type, 1), alt: `${raw.name} 2` },
       { url: building.image.url, alt: raw.building.name },
     ],
-    price_list: (raw.price_list ?? []).map((s) => season(s, "room")),
+    price_list: groupSeasons(raw.price_list ?? []).map((s) => season(s, "room")),
     building_detail: building,
     other_rooms: (raw.other_rooms ?? []).map((r) => mapRoomCard(r, locale)),
     child_policy: childPolicyText(raw.child_policy, locale),
@@ -843,6 +856,7 @@ export interface RawUser {
   phone?: string | null;
   locale?: string | null;
   currency?: string | null;
+  nationality_code?: string | null;
   partner?: { id: number; company: string; status: string; show_retail_price: boolean } | null;
 }
 
@@ -856,6 +870,7 @@ export function mapUser(raw: RawUser): AuthUser {
     phone: raw.phone ?? null,
     locale: raw.locale === "it" || raw.locale === "en" ? raw.locale : null,
     currency: (raw.currency as CurrencyCode | null) ?? null,
+    nationality_code: raw.nationality_code ?? null,
     partner: raw.partner ? { ...raw.partner, status: raw.partner.status as PartnerStatus } : null,
   };
 }

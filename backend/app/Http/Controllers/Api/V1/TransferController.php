@@ -28,7 +28,7 @@ class TransferController extends ApiController
 
     public function quote(TransferQuoteRequest $request, TransferPricingService $pricing, CurrencyService $currencies): JsonResponse
     {
-        $quote = $pricing->quote(TransferQuoteRequestData::fromRequest($request, $this->partner($request), $currencies->current()));
+        $quote = $pricing->quote(TransferQuoteRequestData::fromRequest($request, null, $currencies->current(), ...$this->nationality()));
 
         return $this->quoteResponse($request, $quote);
     }

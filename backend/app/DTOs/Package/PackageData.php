@@ -60,7 +60,6 @@ final readonly class PackageData
                 'price_mode' => PackagePriceMode::from($data['price_mode']),
                 'base_price' => $nullableFloat('base_price'),
                 'base_child_price' => $nullableFloat('base_child_price'),
-                'partner_price' => $nullableFloat('partner_price'),
                 'discount_percent' => $nullableFloat('discount_percent'),
                 'deposit_percent' => (float) $data['deposit_percent'],
                 'free_cancellation_hours' => filled($data['free_cancellation_hours'] ?? null) ? (int) $data['free_cancellation_hours'] : null,

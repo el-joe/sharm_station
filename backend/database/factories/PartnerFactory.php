@@ -26,7 +26,6 @@ class PartnerFactory extends Factory
             'website' => fake()->url(),
             'phone' => fake()->e164PhoneNumber(),
             'status' => PartnerStatus::Active,
-            'default_commission' => 10,
             'show_retail_price' => true,
             'coupons_allowed' => false,
             'approved_at' => now(),
@@ -36,10 +35,5 @@ class PartnerFactory extends Factory
     public function pending(): static
     {
         return $this->state(fn (array $attributes) => ['status' => PartnerStatus::Pending, 'approved_at' => null]);
-    }
-
-    public function withoutDefaultCommission(): static
-    {
-        return $this->state(fn (array $attributes) => ['default_commission' => null]);
     }
 }

@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
-#[Fillable(['name', 'description', 'image', 'price', 'partner_price', 'pricing_basis', 'required', 'max_quantity', 'booking_types', 'is_active'])]
+#[Fillable(['name', 'description', 'image', 'price', 'pricing_basis', 'required', 'max_quantity', 'booking_types', 'is_active'])]
 class Addon extends Model
 {
     /** @use HasFactory<AddonFactory> */
@@ -29,7 +29,6 @@ class Addon extends Model
     {
         return [
             'price' => 'decimal:2',
-            'partner_price' => 'decimal:2',
             'pricing_basis' => AddonPricingBasis::class,
             'required' => 'boolean',
             'max_quantity' => 'integer',

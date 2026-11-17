@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\BookingStatus;
+use App\Enums\CommissionCategory;
 use App\Enums\PartnerStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\ServiceType;
@@ -59,6 +60,7 @@ test('a new booking has a payment deadline', function () {
     $response = $this->postJson('/api/v1/bookings', [
         'trip_slug' => $trip->slug, 'booking_type' => 'group', 'travel_date' => '2026-11-25', 'adults' => 1,
         'units' => [['unit_option_id' => $trip->unitOptions[0]->id, 'quantity' => 1]],
+        'nationality_code' => 'IT',
         'lead' => ['name' => 'A B', 'email' => 'a@example.com'],
         'travelers' => [['first_name' => 'A', 'last_name' => 'B', 'type' => 'adult']],
     ])->assertCreated();
@@ -76,9 +78,10 @@ test('the partner panel is for active partners only', function () {
 });
 
 test('partners see their dashboard, bookings, statements, price list and profile', function () {
-    $partner = Partner::factory()->create(['default_commission' => 10, 'company' => 'Viaggi Sole']);
+    $partner = Partner::factory()->create(['company' => 'Viaggi Sole']);
+    partnerOverride($partner, CommissionCategory::SingleDayTrips, 10);
     Sanctum::actingAs($partner->user);
-    Trip::factory()->create(['title' => ['en' => 'Snorkelling'], 'from_price' => 50, 'partner_price' => null]);
+    Trip::factory()->create(['title' => ['en' => 'Snorkelling'], 'base_price' => 50, 'from_price' => 50]);
 
     Booking::factory()->create(['partner_id' => $partner->id, 'retail_total' => 100, 'total' => 90, 'partner_total' => 90, 'commission_amount' => 10, 'deposit_amount' => 27]);
     Booking::factory()->create(['partner_id' => $partner->id, 'service_type' => ServiceType::Accommodation, 'retail_total' => 200, 'total' => 180, 'partner_total' => 180, 'commission_amount' => 20,
@@ -92,6 +95,10 @@ test('partners see their dashboard, bookings, statements, price list and profile
         ->assertJsonPath('data.kpis.commission_saved_month', 10)
         ->assertJsonPath('data.kpis.balance_due', 90)
         ->assertJsonPath('data.kpis.pending_proofs', 0)
+        ->assertJsonPath('data.commissions.0.category', 'single_day_trips')
+        ->assertJsonPath('data.commissions.0.percent', 10)
+        ->assertJsonPath('data.commissions.0.source', 'partner_override')
+        ->assertJsonPath('data.commissions.1.source', 'global_setting')
         ->assertJsonCount(2, 'data.recent_bookings');
 
     $this->getJson('/api/v1/partner/bookings?service=accommodation')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.totals.partner_total', 180);
@@ -104,18 +111,20 @@ test('partners see their dashboard, bookings, statements, price list and profile
         ->assertJsonPath('data.0.balance', 90)
         ->assertJsonPath('data.1.status', 'paid');
 
-    $this->getJson('/api/v1/partner/price-list')
+    $this->getJson('/api/v1/partner/price-list?service=single_day_trips')
         ->assertOk()
         ->assertJsonPath('data.0.title', 'Snorkelling')
         ->assertJsonPath('data.0.retail_price.amount_eur', 50)
-        ->assertJsonPath('data.0.partner_price.amount_eur', 45);
+        ->assertJsonPath('data.0.partner_price.amount_eur', 45)
+        ->assertJsonPath('data.0.commission.source', 'partner_override');
 
     $this->patchJson('/api/v1/partner/profile', ['contact_name' => 'Marco', 'notify_statements' => false])
         ->assertOk()
         ->assertJsonPath('data.company', 'Viaggi Sole')
         ->assertJsonPath('data.contact_name', 'Marco')
         ->assertJsonPath('data.notify_statements', false)
-        ->assertJsonPath('data.status', PartnerStatus::Active->value);
+        ->assertJsonPath('data.status', PartnerStatus::Active->value)
+        ->assertJsonPath('data.commissions.0.percent', 10);
 
     $partner->update(['price_list_enabled' => false]);
     Sanctum::actingAs($partner->user->fresh());

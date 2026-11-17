@@ -654,7 +654,8 @@
     "genericError": "Si è verificato un errore durante la creazione della prenotazione. Riprova.",
     "emptyTitle": "Il checkout è vuoto",
     "emptyText": "Scegli un'escursione o una camera e premi Prenota per iniziare.",
-    "browse": "Sfoglia le escursioni"
+    "browse": "Sfoglia le escursioni",
+    "nationalityMissing": "Scegli la tua nazionalità in alto nella pagina prima di prenotare: i prezzi dipendono da essa."
   },
   "confirmation": {
     "metaTitle": "Prenotazione ricevuta",
@@ -760,12 +761,6 @@
     "text": "La pagina che cerchi non esiste o è stata spostata. Ti riportiamo sulla giusta via.",
     "home": "Torna alla home",
     "trips": "Sfoglia le escursioni"
-  },
-  "partnerBar": {
-    "label": "Modalità partner",
-    "text": "{company}: stai prenotando a prezzi partner.",
-    "textNoCompany": "Stai prenotando a prezzi partner.",
-    "panel": "Apri l'area partner"
   },
   "guard": {
     "checking": "Verifica della sessione…",
@@ -885,7 +880,10 @@
       "signOut": "Esci",
       "deleteText": "Eliminare l'account non cancella le prenotazioni attive. Scrivici per chiedere la cancellazione dei tuoi dati.",
       "deleteLink": "Richiedi l'eliminazione dell'account",
-      "error": "Qualcosa è andato storto. Riprova."
+      "error": "Qualcosa è andato storto. Riprova.",
+      "nationality": "Nazionalità",
+      "nationalityHint": "I prezzi del sito dipendono dalla tua nazionalità.",
+      "nationalityGroup": "Prezzi per il gruppo di nazionalità {group}."
     },
     "favourites": {
       "metaTitle": "Preferiti",
@@ -916,27 +914,35 @@
       "newBooking": "Nuova prenotazione",
       "statements": "Estratti conto",
       "priceList": "Listino",
-      "profile": "Profilo aziendale"
+      "profile": "Profilo aziendale",
+      "role": "Partner"
     },
-    "comingSoonTitle": "In arrivo",
-    "comingSoonText": "Questa parte dell'area partner è in fase di collegamento al sistema di prenotazione. I tuoi prezzi partner si applicano già quando prenoti sul sito.",
     "noData": "Ancora nessun dato.",
     "retry": "Riprova",
     "dashboard": {
       "metaTitle": "Panoramica partner",
-      "title": "Bentornato{company, select, none {} other {, {company}}}",
-      "subtitle": "Il mese in un colpo d'occhio. Importi in EUR a prezzi partner.",
+      "title": "Ciao{name, select, none {} other {, {name}}}",
+      "subtitle": "Ecco l'andamento di {company} a {month}. Importi a prezzo partner.",
       "kpis": {
         "bookings": "Prenotazioni del mese",
         "sales": "Vendite a prezzo partner",
-        "commission": "Commissione risparmiata",
-        "balance": "Saldi da pagare",
-        "proofs": "Ricevute in verifica"
+        "commission": "Commissioni maturate",
+        "balance": "Saldo da pagare"
       },
       "recent": "Prenotazioni recenti",
       "viewAll": "Tutte le prenotazioni",
-      "empty": "Ancora nessuna prenotazione. Inizia una prenotazione dal sito in modalità partner.",
-      "startBooking": "Nuova prenotazione"
+      "empty": "Ancora nessuna prenotazione. Inizia da Nuova prenotazione.",
+      "startBooking": "Nuova prenotazione",
+      "crumb": "Dashboard",
+      "commissionTitle": "La tua commissione",
+      "commissionText": "Sconto sul prezzo cliente, applicato automaticamente quando prenoti. Stabilito da Sharm Station Viaggi.",
+      "actions": {
+        "title": "Da fare",
+        "balance": "Saldi da pagare: {amount}",
+        "proofs": "{count, plural, one {# ricevuta in verifica} other {# ricevute in verifica}}",
+        "none": "Nulla da fare al momento.",
+        "open": "Apri le prenotazioni"
+      }
     },
     "bookings": {
       "metaTitle": "Prenotazioni partner",
@@ -948,17 +954,15 @@
       "payment": "Pagamento",
       "all": "Tutti",
       "columns": {
-        "reference": "Codice",
+        "reference": "Rif.",
         "service": "Servizio",
-        "product": "Prodotto",
-        "date": "Data",
-        "lead": "Viaggiatore principale",
+        "date": "Data viaggio",
         "total": "Totale partner",
-        "paid": "Pagato",
-        "balance": "Saldo",
-        "status": "Stato"
+        "status": "Stato",
+        "client": "Cliente"
       },
-      "empty": "Nessuna prenotazione corrisponde ai filtri."
+      "empty": "Nessuna prenotazione corrisponde ai filtri.",
+      "crumb": "Prenotazioni"
     },
     "statements": {
       "metaTitle": "Estratti conto",
@@ -969,9 +973,11 @@
         "bookings": "Prenotazioni",
         "total": "Totale partner",
         "paid": "Pagato",
-        "balance": "Da pagare",
+        "balance": "Da saldare",
         "status": "Stato",
-        "export": "Esporta"
+        "export": "Esporta",
+        "retail": "Totale cliente",
+        "commission": "Commissione"
       },
       "status": {
         "open": "Aperto",
@@ -980,23 +986,40 @@
       },
       "pdf": "PDF",
       "excel": "Excel",
-      "empty": "Il primo estratto conto compare alla fine del mese in cui prenoti."
+      "empty": "Il primo estratto conto compare alla fine del mese in cui prenoti.",
+      "crumb": "Estratti conto",
+      "totals": {
+        "retail": "Totale cliente",
+        "commission": "Commissioni maturate",
+        "total": "Totale partner",
+        "balance": "Da saldare"
+      },
+      "bookingsCount": "{count, plural, one {# prenotazione} other {# prenotazioni}}",
+      "exportNote": "Gli export PDF ed Excel compaiono qui quando sono disponibili per un periodo."
     },
     "priceList": {
       "metaTitle": "Listino partner",
       "title": "Listino",
-      "subtitle": "Prezzi partner in sola lettura per servizio e stagione. I prezzi al pubblico sono indicati come riferimento.",
-      "search": "Cerca nel listino",
+      "subtitle": "Prezzi cliente e partner per la nazionalità del cliente scelta, per servizio e stagione.",
+      "search": "Cerca prodotti",
       "columns": {
-        "service": "Servizio",
         "product": "Prodotto",
         "season": "Stagione",
-        "retail": "Al pubblico",
+        "retail": "Prezzo cliente",
         "partner": "Prezzo partner",
-        "saving": "Risparmi"
+        "commission": "Commissione"
       },
-      "partnerPrice": "Prezzo partner",
-      "empty": "Il listino non è ancora stato attivato per il tuo account."
+      "empty": "Nessun prodotto trovato.",
+      "crumb": "Listino",
+      "nationality": "Nazionalità del cliente",
+      "group": "Gruppo di nazionalità: {group}",
+      "service": "Servizio",
+      "allServices": "Tutti i servizi",
+      "chooseNationality": "Scegli la nazionalità del cliente per vedere i prezzi.",
+      "disabled": "Il listino non è ancora stato attivato per il tuo account.",
+      "caption": "Prezzi per il gruppo di nazionalità {group}",
+      "basePrice": "Prezzo base",
+      "from": "Da"
     },
     "profile": {
       "metaTitle": "Profilo aziendale",
@@ -1012,7 +1035,7 @@
       "company": "Ragione sociale",
       "taxNumber": "Partita IVA o numero di registro",
       "website": "Sito web",
-      "country": "Paese (codice ISO)",
+      "country": "Paese",
       "contactTitle": "Referente principale",
       "contactName": "Referente",
       "email": "Email",
@@ -1022,8 +1045,224 @@
       "notifyStatements": "Avvisami via email quando è pronto un nuovo estratto conto",
       "save": "Salva profilo aziendale",
       "saved": "Profilo aziendale salvato.",
-      "pending": "La modifica online del profilo aziendale arriverà presto. Scrivici e lo aggiorniamo noi.",
-      "passwordNote": "Per cambiare la password usa Profilo e impostazioni."
+      "passwordNote": "Per cambiare la password usa Profilo e impostazioni.",
+      "crumb": "Profilo aziendale",
+      "companyHint": "Per cambiare la ragione sociale contattaci.",
+      "commissionsTitle": "Commissioni",
+      "commissionsText": "Sola lettura. Stabilite da Sharm Station Viaggi per tipo di servizio; gli alloggi non hanno commissione.",
+      "standardWas": "standard {percent}%"
+    },
+    "forbidden": "Questa pagina non è disponibile per il tuo account.",
+    "loadError": "Non siamo riusciti a caricare questi dati.",
+    "services": {
+      "single_day_trips": "Escursioni giornaliere",
+      "multi_day_trips": "Tour di più giorni",
+      "nile_trips": "Crociere sul Nilo",
+      "packages": "Pacchetti",
+      "transfers": "Transfer",
+      "accommodation": "Alloggi"
+    },
+    "commission": {
+      "yourRate": "Tua percentuale",
+      "standardRate": "Percentuale standard",
+      "none": "Nessuna commissione",
+      "pill": "Commissione {percent}%"
+    },
+    "summary": {
+      "title": "Riepilogo prezzo",
+      "updating": "Aggiornamento prezzo",
+      "customerPrice": "Prezzo cliente",
+      "commission": "Commissione {percent}%",
+      "noCommission": "Nessuna commissione",
+      "partnerPrice": "Prezzo partner",
+      "deposit": "Acconto {percent}% (subito)",
+      "balance": "Saldo il giorno del servizio",
+      "nationalityNote": "Gruppo di nazionalità del cliente: {group}.",
+      "season": "Stagione: {season}.",
+      "noSeason": "Prezzo base (nessuna stagione in questa data).",
+      "empty": "Scegli le opzioni per vedere il prezzo partner aggiornato."
+    },
+    "newBooking": {
+      "metaTitle": "Nuova prenotazione",
+      "crumb": "Nuova prenotazione",
+      "title": "Nuova prenotazione",
+      "subtitle": "Prenota qualsiasi servizio per il tuo cliente al tuo prezzo partner.",
+      "steps": {
+        "label": "Passaggi della prenotazione",
+        "service": "Scegli il servizio",
+        "configure": "Configura",
+        "client": "Cliente e pagamento",
+        "confirmation": "Conferma",
+        "done": "(completato)"
+      },
+      "catalogue": {
+        "nationality": "Nazionalità del cliente",
+        "group": "Gruppo: {group}",
+        "nationalityText": "I prezzi qui sotto sono calcolati per questa nazionalità e si ricalcolano quando la cambi.",
+        "servicesLabel": "Servizi",
+        "search": "Cerca {service}",
+        "destination": "Destinazione",
+        "allDestinations": "Tutte le destinazioni",
+        "date": "Data del viaggio",
+        "chooseNationality": "Scegli la nazionalità del cliente per vedere i prezzi.",
+        "basePrice": "Prezzo base",
+        "unit": {
+          "per_person": "Prezzo per adulto",
+          "per_unit": "Prezzo per unità",
+          "per_night": "Prezzo per notte",
+          "per_vehicle": "Prezzo per veicolo",
+          "other": ""
+        },
+        "customerPrice": "Prezzo cliente",
+        "customer": "Cliente",
+        "partnerPrice": "Prezzo partner",
+        "select": "Seleziona",
+        "selectAria": "Seleziona {title}",
+        "empty": "Nessun prodotto corrisponde ai filtri.",
+        "accommodationNote": "Gli alloggi non hanno commissione: i partner pagano il prezzo cliente per la nazionalità e la stagione del cliente.",
+        "from": "Da"
+      },
+      "configure": {
+        "title": "Configura la prenotazione",
+        "change": "Cambia",
+        "nationalityTitle": "Nazionalità del cliente",
+        "nationalityText": "Obbligatoria. Il prezzo dipende dal gruppo di nazionalità del cliente.",
+        "groupHint": "Gruppo di nazionalità {group}.",
+        "loadError": "Non siamo riusciti a caricare il prodotto. Torna indietro e riprova.",
+        "continue": "Continua",
+        "childAge": "Età del bambino {n}",
+        "chooseAge": "Età",
+        "years": "{count, plural, one {# anno} other {# anni}}",
+        "party": "{adults, plural, one {# adulto} other {# adulti}}{children, plural, =0 {} one {, # bambino} other {, # bambini}}",
+        "bookingType": "Tipo di prenotazione",
+        "privateText": "Servizio privato solo per i tuoi clienti",
+        "groupText": "Condiviso con altri ospiti",
+        "fromPrices": "da {customer} · partner {partner}",
+        "dateTravellers": "Data e viaggiatori",
+        "travelDate": "Data del viaggio",
+        "agesRequired": "Indica l'età di ogni bambino.",
+        "units": "Scegli {unit}",
+        "unitsText": "Prezzi per unità; la commissione si applica a ogni riga.",
+        "unitsRequired": "Scegli almeno un'unità.",
+        "addons": "Extra",
+        "addonsText": "Gli extra seguono la commissione dell'escursione ({percent}%).",
+        "required": "Incluso",
+        "partnerShort": "partner {amount}",
+        "stay": "Soggiorno",
+        "noCommissionText": "Gli alloggi non hanno commissione: paghi il prezzo cliente.",
+        "checkIn": "Check-in",
+        "checkOut": "Check-out",
+        "checkOutAfter": "Il check-out deve essere dopo il check-in.",
+        "transferTitle": "Dettagli del transfer",
+        "pickupDate": "Data di prelievo",
+        "pickupTime": "Ora di prelievo",
+        "vehicle": "Veicolo",
+        "vehicleCapacity": "{name} (fino a {count})",
+        "flight": "Numero di volo (facoltativo)",
+        "passengersLabel": "Passeggeri",
+        "passengers": "{count, plural, one {# passeggero} other {# passeggeri}}"
+      },
+      "client": {
+        "title": "Cliente e pagamento",
+        "leadTitle": "Cliente principale",
+        "leadText": "Il voucher è intestato al tuo cliente; tu risulti come prenotante.",
+        "firstName": "Nome",
+        "lastName": "Cognome",
+        "email": "Email",
+        "phone": "Telefono (WhatsApp)",
+        "nationality": "Nazionalità del cliente",
+        "nationalityHint": "Impostata nel passaggio precedente. Cambiala lì per ricalcolare il prezzo.",
+        "travellersTitle": "Altri viaggiatori",
+        "travellerAdult": "Viaggiatore {n} · Adulto",
+        "travellerChild": "Viaggiatore {n} · Bambino ({age} anni)",
+        "paymentTitle": "Pagamento",
+        "paymentText": "Acconto {deposit} subito, saldo {balance} il giorno del servizio. Calcolato sul tuo prezzo partner.",
+        "payOnline": "Paga online subito",
+        "payOnlineText": "Pagamento con carta tramite checkout sicuro subito dopo la creazione della prenotazione.",
+        "payTransfer": "Bonifico o versamento",
+        "payTransferText": "Paga l'acconto e carica la ricevuta dopo la prenotazione. Confermiamo dopo la verifica.",
+        "voucherTitle": "Voucher per il cliente",
+        "voucherWith": "Voucher con prezzi",
+        "voucherWithText": "Mostra il prezzo pagato dal cliente.",
+        "voucherWithout": "Voucher senza prezzi",
+        "voucherWithoutText": "Consigliato quando rivendi al tuo prezzo.",
+        "notesTitle": "Note per il nostro team (facoltative)",
+        "terms": "Confermo che i dati del cliente sono corretti e accetto i termini e condizioni per i partner.",
+        "back": "Indietro",
+        "confirm": "Conferma prenotazione",
+        "error": "Non è stato possibile creare la prenotazione. Riprova."
+      },
+      "confirmation": {
+        "heading": "Prenotazione ricevuta",
+        "title": "Grazie, la prenotazione è registrata!",
+        "reference": "Riferimento",
+        "text": "Paga l'acconto qui sotto per confermarla. Invieremo il voucher a {email}.",
+        "client": "Cliente",
+        "partnerTotal": "Totale partner",
+        "voucherWith": "Voucher con prezzi",
+        "voucherWithout": "Voucher senza prezzi",
+        "view": "Vedi prenotazione",
+        "new": "Nuova prenotazione"
+      }
+    },
+    "detail": {
+      "metaTitle": "Prenotazione {reference}",
+      "notFound": "La prenotazione {reference} non è stata trovata.",
+      "back": "Torna alle prenotazioni",
+      "title": "Prenotazione {reference}",
+      "bookedOn": "prenotata il {date}",
+      "client": "Cliente (viaggiatore principale)",
+      "name": "Nome",
+      "nationality": "Nazionalità",
+      "group": "gruppo {group}",
+      "email": "Email",
+      "phone": "Telefono",
+      "travellers": "Viaggiatori",
+      "party": "{adults, plural, one {# adulto} other {# adulti}}{children, plural, =0 {} one {, # bambino} other {, # bambini}}",
+      "service": "Servizio",
+      "items": "Voci",
+      "season": "Stagione: {season}",
+      "columns": {
+        "item": "Voce",
+        "qty": "Q.tà",
+        "customer": "Prezzo cliente",
+        "partner": "Totale partner"
+      },
+      "payments": "Pagamenti",
+      "paymentsText": "Acconto e saldo sono calcolati sul totale partner.",
+      "deposit": "Acconto",
+      "balancePayment": "Saldo",
+      "noPayments": "Ancora nessun pagamento.",
+      "totals": "Totali",
+      "customerTotal": "Totale cliente",
+      "partnerTotal": "Totale partner",
+      "partnerPrice": "Prezzo partner",
+      "paid": "Pagato",
+      "balanceDue": "Saldo da pagare",
+      "voucher": "Voucher per il cliente",
+      "voucherText": "Invia al cliente il voucher con o senza prezzi.",
+      "voucherWith": "Voucher con prezzi",
+      "voucherWithout": "Voucher senza prezzi",
+      "cancel": "Richiedi la cancellazione"
+    },
+    "voucher": {
+      "metaTitle": "Voucher {reference}",
+      "notFound": "Prenotazione non trovata.",
+      "withPrices": "Voucher cliente con prezzi",
+      "withoutPrices": "Voucher cliente senza prezzi",
+      "print": "Stampa o salva in PDF",
+      "label": "Voucher di prenotazione",
+      "service": "Servizio",
+      "date": "Data",
+      "client": "Viaggiatore principale",
+      "nationality": "Nazionalità",
+      "travellers": "Viaggiatori",
+      "party": "{adults, plural, one {# adulto} other {# adulti}}{children, plural, =0 {} one {, # bambino} other {, # bambini}}",
+      "destination": "Destinazione",
+      "names": "Viaggiatori",
+      "prices": "Prezzi",
+      "total": "Totale",
+      "footer": "Sharm Station Viaggi · {phone} · {email}"
     }
   },
   "partnerPrice": {
@@ -1207,5 +1446,30 @@
       "size": "{name} supera i 5 MB.",
       "count": "Puoi caricare al massimo 3 file."
     }
+  },
+  "nationality": {
+    "title": "Da dove vieni?",
+    "changeTitle": "La tua nazionalità",
+    "subtitle": "I prezzi dipendono dalla tua nazionalità.",
+    "text": "Scegli il paese del tuo passaporto per vedere i prezzi corretti. Puoi cambiarlo in qualsiasi momento dalla parte alta della pagina.",
+    "changeText": "I prezzi del sito sono mostrati per questa nazionalità.",
+    "label": "Nazionalità",
+    "searchPlaceholder": "Cerca un paese…",
+    "suggested": "Suggeriti",
+    "allCountries": "Tutti i paesi",
+    "noMatch": "Nessun paese trovato",
+    "clear": "Cancella",
+    "close": "Chiudi",
+    "loading": "Caricamento paesi…",
+    "detected": "Rilevato dalla tua posizione",
+    "fromBrowser": "Suggerito dalla lingua del browser",
+    "groupHint": "Prezzi per il gruppo di nazionalità {group}.",
+    "changeNote": "Cambiando nazionalità tutti i prezzi del sito si aggiornano subito.",
+    "continue": "Continua",
+    "cancel": "Annulla",
+    "apply": "Applica",
+    "privacy": "Salviamo la tua scelta in un cookie e nel tuo account e la usiamo solo per mostrare i prezzi. Leggi la <link>Privacy policy</link>.",
+    "chipLabel": "Nazionalità: {country}. Cambia nazionalità",
+    "chipEmpty": "Nazionalità"
   }
 }

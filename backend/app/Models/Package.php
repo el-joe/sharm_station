@@ -8,8 +8,10 @@ use App\Enums\PricingMode;
 use App\Enums\PublishStatus;
 use App\Models\Concerns\HasAddons;
 use App\Models\Concerns\HasChildPolicy;
+use App\Models\Concerns\HasProductPrices;
 use App\Models\Concerns\HasSeasonPrices;
 use App\Models\Concerns\HasTranslations;
+use App\Models\Contracts\Priceable;
 use Database\Factories\PackageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -21,15 +23,25 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'destination_id', 'title', 'slug', 'summary', 'description', 'days', 'nights', 'private_enabled', 'group_enabled',
-    'pricing_mode', 'min_persons', 'max_persons', 'price_mode', 'base_price', 'base_child_price', 'partner_price',
+    'pricing_mode', 'min_persons', 'max_persons', 'price_mode', 'base_price', 'base_child_price',
     'discount_percent', 'from_price', 'deposit_percent', 'free_cancellation_hours', 'highlights', 'included', 'excluded',
     'cover_image', 'status', 'seo', 'featured', 'sort', 'transfers_included', 'faq', 'what_to_bring', 'guide_languages',
     'cancellation_policy',
 ])]
-class Package extends Model
+class Package extends Model implements Priceable
 {
     /** @use HasFactory<PackageFactory> */
-    use HasAddons, HasChildPolicy, HasFactory, HasSeasonPrices, HasTranslations;
+    use HasAddons, HasChildPolicy, HasFactory, HasProductPrices, HasSeasonPrices, HasTranslations;
+
+    /**
+     * Relations the "from" price of a package priced from its trips needs (eager load them on listings).
+     *
+     * @var list<string>
+     */
+    public const COMPUTED_PRICE_RELATIONS = [
+        'stages.stageTrips.trip.unitOptions', 'stages.stageTrips.trip.privateTiers',
+        'stages.stageTrips.trip.seasonPrices', 'stages.stageTrips.trip.productPrices',
+    ];
 
     /**
      * @var list<string>
@@ -50,7 +62,6 @@ class Package extends Model
             'featured' => 'boolean',
             'base_price' => 'decimal:2',
             'base_child_price' => 'decimal:2',
-            'partner_price' => 'decimal:2',
             'discount_percent' => 'decimal:2',
             'from_price' => 'decimal:2',
             'deposit_percent' => 'decimal:2',
@@ -125,5 +136,21 @@ class Package extends Model
         }
 
         return $days;
+    }
+
+    public function basePriceFor(string $field): ?float
+    {
+        $value = match ($field) {
+            'adult_price' => $this->base_price,
+            'child_price' => $this->base_child_price,
+            default => null,
+        };
+
+        return $value !== null ? (float) $value : null;
+    }
+
+    public function priceFields(): array
+    {
+        return ['adult_price' => 'Adult', 'child_price' => 'Child'];
     }
 }

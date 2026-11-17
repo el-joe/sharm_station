@@ -64,4 +64,12 @@ interface RoomRepositoryInterface extends BaseRepositoryInterface
      * @return int Number of dates changed.
      */
     public function setManualStatus(Room $room, array $dates, RoomAvailabilityStatus $status): int;
+
+    /**
+     * Bookable rooms for the partner catalogue.
+     *
+     * @param  list<string>  $tokens
+     * @return Collection<int, Room>
+     */
+    public function forCatalogue(?string $destination, array $tokens): Collection;
 }

@@ -106,8 +106,7 @@ describe('detail', function () {
     });
 
     test('partner prices are never exposed to visitors or customers', function () {
-        $trip = buggyTrip();
-        $trip->unitOptions[0]->update(['partner_price' => 30]);
+        buggyTrip();
 
         $guest = $this->getJson('/api/v1/trips/desert-buggy-safari')->assertOk();
         expect($guest->json('data'))->not->toHaveKey('partner_from_price')
@@ -123,16 +122,19 @@ describe('detail', function () {
         expect($this->getJson('/api/v1/trips/desert-buggy-safari')->getContent())->not->toContain('partner_price');
     });
 
-    test('approved partners see partner prices', function () {
-        $trip = buggyTrip();
-        $trip->unitOptions[0]->update(['partner_price' => 30]);
-        $partner = Partner::factory()->create(['default_commission' => 10]);
+    test('approved partners see customer prices on the public site (D10)', function () {
+        buggyTrip();
+        $partner = Partner::factory()->create();
         Sanctum::actingAs($partner->user);
 
-        $this->getJson('/api/v1/trips/desert-buggy-safari')
+        $response = $this->getJson('/api/v1/trips/desert-buggy-safari')
             ->assertOk()
-            ->assertJsonPath('data.unit_options.0.partner_price.amount_eur', 30)
-            ->assertJsonPath('data.unit_options.1.partner_price.amount_eur', 45);
+            ->assertJsonPath('data.unit_options.0.price.amount_eur', 35)
+            ->assertJsonMissingPath('data.unit_options.0.partner_price')
+            ->assertJsonMissingPath('data.partner_from_price');
+
+        expect($response->getContent())->not->toContain('partner_');
+        expect($this->getJson('/api/v1/trips')->getContent())->not->toContain('partner_');
     });
 
     test('draft and unknown trips return 404', function () {

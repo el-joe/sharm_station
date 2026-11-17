@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Contracts;
 
+use App\DTOs\Ai\CatalogueQueryData;
 use App\DTOs\Trip\TripAdminFilterData;
 use App\DTOs\Trip\TripFilterData;
 use App\Enums\TripType;
@@ -45,4 +46,23 @@ interface TripRepositoryInterface extends BaseRepositoryInterface
      * @return Collection<int, Trip>
      */
     public function suggest(array $tokens, array $types, int $limit): Collection;
+
+    /**
+     * Published trips of the given types for the partner catalogue, with everything pricing needs.
+     *
+     * @param  list<string>  $types
+     * @param  list<string>  $tokens
+     * @return Collection<int, Trip>
+     */
+    public function forCatalogue(array $types, ?string $destination, array $tokens): Collection;
+
+    /**
+     * Trips of every status for the MCP read tools, with destination and price relations.
+     */
+    public function paginateForMcp(CatalogueQueryData $query): LengthAwarePaginator;
+
+    /**
+     * One trip with everything get_trip returns (content, itinerary, options, tiers, prices).
+     */
+    public function findForMcp(int $id): ?Trip;
 }

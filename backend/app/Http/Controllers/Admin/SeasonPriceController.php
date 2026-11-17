@@ -7,48 +7,62 @@ use App\Http\Requests\Admin\SeasonPricesRequest;
 use App\Models\Package;
 use App\Models\Room;
 use App\Models\SeasonPrice;
+use App\Models\TransferFixedRoute;
 use App\Models\Trip;
+use App\Services\PriceMatrixService;
 use App\Services\SeasonPriceService;
 use Illuminate\Http\RedirectResponse;
 
 /**
- * Price list (seasons) of trips, packages and rooms (SRS 3.8).
+ * Price matrix (base per nationality group + seasons per group) of trips, packages, rooms and
+ * transfer fixed routes (SRS 3.8, 3.9).
  */
 class SeasonPriceController extends Controller
 {
-    public function __construct(private readonly SeasonPriceService $seasons) {}
+    public function __construct(
+        private readonly SeasonPriceService $seasons,
+        private readonly PriceMatrixService $matrix,
+    ) {}
 
     public function updateTrip(SeasonPricesRequest $request, Trip $trip): RedirectResponse
     {
-        $this->seasons->sync($trip, $request->rows());
+        $this->matrix->save($trip->load(['unitOptions', 'privateTiers']), $request->baseRows(), $request->rows());
 
-        return redirect()->to(route('admin.trips.edit', $trip).'#tab-prices')->with('success', 'Price list saved.');
+        return redirect()->to(route('admin.trips.edit', $trip).'#tab-prices')->with('success', 'Price matrix saved.');
     }
 
     public function updateRoom(SeasonPricesRequest $request, Room $room): RedirectResponse
     {
-        $this->seasons->sync($room, $request->rows());
+        $this->matrix->save($room, $request->baseRows(), $request->rows());
 
-        return redirect()->to(route('admin.rooms.edit', $room).'#tab-prices')->with('success', 'Price list saved.');
+        return redirect()->to(route('admin.rooms.edit', $room).'#tab-prices')->with('success', 'Price matrix saved.');
     }
 
     public function updatePackage(SeasonPricesRequest $request, Package $package): RedirectResponse
     {
-        $this->seasons->sync($package, $request->rows());
+        $this->matrix->save($package, $request->baseRows(), $request->rows());
 
-        return redirect()->to(route('admin.packages.edit', $package).'#tab-prices')->with('success', 'Price list saved.');
+        return redirect()->to(route('admin.packages.edit', $package).'#tab-prices')->with('success', 'Price matrix saved.');
+    }
+
+    public function updateFixedRoute(SeasonPricesRequest $request, TransferFixedRoute $fixedRoute): RedirectResponse
+    {
+        $this->matrix->save($fixedRoute, $request->baseRows(), $request->rows());
+
+        return redirect()->to(route('admin.transfers.routes.edit', $fixedRoute).'#price-matrix')->with('success', 'Price matrix saved.');
     }
 
     public function copyToNextYear(SeasonPrice $season): RedirectResponse
     {
         $copy = $this->seasons->copyToNextYear($season);
-        $route = match (true) {
-            $season->priceable instanceof Room => 'admin.rooms.edit',
-            $season->priceable instanceof Package => 'admin.packages.edit',
-            default => 'admin.trips.edit',
+        [$route, $anchor] = match (true) {
+            $season->priceable instanceof Room => ['admin.rooms.edit', '#tab-prices'],
+            $season->priceable instanceof Package => ['admin.packages.edit', '#tab-prices'],
+            $season->priceable instanceof TransferFixedRoute => ['admin.transfers.routes.edit', '#price-matrix'],
+            default => ['admin.trips.edit', '#tab-prices'],
         };
 
-        return redirect()->to(route($route, $season->priceable).'#tab-prices')
+        return redirect()->to(route($route, $season->priceable).$anchor)
             ->with('success', "Copied to {$this->seasons->formatRange($copy->starts_on, $copy->ends_on)}.");
     }
 }

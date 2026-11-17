@@ -22,4 +22,11 @@ interface TransferFixedRouteRepositoryInterface extends BaseRepositoryInterface
      * @return Builder<TransferFixedRoute>
      */
     public function adminQuery(): Builder;
+
+    /**
+     * Enabled fixed routes of enabled hubs for the partner catalogue.
+     *
+     * @return Collection<int, TransferFixedRoute>
+     */
+    public function forCatalogue(): Collection;
 }

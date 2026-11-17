@@ -32,6 +32,7 @@ function buggyBookingPayload(Trip $trip, array $overrides = []): array
             ['unit_option_id' => $trip->unitOptions[0]->id, 'quantity' => 1],
             ['unit_option_id' => $trip->unitOptions[1]->id, 'quantity' => 1],
         ],
+        'nationality_code' => 'IT',
         'lead' => ['name' => 'Giulia Rossi', 'email' => 'giulia@example.com', 'phone' => '+39 333 1234567'],
         'travelers' => [
             ['first_name' => 'Giulia', 'last_name' => 'Rossi', 'type' => 'adult'],
@@ -100,18 +101,20 @@ test('the travellers must match the party', function () {
     }
 });
 
-test('a partner booking stores retail, partner and commission totals', function () {
+test('a partner booking stores retail, partner and commission totals with the commission source', function () {
     $trip = buggyTrip();
-    $partner = Partner::factory()->create(['default_commission' => 10]);
+    $partner = Partner::factory()->create();
 
     $booking = $this->service->createFromQuote(CreateBookingData::fromArray(buggyBookingPayload($trip), partner: $partner));
 
     expect($booking->partner_id)->toBe($partner->id)
         ->and((float) $booking->retail_total)->toBe(85.0)
-        ->and((float) $booking->partner_total)->toBe(76.5)
-        ->and((float) $booking->commission_amount)->toBe(8.5)
-        ->and((float) $booking->total)->toBe(76.5)
-        ->and($booking->price_rule)->toBe(PriceRule::DefaultCommission);
+        ->and((float) $booking->partner_total)->toBe(72.25)
+        ->and((float) $booking->commission_amount)->toBe(12.75)
+        ->and((float) $booking->commission_percent)->toBe(15.0)
+        ->and((float) $booking->total)->toBe(72.25)
+        ->and($booking->price_rule)->toBe(PriceRule::GlobalSetting)
+        ->and($booking->nationality_code)->toBe('IT');
 });
 
 test('an accommodation booking holds the nights so the room cannot be booked twice', function () {
@@ -121,6 +124,7 @@ test('an accommodation booking holds the nights so the room cannot be booked twi
         'check_in' => '2026-12-01',
         'check_out' => '2026-12-04',
         'adults' => 2,
+        'nationality_code' => 'IT',
         'lead' => ['name' => 'John Smith', 'email' => 'john@example.com'],
         'travelers' => [
             ['first_name' => 'John', 'last_name' => 'Smith', 'type' => 'adult'],

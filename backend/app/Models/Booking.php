@@ -23,7 +23,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 #[Fillable([
     'reference', 'access_token', 'service_type', 'booking_type', 'pricing_mode', 'bookable_type', 'bookable_id', 'season_name',
     'start_date', 'check_in', 'check_out', 'user_id', 'partner_id', 'lead_name', 'lead_email', 'lead_phone', 'adults',
-    'children', 'retail_total', 'partner_total', 'commission_amount', 'price_rule', 'total', 'deposit_percent',
+    'children', 'retail_total', 'partner_total', 'commission_amount', 'commission_percent', 'nationality_code', 'nationality_group_id', 'price_rule', 'total', 'deposit_percent',
     'deposit_amount', 'balance_amount', 'currency', 'exchange_rate', 'total_in_currency', 'status', 'payment_status', 'payment_due_at',
     'locale', 'notes', 'price_lines',
 ])]
@@ -53,6 +53,7 @@ class Booking extends Model
             'retail_total' => 'decimal:2',
             'partner_total' => 'decimal:2',
             'commission_amount' => 'decimal:2',
+            'commission_percent' => 'decimal:2',
             'total' => 'decimal:2',
             'deposit_percent' => 'decimal:2',
             'deposit_amount' => 'decimal:2',
@@ -186,5 +187,13 @@ class Booking extends Model
     public function dueAmount(): float
     {
         return in_array($this->status, BookingStatus::voided(), true) ? 0.0 : round((float) $this->total - $this->paidAmount(), 2);
+    }
+
+    /**
+     * @return BelongsTo<NationalityGroup, $this>
+     */
+    public function nationalityGroup(): BelongsTo
+    {
+        return $this->belongsTo(NationalityGroup::class);
     }
 }

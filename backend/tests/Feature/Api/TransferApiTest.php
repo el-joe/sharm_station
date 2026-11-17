@@ -5,6 +5,7 @@ use App\Enums\ServiceType;
 use App\Enums\TransferStatus;
 use App\Models\Booking;
 use App\Models\Partner;
+use App\Models\ProductPrice;
 use App\Models\TransferFixedRoute;
 use App\Models\TransferHub;
 use App\Models\TransferRequest;
@@ -12,6 +13,7 @@ use App\Models\VehicleType;
 use App\Services\Transfers\DistanceProvider;
 use App\Services\Transfers\HaversineDistanceProvider;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(function () {
@@ -96,6 +98,16 @@ test('night surcharge, round trip discount and extras are added', function () {
         ->assertJsonPath('data.total', 139);
 });
 
+test('a repeated quote reads the cached road distance from a serializing cache store', function () {
+    // The database/file stores serialize values and refuse to unserialize objects
+    // (cache.serializable_classes = false): the second quote must still work.
+    config(['cache.stores.array.serialize' => true]);
+    Cache::forgetDriver('array');
+
+    $this->postJson('/api/v1/transfers/quote', transferBody())->assertOk()->assertJsonPath('data.distance_km', 50);
+    $this->postJson('/api/v1/transfers/quote', transferBody())->assertOk()->assertJsonPath('data.distance_km', 50)->assertJsonPath('data.total', 66);
+});
+
 test('the minimum fare applies to short rides', function () {
     $this->app->instance(DistanceProvider::class, new class implements DistanceProvider
     {
@@ -112,17 +124,23 @@ test('the minimum fare applies to short rides', function () {
         ->assertJsonPath('data.total', 30);
 });
 
-test('a fixed route overrides the distance formula and carries its partner price', function () {
-    TransferFixedRoute::factory()->create(['transfer_hub_id' => $this->hub->id, 'lat' => 27.99, 'lng' => 34.42, 'price' => 35, 'partner_price' => 28]);
-    $partner = Partner::factory()->create(['default_commission' => 10]);
-    Sanctum::actingAs($partner->user);
+test('a fixed route overrides the distance formula and is priced per nationality group', function () {
+    $route = TransferFixedRoute::factory()->create(['transfer_hub_id' => $this->hub->id, 'lat' => 27.99, 'lng' => 34.42, 'price' => 35]);
+    ProductPrice::factory()->create(['priceable_type' => 'transfer_fixed_route', 'priceable_id' => $route->id, 'nationality_group_id' => nationalityGroup('egyptian')->id, 'adult_price' => null, 'child_price' => null, 'price' => 20]);
+    Sanctum::actingAs(Partner::factory()->create()->user);
 
     $this->postJson('/api/v1/transfers/quote', transferBody(['vehicle_type_id' => $this->minivan->id]))
         ->assertOk()
         ->assertJsonPath('data.lines.0.meta.breakdown.method', 'fixed_route')
+        ->assertJsonPath('data.lines.0.meta.breakdown.price_source', 'product_base')
         ->assertJsonPath('data.retail_total', 49)
-        ->assertJsonPath('data.partner_total', 39.2)
-        ->assertJsonPath('data.price_rule', 'partner_price');
+        ->assertJsonMissingPath('data.partner_total');
+
+    $this->postJson('/api/v1/transfers/quote?nationality=EG', transferBody(['vehicle_type_id' => $this->minivan->id]))
+        ->assertOk()
+        ->assertJsonPath('data.lines.0.meta.breakdown.price_source', 'group_base')
+        ->assertJsonPath('data.retail_total', 28)
+        ->assertJsonPath('data.nationality.group.code', 'egyptian');
 });
 
 test('transfer quotes validate capacity, service area, notice and return', function () {
@@ -154,6 +172,7 @@ test('a transfer booking stores the request with its distance and breakdown', fu
     $this->postJson('/api/v1/bookings', [
         'service' => 'transfer',
         'transfer' => transferBody(['flight_number' => 'AZ 896']),
+        'nationality_code' => 'IT',
         'lead' => ['name' => 'Giulia Rossi', 'email' => 'giulia@example.com', 'phone' => '+39 333 1234567'],
     ])
         ->assertCreated()
@@ -174,6 +193,7 @@ test('a transfer booking stores the request with its distance and breakdown', fu
 test('a transfer booking with an invalid quote is rejected', function () {
     $this->postJson('/api/v1/bookings', [
         'transfer' => transferBody(['passengers' => 9]),
+        'nationality_code' => 'IT',
         'lead' => ['name' => 'Giulia Rossi', 'email' => 'giulia@example.com', 'phone' => '+39 333 1234567'],
     ])->assertUnprocessable()->assertJsonValidationErrors(['passengers']);
 

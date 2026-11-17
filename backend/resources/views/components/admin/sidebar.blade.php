@@ -6,13 +6,14 @@
 
     $groups = [
         ['label' => 'Overview', 'icon' => 'overview', 'route' => 'admin.dashboard', 'active' => request()->routeIs('admin.dashboard')],
-        ['label' => 'Catalogue', 'icon' => 'catalogue', 'items' => [
+        ['label' => 'Catalogue', 'icon' => 'catalogue', 'items' => array_values(array_filter([
             ['label' => 'Trips', 'url' => route('admin.trips.index'), 'active' => request()->routeIs('admin.trips.*') && ! $isNile],
             ['label' => 'Nile trips', 'url' => route('admin.trips.index', ['type' => 'nile']), 'active' => $isNile],
             ['label' => 'Packages', 'url' => route('admin.packages.index'), 'active' => request()->routeIs('admin.packages.*')],
             ['label' => 'Add-ons', 'url' => route('admin.addons.index'), 'active' => request()->routeIs('admin.addons.*')],
             ['label' => 'Destinations', 'url' => route('admin.destinations.index'), 'active' => request()->routeIs('admin.destinations.*')],
-        ]],
+            $finance ? ['label' => 'Nationality groups', 'url' => route('admin.nationality-groups.index'), 'active' => request()->routeIs('admin.nationality-groups.*')] : null,
+        ]))],
         ['label' => 'Accommodation', 'icon' => 'bed', 'items' => [
             ['label' => 'Buildings', 'url' => route('admin.buildings.index'), 'active' => request()->routeIs('admin.buildings.*')],
             ['label' => 'Rooms', 'url' => route('admin.rooms.index'), 'active' => request()->routeIs('admin.rooms.*')],
@@ -35,11 +36,16 @@
             ['label' => 'Fixed routes', 'url' => route('admin.transfers.routes.index'), 'active' => request()->routeIs('admin.transfers.routes.*')],
             ['label' => 'Pricing simulator', 'url' => route('admin.transfers.simulator'), 'active' => request()->routeIs('admin.transfers.simulator')],
         ] : []],
-        ['label' => 'Content', 'icon' => 'pen', 'route' => 'admin.soon', 'params' => 'content', 'active' => request()->is('admin/soon/content')],
+        ['label' => 'Content', 'icon' => 'pen', 'items' => [
+            ['label' => 'Pages and blog', 'url' => route('admin.soon', 'content'), 'active' => request()->is('admin/soon/content')],
+            ['label' => 'AI suggestions', 'url' => route('admin.ai-suggestions.index'), 'active' => request()->routeIs('admin.ai-suggestions.*')],
+        ]],
         ['label' => 'Settings', 'icon' => 'settings', 'items' => array_values(array_filter([
             $settings ? ['label' => 'General', 'url' => route('admin.settings.edit'), 'active' => request()->routeIs('admin.settings.*')] : null,
+            $finance ? ['label' => 'Commissions', 'url' => route('admin.commissions.edit'), 'active' => request()->routeIs('admin.commissions.*')] : null,
             $finance ? ['label' => 'Payment methods', 'url' => route('admin.payment-methods.index'), 'active' => request()->routeIs('admin.payment-methods.*')] : null,
             $finance ? ['label' => 'Currencies', 'url' => route('admin.currencies.index'), 'active' => request()->routeIs('admin.currencies.*')] : null,
+            $settings ? ['label' => 'MCP access', 'url' => route('admin.mcp.index'), 'active' => request()->routeIs('admin.mcp.*')] : null,
             $settings ? ['label' => 'Users and roles', 'url' => route('admin.soon', 'users'), 'active' => request()->is('admin/soon/users')] : null,
         ]))],
     ];

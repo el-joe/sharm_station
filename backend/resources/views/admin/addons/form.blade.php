@@ -11,8 +11,7 @@
             <x-admin.translatable name="description" label="Description" type="textarea" :rows="3" :value="$addon->getTranslations('description')" />
         </x-admin.form-section>
         <x-admin.form-section title="Price and rules">
-            <x-admin.money name="price" label="Retail price" :value="$addon->price" retail-for="addon" span="md:col-span-2" />
-            <x-admin.money name="partner_price" label="Partner price (optional)" :value="$addon->partner_price" partner-for="addon" :commission="$commission" hint="Overrides the commission rule" span="md:col-span-2" />
+            <x-admin.money name="price" label="Price" :value="$addon->price" hint="Partners get the commission of the product's type" span="md:col-span-2" />
             <x-admin.select name="pricing_basis" label="Pricing basis" :options="\App\Enums\AddonPricingBasis::options()" :selected="$addon->pricing_basis" :select2="false" span="md:col-span-2" />
             <x-admin.input name="max_quantity" label="Max quantity" type="number" min="1" :value="$addon->max_quantity" span="md:col-span-2" />
             <x-admin.select name="booking_types[]" label="Booking types" :options="\App\Enums\BookingType::options()" :selected="$addon->booking_types ?? []" multiple placeholder="All booking types" span="md:col-span-4" />

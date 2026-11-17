@@ -33,8 +33,8 @@ function perUnitTripPayload(Destination $destination, array $overrides = []): ar
         'max_persons' => 8,
         'deposit_percent' => 25,
         'unit_options' => [
-            'n1' => ['name' => ['en' => 'Single quad', 'it' => 'Quad singolo'], 'seats' => 1, 'price' => 40, 'partner_price' => '', 'max_quantity' => 6, 'children_allowed' => '0', 'sort' => 0],
-            'n2' => ['name' => ['en' => 'Double quad'], 'seats' => 2, 'price' => 60, 'partner_price' => 51, 'max_quantity' => 4, 'children_allowed' => '1', 'sort' => 1],
+            'n1' => ['name' => ['en' => 'Single quad', 'it' => 'Quad singolo'], 'seats' => 1, 'price' => 40, 'max_quantity' => 6, 'children_allowed' => '0', 'sort' => 0],
+            'n2' => ['name' => ['en' => 'Double quad'], 'seats' => 2, 'price' => 60, 'max_quantity' => 4, 'children_allowed' => '1', 'sort' => 1],
         ],
         'availability' => [
             'private' => ['lead_time_hours' => 12, 'blackout_dates' => '2026-12-25, 2026-12-31'],
@@ -82,7 +82,7 @@ test('a per-unit trip is created with unit options, availability, itinerary and 
         ->and($trip->unitOptions)->toHaveCount(2)
         ->and($trip->unitOptions[0]->getTranslations('name'))->toBe(['en' => 'Single quad', 'it' => 'Quad singolo'])
         ->and($trip->unitOptions[0]->children_allowed)->toBeFalse()
-        ->and((float) $trip->unitOptions[1]->partner_price)->toBe(51.0)
+        ->and((float) $trip->unitOptions[1]->price)->toBe(60.0)
         ->and((float) $trip->from_price)->toBe(40.0)
         ->and($trip->addons->pluck('id')->all())->toBe([$addons[1]->id, $addons[0]->id]);
 
@@ -118,7 +118,7 @@ test('updating a trip updates, reorders and removes unit options', function () {
         ->and($options->contains('id', $double->id))->toBeFalse();
 });
 
-test('a per-unit trip needs at least one unit option and valid partner prices', function () {
+test('a per-unit trip needs at least one unit option and ignores partner prices', function () {
     $this->actingAs($this->admin)
         ->post(route('admin.trips.store'), perUnitTripPayload($this->destination, ['unit_options' => []]))
         ->assertSessionHasErrors(['unit_options' => 'Add at least one unit option for a per-unit trip.']);
@@ -127,7 +127,7 @@ test('a per-unit trip needs at least one unit option and valid partner prices', 
         ->post(route('admin.trips.store'), perUnitTripPayload($this->destination, ['unit_options' => [
             ['name' => ['en' => 'Single'], 'seats' => 1, 'price' => 30, 'partner_price' => 45, 'max_quantity' => 3],
         ]]))
-        ->assertSessionHasErrors('unit_options.0.partner_price');
+        ->assertSessionDoesntHaveErrors('unit_options.0.partner_price');
 
     $this->actingAs($this->admin)
         ->post(route('admin.trips.store'), perUnitTripPayload($this->destination, ['private_enabled' => '0', 'group_enabled' => '0']))
@@ -162,9 +162,9 @@ test('the price list rejects overlapping seasons with the exact message on the o
         ->from(route('admin.trips.edit', $trip))
         ->put(route('admin.trips.seasons.update', $trip), ['seasons' => [
             'n1' => ['name' => ['en' => 'High season'], 'starts_on' => '2026-11-01', 'ends_on' => '2026-12-19', 'is_active' => '1', 'recurring_yearly' => '0',
-                'unit_prices' => [$option->id => ['price' => 40, 'partner_price' => 34]]],
+                'unit_prices' => [$option->id => 40]],
             'n2' => ['name' => ['en' => 'Christmas & New Year'], 'starts_on' => '2026-12-15', 'ends_on' => '2027-01-06', 'is_active' => '1', 'recurring_yearly' => '0',
-                'unit_prices' => [$option->id => ['price' => 45]]],
+                'unit_prices' => [$option->id => 45]],
         ]]);
 
     $response->assertRedirect(route('admin.trips.edit', $trip))
@@ -183,9 +183,9 @@ test('the price list saves, updates and deletes seasons and refreshes the from p
 
     $this->actingAs($this->admin)->put(route('admin.trips.seasons.update', $trip), ['seasons' => [
         ['id' => $old->id, 'name' => ['en' => 'Low season', 'it' => 'Bassa stagione'], 'starts_on' => '2027-01-07', 'ends_on' => '2027-03-31', 'is_active' => '1', 'recurring_yearly' => '1',
-            'unit_prices' => [$option->id => ['price' => 25, 'partner_price' => '']]],
+            'unit_prices' => [$option->id => 25]],
         ['name' => ['en' => 'Christmas'], 'starts_on' => '2026-12-20', 'ends_on' => '2027-01-06', 'is_active' => '1', 'recurring_yearly' => '0',
-            'unit_prices' => [$option->id => ['price' => 45]]],
+            'unit_prices' => [$option->id => 45]],
     ]])->assertSessionHasNoErrors()->assertRedirect(route('admin.trips.edit', $trip).'#tab-prices');
 
     $seasons = SeasonPrice::query()->orderBy('starts_on')->get();
@@ -193,7 +193,6 @@ test('the price list saves, updates and deletes seasons and refreshes the from p
         ->and(SeasonPrice::query()->find($removed->id))->toBeNull()
         ->and($old->fresh()->recurring_yearly)->toBeTrue()
         ->and($old->fresh()->unitPriceFor($option->id))->toBe(25.0)
-        ->and($old->fresh()->unitPartnerPriceFor($option->id))->toBeNull()
         ->and((float) $trip->fresh()->from_price)->toBe(25.0);
 });
 

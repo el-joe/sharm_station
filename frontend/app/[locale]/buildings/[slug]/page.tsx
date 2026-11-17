@@ -1,23 +1,16 @@
 import { BuildingCard } from "@/components/accommodation/BuildingCard";
+import { getNationality } from "@/lib/api/nationality-server";
 import { RoomCard } from "@/components/accommodation/RoomCard";
 import { GoogleReviewsSection } from "@/components/reviews/GoogleReviewsSection";
 import { AppImage } from "@/components/ui/AppImage";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
-import { api } from "@/lib/api/client";
-import { getCatalogueKeys, getGoogleReviews } from "@/lib/api/server";
+import { getBuilding, getCatalogueKeys, getGoogleReviews } from "@/lib/api/server";
 import type { Locale } from "@/lib/api/types";
 import { pageMetadata } from "@/lib/seo";
 import type { Metadata } from "next";
-import { cacheLife } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-
-async function getBuilding(slug: string, locale: Locale) {
-  "use cache";
-  cacheLife("minutes");
-  return api.building(slug, { locale });
-}
 
 export async function generateStaticParams() {
   const keys = await getCatalogueKeys();
@@ -41,7 +34,7 @@ export default function BuildingPage({ params }: PageProps<"/[locale]/buildings/
 
 async function Content({ params }: { params: PageProps<"/[locale]/buildings/[slug]">["params"] }) {
   const { locale, slug } = await params;
-  const b = await getBuilding(slug, locale as Locale);
+  const b = await getBuilding(slug, locale as Locale, await getNationality());
   if (!b) notFound();
   const [t, tc, tn, reviews] = await Promise.all([getTranslations("building"), getTranslations("common"), getTranslations("nav"), getGoogleReviews(locale as Locale)]);
   return (

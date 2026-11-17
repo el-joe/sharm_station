@@ -76,7 +76,7 @@ class BookingService
             default => $this->createTripBooking($data),
         };
 
-        return $booking->load(['travelers', 'units', 'addons', 'rooms.guests', 'bookable', 'includedTransfers', 'transferRequest']);
+        return $booking->load(['travelers', 'units', 'addons', 'rooms.guests', 'bookable', 'includedTransfers', 'transferRequest', 'nationalityGroup']);
     }
 
     public function findByReference(string $reference): ?Booking
@@ -351,7 +351,10 @@ class BookingService
             'retail_total' => $quote->retailTotal,
             'partner_total' => $quote->partnerTotal,
             'commission_amount' => $quote->commissionAmount,
+            'commission_percent' => $quote->commissionPercent,
             'price_rule' => $quote->priceRule,
+            'nationality_code' => $data->nationalityCode,
+            'nationality_group_id' => $quote->nationality['group']['id'] ?? $data->nationalityGroupId,
             'total' => $quote->total,
             'deposit_percent' => $quote->depositPercent,
             'deposit_amount' => $quote->depositAmount,
@@ -468,7 +471,7 @@ class BookingService
     public function loadForAdmin(Booking $booking): Booking
     {
         return $booking->load([
-            'travelers', 'units', 'addons', 'rooms.guests', 'bookable', 'partner.user', 'user',
+            'travelers', 'units', 'addons', 'rooms.guests', 'bookable', 'partner.user', 'user', 'nationalityGroup',
             'statusLogs.user:id,name', 'includedTransfers', 'transferRequest.hub', 'transferRequest.vehicleType',
             'payments.method', 'payments.recorder:id,name', 'proofs.method', 'proofs.reviewer:id,name',
         ]);

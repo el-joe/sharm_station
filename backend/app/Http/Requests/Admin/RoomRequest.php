@@ -17,7 +17,7 @@ class RoomRequest extends FormRequest
     /**
      * @var list<string>
      */
-    public const PRICE_FIELDS = ['pricing_mode', 'base_price', 'partner_price', 'extra_bed_price'];
+    public const PRICE_FIELDS = ['pricing_mode', 'base_price', 'extra_bed_price'];
 
     public function authorize(): bool
     {
@@ -72,7 +72,6 @@ class RoomRequest extends FormRequest
             'amenities.*' => ['string', 'max:60'],
             'pricing_mode' => ['required', Rule::enum(RoomPricingMode::class)],
             'base_price' => ['required', 'numeric', 'min:0'],
-            'partner_price' => ['nullable', 'numeric', 'min:0', 'lte:base_price'],
             'extra_bed_price' => ['nullable', 'numeric', 'min:0'],
             'min_nights' => ['required', 'integer', 'min:1', 'max:365'],
             'max_nights' => ['nullable', 'integer', 'gte:min_nights', 'max:365'],
@@ -87,7 +86,6 @@ class RoomRequest extends FormRequest
     {
         return [
             'max_total.gte' => 'The total capacity must be at least the maximum adults.',
-            'partner_price.lte' => 'The partner price cannot be higher than the base price.',
         ];
     }
 

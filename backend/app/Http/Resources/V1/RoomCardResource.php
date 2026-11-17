@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources\V1;
 
-use App\Enums\CommissionCategory;
 use App\Http\Resources\V1\Concerns\PresentsLabels;
 use App\Http\Resources\V1\Concerns\PresentsPrices;
 use App\Models\Room;
@@ -39,13 +38,9 @@ class RoomCardResource extends JsonResource
             'amenities' => $this->amenities ?? [],
             'cover_image' => $this->cover_image,
             'pricing_mode' => $this->pricing_mode->value,
-            'from_price' => $this->money($this->from_price ?? $this->base_price),
-            'base_price' => $this->money($this->base_price),
+            'from_price' => $this->groupFromPrice($this->resource, $this->from_price ?? $this->base_price),
+            'base_price' => $this->groupBasePrice($this->resource, 'price_per_night'),
             'price_unit' => 'per_night',
-            'partner_from_price' => $this->when(
-                $this->partner($request) !== null,
-                fn (): ?array => $this->partnerMoney($request, CommissionCategory::Accommodation, $this->from_price ?? $this->base_price, $this->partner_price),
-            ),
             'tax_included' => $this->building->taxes_included,
             'min_nights' => $this->min_nights,
             'max_nights' => $this->max_nights,

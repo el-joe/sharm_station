@@ -17,7 +17,7 @@ class RoomQuoteController extends ApiController
         $room = $rooms->findBookable((int) $request->validated('room_id'));
         abort_if($room === null, 404, 'Room not found.');
 
-        $quote = $engine->quote($room, RoomQuoteRequestData::fromRequest($request, $this->partner($request), $currencies->current()));
+        $quote = $engine->quote($room, RoomQuoteRequestData::fromRequest($request, null, $currencies->current(), ...$this->nationality()));
         $payload = (new QuoteResource($quote))->resolve($request);
 
         if (! $quote->isValid()) {

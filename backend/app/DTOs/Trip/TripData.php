@@ -33,7 +33,6 @@ final readonly class TripData
         public ?int $maxPersons = null,
         public ?float $basePrice = null,
         public ?float $baseChildPrice = null,
-        public ?float $partnerPrice = null,
         public float $depositPercent = 30,
         public PublishStatus $status = PublishStatus::Draft,
         public array $attributes = [],
@@ -50,7 +49,7 @@ final readonly class TripData
     public static function fromArray(array $data): self
     {
         $known = ['type', 'destination_id', 'title', 'slug', 'pricing_mode', 'private_enabled', 'group_enabled', 'min_persons',
-            'max_persons', 'base_price', 'base_child_price', 'partner_price', 'deposit_percent', 'status', 'unit_options', 'private_tiers', 'availability', 'itinerary', 'addon_ids'];
+            'max_persons', 'base_price', 'base_child_price', 'deposit_percent', 'status', 'unit_options', 'private_tiers', 'availability', 'itinerary', 'addon_ids'];
         $days = isset($data['itinerary']) ? array_values($data['itinerary']) : null;
 
         return new self(
@@ -65,7 +64,6 @@ final readonly class TripData
             maxPersons: isset($data['max_persons']) && $data['max_persons'] !== '' ? (int) $data['max_persons'] : null,
             basePrice: isset($data['base_price']) && $data['base_price'] !== '' ? (float) $data['base_price'] : null,
             baseChildPrice: isset($data['base_child_price']) && $data['base_child_price'] !== '' ? (float) $data['base_child_price'] : null,
-            partnerPrice: isset($data['partner_price']) && $data['partner_price'] !== '' ? (float) $data['partner_price'] : null,
             depositPercent: (float) ($data['deposit_percent'] ?? 30),
             status: PublishStatus::from($data['status'] ?? PublishStatus::Draft->value),
             attributes: array_diff_key($data, array_flip($known)),
@@ -117,7 +115,6 @@ final readonly class TripData
             'max_persons' => $this->maxPersons,
             'base_price' => $this->basePrice,
             'base_child_price' => $this->baseChildPrice,
-            'partner_price' => $this->partnerPrice,
             'deposit_percent' => $this->depositPercent,
             'status' => $this->status,
         ];

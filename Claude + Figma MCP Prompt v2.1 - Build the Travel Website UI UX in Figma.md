@@ -2,7 +2,7 @@
 
 Version 2.1 · Nov 13, 2026 (supersedes v2.0 · Nov 2, 2026)
 
-**What changed in v2.1:** the design file already exists, so the work is now **change requests CR-1 to CR-8** on the existing file (Section 2A) and the **Admin panel layout** (Section 2B), designed before the Laravel admin is coded. Source of truth for business rules is **SRS v2.1**.
+**What changed in v2.1:** the design file already exists, so the work is now **change requests CR-1 to CR-8** on the existing file (Section 2A) and the **Admin panel layout** (Section 2B), designed before the Laravel admin is coded. Source of truth for business rules is **SRS v2.2**.
 
 ## 1. When to use this file
 
@@ -12,7 +12,7 @@ Use this file if Figma AI does not produce a design that meets the requirements.
 
 1. Enable the **Figma** connector in Claude and sign in to your Figma account (Settings, Connectors).
 2. Make sure you have edit rights in a Figma team or drafts folder; Claude can create a new design file for you.
-3. Start a new Claude chat and attach these files: **Figma AI Design Brief v2.0** (the design source of truth) and **SRS v2.1 (English)** (the business rules).
+3. Start a new Claude chat and attach these files: **Figma AI Design Brief v2.0** (the design source of truth) and **SRS v2.2 (English)** (the business rules).
 4. Paste the main prompt from Section 2.
 5. Stay in the chat: Claude works in phases and reports after each. Reply "continue" or send corrections. If the chat stops, use the resume prompt in Section 3.
 
@@ -36,7 +36,7 @@ You are a senior product designer and Figma power-user. Using the Figma connecto
 
 SOURCES OF TRUTH (attached)
 1. "Figma AI Design Brief v2.0": design direction, tokens, components, every page with desktop and mobile layout, states, sample content. Follow it exactly.
-2. "SRS v2.1 (English)": business rules (including change requests CR-1 to CR-9). Use it to resolve any question about behaviour. Key rules: five services (trips, Nile trips, packages, transfers, accommodation); private vs group booking types on trips, Nile trips and packages (private any day, group only on listed days); add-ons on trips, Nile trips and packages; packages include transfers at no extra charge; accommodation is date-scheduled and shows ROOMS directly with their building's data; strict no-shared-rooms allocation; children policy with age discounts; deposit and balance; online and manual payments with proof upload; transfers priced by distance from predefined hubs; default currency EUR (also USD, GBP, EGP); Italian and English primary, RTL-ready; partner prices (commission rule or explicit partner price) shown only to logged-in approved partners; trips priced per person (with max persons) or per unit (Single / Double options); seasonal price lists on trips, Nile trips, packages and rooms; no date in trip search; tax-included accommodation prices; Google reviews only; no cabin deck on Nile trips.
+2. "SRS v2.2 (English)": business rules (including change requests CR-1 to CR-9). Use it to resolve any question about behaviour. Key rules: five services (trips, Nile trips, packages, transfers, accommodation); private vs group booking types on trips, Nile trips and packages (private any day, group only on listed days); add-ons on trips, Nile trips and packages; packages include transfers at no extra charge; accommodation is date-scheduled and shows ROOMS directly with their building's data; strict no-shared-rooms allocation; children policy with age discounts; deposit and balance; online and manual payments with proof upload; transfers priced by distance from predefined hubs; default currency EUR (also USD, GBP, EGP); Italian and English primary, RTL-ready; partner prices (commission rule or explicit partner price) shown only to logged-in approved partners; trips priced per person (with max persons) or per unit (Single / Double options); seasonal price lists on trips, Nile trips, packages and rooms; no date in trip search; tax-included accommodation prices; Google reviews only; no cabin deck on Nile trips.
 If the two disagree, the Brief wins for visuals and the SRS wins for business rules. If something is ambiguous, make the most reasonable choice, note it in the hand-off, and keep going; ask me only for decisions that would force a large redo.
 
 HOW TO WORK WITH FIGMA (mandatory)
@@ -80,7 +80,7 @@ Start now with Phase 0.
 File: https://www.figma.com/design/WGqsCzbjhWYrsLXqFranBq/Egypt-Travel---Platform-UI-UX (must be owned by a Professional team; MCP calls count against the owning team's plan).
 
 ```text
-Open the existing file "Egypt Travel - Platform UI/UX". Do NOT recreate it. Apply these change requests from SRS v2.1, editing the main components first so every instance updates, then fixing the screens that use detached copies. Screenshot every changed component and screen, desktop and mobile.
+Open the existing file "Egypt Travel - Platform UI/UX". Do NOT recreate it. Apply these change requests from SRS v2.2, editing the main components first so every instance updates, then fixing the screens that use detached copies. Screenshot every changed component and screen, desktop and mobile.
 
 CR-1 Trip pricing modes
 - New component UnitOptionCard (variants: state=default|selected|disabled, language=EN|IT): option name (Single buggy / Double buggy), seats icon + "1 rider" / "2 riders", price per unit, quantity stepper.
@@ -132,7 +132,7 @@ States: table loading, empty, error; form validation errors; delete confirmation
 ### 3.1 Resume prompt (new chat or after a stop)
 
 ```text
-Continue building the travel platform UI/UX in Figma from Phase [N]. The file is here: [paste Figma file link]. First open the file, list the pages and frames that already exist, take screenshots of the last completed phase to confirm its state, and fix anything broken. Then continue with the remaining phases exactly as in the attached Figma AI Design Brief v2.0 and SRS v2.1, with the same rules: variables for all styles, auto layout, reusable PascalCase components with variants, one frame per step with a screenshot check, EUR as the default currency, no edits outside this file. Report status after each phase.
+Continue building the travel platform UI/UX in Figma from Phase [N]. The file is here: [paste Figma file link]. First open the file, list the pages and frames that already exist, take screenshots of the last completed phase to confirm its state, and fix anything broken. Then continue with the remaining phases exactly as in the attached Figma AI Design Brief v2.0 and SRS v2.2, with the same rules: variables for all styles, auto layout, reusable PascalCase components with variants, one frame per step with a screenshot check, EUR as the default currency, no edits outside this file. Report status after each phase.
 ```
 
 ### 3.2 Correction prompts (copy the one you need)

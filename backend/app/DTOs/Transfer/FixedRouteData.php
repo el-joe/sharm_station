@@ -23,7 +23,6 @@ final readonly class FixedRouteData
             'lng' => (float) $data['lng'],
             'match_radius_km' => (float) $data['match_radius_km'],
             'price' => (float) $data['price'],
-            'partner_price' => filled($data['partner_price'] ?? null) ? (float) $data['partner_price'] : null,
             'is_enabled' => (bool) ($data['is_enabled'] ?? false),
         ]);
     }

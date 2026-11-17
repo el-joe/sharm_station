@@ -1,4 +1,5 @@
 import { BuildingCard } from "@/components/accommodation/BuildingCard";
+import { getNationality } from "@/lib/api/nationality-server";
 import { RoomBookingWidget } from "@/components/accommodation/RoomBookingWidget";
 import { RoomCard } from "@/components/accommodation/RoomCard";
 import { SeasonPriceTable } from "@/components/booking/SeasonPriceTable";
@@ -38,7 +39,7 @@ export default function RoomPage({ params }: PageProps<"/[locale]/rooms/[id]">) 
 
 async function RoomContent({ params }: { params: PageProps<"/[locale]/rooms/[id]">["params"] }) {
   const { locale, id } = await params;
-  const room = Number.isInteger(Number(id)) ? await getRoom(Number(id), locale as Locale) : null;
+  const room = Number.isInteger(Number(id)) ? await getRoom(Number(id), locale as Locale, await getNationality()) : null;
   if (!room) notFound();
   const [t, tc, tn] = await Promise.all([getTranslations("roomPage"), getTranslations("common"), getTranslations("nav")]);
 

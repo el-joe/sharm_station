@@ -23,7 +23,11 @@ enum TripType: string
 
     public function commissionCategory(): CommissionCategory
     {
-        return $this === self::Nile ? CommissionCategory::NileTrips : CommissionCategory::Trips;
+        return match ($this) {
+            self::SingleDay => CommissionCategory::SingleDayTrips,
+            self::MultiDay => CommissionCategory::MultiDayTrips,
+            self::Nile => CommissionCategory::NileTrips,
+        };
     }
 
     public function serviceType(): ServiceType

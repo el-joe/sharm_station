@@ -77,7 +77,6 @@ class PackageRequest extends FormRequest
             'price_mode' => ['required', Rule::enum(PackagePriceMode::class)],
             'base_price' => ['nullable', 'required_if:price_mode,fixed', 'numeric', 'min:0'],
             'base_child_price' => ['nullable', 'numeric', 'min:0'],
-            'partner_price' => ['nullable', 'numeric', 'min:0'],
             'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'deposit_percent' => ['required', 'numeric', 'min:0', 'max:100'],
             'free_cancellation_hours' => ['nullable', 'integer', 'min:0', 'max:8760'],
