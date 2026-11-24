@@ -1,4 +1,6 @@
 import { ContactForm } from "@/components/content/ContactForm";
+import { MapEmbed } from "@/components/map/MapEmbed";
+import { hasCoords } from "@/components/map/types";
 import { PageIntro } from "@/components/ui/PageIntro";
 import { getMeta } from "@/lib/api/server";
 import type { Locale } from "@/lib/api/types";
@@ -15,15 +17,20 @@ export async function generateMetadata(): Promise<Metadata> {
   return pageMetadata({ locale, path: "/contact", title: t("metaTitle"), description: t("subtitle") });
 }
 
-const ADDRESS = "Naama Bay, Sharm El Sheikh, Egypt";
+const DEFAULT_ADDRESS = "Naama Bay, Sharm El Sheikh, Egypt";
+/** Naama Bay office, used when GET /meta has no coordinates. */
+const DEFAULT_OFFICE: [number, number] = [27.9158, 34.33];
 
 export default async function Page() {
   const locale = (await rootLocale()) as Locale;
   const [t, meta] = await Promise.all([getTranslations("contact"), getMeta(locale)]);
-  // Contact details come from GET /meta settings, with the site constants as fallback.
-  const email = meta.settings.email || CONTACT_EMAIL;
-  const phone = meta.settings.phone || PHONE_DISPLAY;
-  const whatsappDisplay = meta.settings.whatsapp || `+${WHATSAPP_NUMBER}`;
+  // Contact details come from GET /meta `contact` (then settings), with the site constants as fallback.
+  const c = meta.contact;
+  const email = c?.email || meta.settings.email || CONTACT_EMAIL;
+  const phone = c?.phone || meta.settings.phone || PHONE_DISPLAY;
+  const whatsappDisplay = c?.whatsapp || meta.settings.whatsapp || `+${WHATSAPP_NUMBER}`;
+  const ADDRESS = c?.address || DEFAULT_ADDRESS;
+  const office: [number, number] = c && hasCoords(c.lat, c.lng) ? [c.lat!, c.lng!] : DEFAULT_OFFICE;
   const whatsappDigits = whatsappDisplay.replace(/\D/g, "") || WHATSAPP_NUMBER;
   const rows = [
     { Icon: MessageCircle, label: t("whatsapp"), value: whatsappDisplay, href: `https://wa.me/${whatsappDigits}`, external: true },
@@ -70,16 +77,9 @@ export default async function Page() {
       </div>
       <section className="mt-12" aria-labelledby="find-h">
         <h2 id="find-h" className="text-h3 mb-4 text-ink-900">{t("findUs")}</h2>
-        <div className="grid min-h-[260px] place-items-center rounded-card border border-ink-100 bg-[linear-gradient(90deg,var(--color-ink-100)_1px,transparent_1px),linear-gradient(var(--color-ink-100)_1px,transparent_1px)] bg-[size:48px_48px] p-6 text-center">
-          <div className="flex flex-col items-center gap-3">
-            <span className="grid size-12 place-items-center rounded-full bg-cta-600 text-white shadow-cta"><MapPin className="size-6" aria-hidden /></span>
-            <p className="font-semibold text-ink-900">{ADDRESS}</p>
-            <p className="text-sm text-ink-500">{t("mapPlaceholder")}</p>
-            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ADDRESS)}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary-700 underline">
-              {t("openMaps")}
-            </a>
-          </div>
-        </div>
+        <MapEmbed lat={office[0]} lng={office[1]} name="Sharm Station Viaggi" label={t("mapLabel")} mapClassName="h-[320px] md:h-[420px]">
+          <p className="flex items-center gap-2 font-semibold text-ink-900"><MapPin className="size-5 shrink-0 text-cta-600" aria-hidden />{ADDRESS}</p>
+        </MapEmbed>
       </section>
     </div>
   );

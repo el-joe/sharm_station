@@ -18,6 +18,11 @@ import { initCharts } from './modules/charts.js';
 import { initRoomCalendar } from './modules/room-calendar.js';
 import { initAjaxToggles, initAjaxActions } from './modules/ajax-actions.js';
 import { initClipboard, initDialogs, initCharCounters } from './modules/clipboard.js';
+import { initRichEditors } from './modules/rich-editor.js';
+import { initSortableLists } from './modules/sortable-list.js';
+import { initOccupancyCalendar } from './modules/occupancy-calendar.js';
+import { initReportCharts } from './modules/report-charts.js';
+import { initLocationPickers } from './modules/location-picker.js';
 
 function boot(root = document) {
     initSelect2(root);
@@ -43,4 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initClipboard();
     initDialogs();
     initCharCounters();
+    initRichEditors();
+    initSortableLists();
+    initOccupancyCalendar();
+    initReportCharts();
+    initLocationPickers();
 });

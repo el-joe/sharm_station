@@ -1,6 +1,6 @@
 import { AccommodationSearch, type AccommodationQuery } from "@/components/accommodation/AccommodationSearch";
 import { getNationality } from "@/lib/api/nationality-server";
-import { RoomCard } from "@/components/accommodation/RoomCard";
+import { AccommodationResults } from "@/components/accommodation/AccommodationResults";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { mockApi } from "@/lib/api/mock-api";
 import { getMeta, getRooms } from "@/lib/api/server";
@@ -77,13 +77,7 @@ async function Results({ locale, searchParams }: { locale: Locale; searchParams:
           <p className="mt-1 text-ink-700">{t("emptyText")}</p>
         </div>
       ) : (
-        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {rooms.data.map((room) => (
-            <li key={room.id}>
-              <RoomCard room={room} nights={nights} className="h-full" query={linkQuery} />
-            </li>
-          ))}
-        </ul>
+        <AccommodationResults rooms={rooms.data} nights={nights} query={linkQuery} initialView={one(raw.view) === "map" ? "map" : "list"} />
       )}
     </div>
   );

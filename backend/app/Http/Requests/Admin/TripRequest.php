@@ -98,6 +98,12 @@ class TripRequest extends FormRequest
             'nights' => ['required', 'integer', 'min:0', 'max:60'],
             'free_cancellation_hours' => ['nullable', 'integer', 'min:0', 'max:8760'],
 
+            // Meeting point
+            'meeting_point' => ['nullable', 'array'],
+            'meeting_point.*' => ['nullable', 'string', 'max:255'],
+            'lat' => ['nullable', 'numeric', 'between:-90,90', 'required_with:lng'],
+            'lng' => ['nullable', 'numeric', 'between:-180,180', 'required_with:lat'],
+
             // Pricing
             'pricing_mode' => ['required', Rule::enum(PricingMode::class)],
             'min_persons' => ['required', 'integer', 'min:1', 'max:999'],

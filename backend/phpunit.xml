@@ -32,5 +32,9 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="GOOGLE_MAPS_BROWSER_KEY" value=""/>
+        <env name="GOOGLE_MAPS_SERVER_KEY" value=""/>
+        <env name="FRONTEND_REVALIDATE_URL" value=""/>
+        <env name="FRONTEND_REVALIDATE_SECRET" value=""/>
     </php>
 </phpunit>

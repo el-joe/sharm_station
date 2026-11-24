@@ -14,7 +14,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'role', 'phone', 'locale', 'currency', 'nationality_code', 'newsletter'])]
+#[Fillable(['name', 'email', 'password', 'role', 'is_active', 'phone', 'locale', 'currency', 'nationality_code', 'newsletter', 'admin_notes'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -31,6 +31,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => UserRole::class,
             'newsletter' => 'boolean',
+            'is_active' => 'boolean',
         ];
     }
 
@@ -53,6 +54,14 @@ class User extends Authenticatable
     public function isStaff(): bool
     {
         return $this->role?->isStaff() ?? false;
+    }
+
+    /**
+     * Deactivated accounts cannot sign in (admin panel, website or partner panel).
+     */
+    public function isActive(): bool
+    {
+        return $this->is_active ?? true;
     }
 
     public function activePartner(): ?Partner

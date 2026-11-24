@@ -5,7 +5,10 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BookingController;
 use App\Http\Controllers\Api\V1\BookingPaymentController;
 use App\Http\Controllers\Api\V1\BuildingController;
+use App\Http\Controllers\Api\V1\CancellationRequestController;
 use App\Http\Controllers\Api\V1\ContactController;
+use App\Http\Controllers\Api\V1\ContentController;
+use App\Http\Controllers\Api\V1\CouponController;
 use App\Http\Controllers\Api\V1\DestinationController;
 use App\Http\Controllers\Api\V1\GoogleReviewController;
 use App\Http\Controllers\Api\V1\HomeController;
@@ -57,11 +60,18 @@ Route::prefix('v1')->name('api.v1.')->middleware(SetLocaleAndCurrency::class)->g
 
     Route::get('reviews/google', GoogleReviewController::class)->name('reviews.google');
 
+    Route::get('pages/{slug}', [ContentController::class, 'page'])->name('pages.show');
+    Route::get('blog', [ContentController::class, 'blog'])->name('blog.index');
+    Route::get('blog/{slug}', [ContentController::class, 'post'])->name('blog.show');
+    Route::get('faqs', [ContentController::class, 'faqs'])->name('faqs');
+
     Route::post('bookings', [BookingController::class, 'store'])->middleware('throttle:20,1,bookings')->name('bookings.store');
     Route::get('bookings/{reference}', [BookingController::class, 'show'])->name('bookings.show');
     Route::get('bookings/{reference}/payment-methods', [BookingPaymentController::class, 'methods'])->name('bookings.payment-methods');
     Route::post('bookings/{reference}/proofs', [BookingPaymentController::class, 'storeProof'])->middleware('throttle:10,1,payment-proofs')->name('bookings.proofs.store');
     Route::post('bookings/{reference}/checkout', [BookingPaymentController::class, 'checkout'])->middleware('throttle:20,1,payment-checkout')->name('bookings.checkout');
+    Route::post('bookings/{reference}/cancellation-request', CancellationRequestController::class)->middleware('throttle:10,1,cancellation-requests')->name('bookings.cancellation-request');
+    Route::post('coupons/validate', [CouponController::class, 'check'])->middleware('throttle:30,1,coupons')->name('coupons.validate');
     Route::post('payments/webhooks/{driver}', PaymentWebhookController::class)->whereAlpha('driver')->name('payments.webhook');
 
     Route::post('newsletter', NewsletterController::class)->middleware('throttle:10,1,newsletter')->name('newsletter.subscribe');
@@ -91,6 +101,7 @@ Route::prefix('v1')->name('api.v1.')->middleware(SetLocaleAndCurrency::class)->g
         Route::post('bookings', 'storeBooking')->middleware('throttle:20,1,partner-bookings')->name('bookings.store');
         Route::get('bookings', 'bookings')->name('bookings');
         Route::get('statements', 'statements')->name('statements');
+        Route::get('statements/{period}/export', 'exportStatement')->where('period', '[0-9]{4}-[0-9]{2}')->middleware('throttle:30,1,partner-exports')->name('statements.export');
         Route::get('price-list', 'priceList')->name('price-list');
         Route::get('profile', 'profile')->name('profile');
         Route::patch('profile', 'updateProfile')->name('profile.update');

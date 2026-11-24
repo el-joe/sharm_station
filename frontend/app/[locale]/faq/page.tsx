@@ -2,8 +2,8 @@ import { Faq } from "@/components/trips/Faq";
 import { buttonClasses } from "@/components/ui/Button";
 import { PageIntro } from "@/components/ui/PageIntro";
 import { Link } from "@/i18n/navigation";
+import { getFaqs, htmlToText } from "@/lib/api/content";
 import type { Locale } from "@/lib/api/types";
-import { FAQ } from "@/lib/content/faq";
 import { pageMetadata } from "@/lib/seo";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
@@ -17,12 +17,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function Page() {
   const locale = (await rootLocale()) as Locale;
-  const t = await getTranslations("faqPage");
-  const categories = FAQ[locale];
+  const [t, categories] = await Promise.all([getTranslations("faqPage"), getFaqs(locale)]);
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: categories.flatMap((c) => c.items.map((i) => ({ "@type": "Question", name: i.question, acceptedAnswer: { "@type": "Answer", text: i.answer } }))),
+    mainEntity: categories.flatMap((c) => c.items.map((i) => ({ "@type": "Question", name: i.question, acceptedAnswer: { "@type": "Answer", text: htmlToText(i.answer_html) } }))),
   };
   return (
     <div className="container-page pb-16">
@@ -33,7 +32,7 @@ export default async function Page() {
             {categories.map((c) => (
               <li key={c.id}>
                 <a href={`#${c.id}`} className="inline-flex h-10 items-center rounded-pill bg-ink-100 px-4 text-sm font-semibold whitespace-nowrap text-ink-900 hover:bg-primary-100">
-                  {c.title}
+                  {c.category}
                 </a>
               </li>
             ))}
@@ -43,7 +42,7 @@ export default async function Page() {
       <div className="mt-4 flex max-w-4xl flex-col gap-10">
         {categories.map((c) => (
           <section key={c.id} id={c.id} className="scroll-mt-32" aria-labelledby={`${c.id}-h`}>
-            <h2 id={`${c.id}-h`} className="text-h3 mb-4 text-ink-900">{c.title}</h2>
+            <h2 id={`${c.id}-h`} className="text-h3 mb-4 text-ink-900">{c.category}</h2>
             <Faq items={c.items} />
           </section>
         ))}

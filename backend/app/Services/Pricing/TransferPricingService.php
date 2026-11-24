@@ -34,6 +34,9 @@ class TransferPricingService
 {
     use BuildsQuotes;
 
+    /** How long a fallback estimate (maps provider down) is reused before the provider is asked again. */
+    public const FALLBACK_CACHE_MINUTES = 10;
+
     public function __construct(
         private readonly TransferHubRepositoryInterface $hubs,
         private readonly VehicleTypeRepositoryInterface $vehicles,
@@ -179,7 +182,9 @@ class TransferPricingService
     }
 
     /**
-     * Road distance, cached for repeated hub/destination pairs.
+     * Road distance, cached for repeated hub/destination pairs (per provider, so adding a Google key
+     * does not keep serving Haversine estimates). A fallback estimate from a maps provider is only cached
+     * briefly, so the real distance is fetched again once the provider recovers.
      *
      * The cache holds a plain array: the cache store refuses to unserialize objects
      * (config cache.serializable_classes = false), so a cached RouteData would come back
@@ -187,18 +192,21 @@ class TransferPricingService
      */
     private function route(TransferHub $hub, TransferQuoteRequestData $request): RouteData
     {
-        $key = sprintf('transfer-route:v2:%.4f,%.4f:%.4f,%.4f', $hub->lat, $hub->lng, $request->destinationLat, $request->destinationLng);
+        $provider = $this->distances->name();
+        $key = sprintf('transfer-route:v3:%s:%.4f,%.4f:%.4f,%.4f', $provider, $hub->lat, $hub->lng, $request->destinationLat, $request->destinationLng);
+        $cached = Cache::get($key);
 
-        $cached = Cache::remember($key, now()->addDay(), function () use ($hub, $request): array {
+        if (! is_array($cached)) {
             $route = $this->distances->route($hub->lat, $hub->lng, $request->destinationLat, $request->destinationLng);
-
-            return [
+            $cached = [
                 'distance_km' => $route->distanceKm,
                 'duration_minutes' => $route->durationMinutes,
                 'provider' => $route->provider,
                 'estimated' => $route->estimated,
             ];
-        });
+            $isFallback = $route->provider !== $provider;
+            Cache::put($key, $cached, $isFallback ? now()->addMinutes(self::FALLBACK_CACHE_MINUTES) : now()->addDay());
+        }
 
         return new RouteData(
             (float) $cached['distance_km'],

@@ -11,9 +11,8 @@ import { useAuth } from "@/lib/auth";
 import { useCurrency } from "@/lib/currency";
 import { useToday } from "@/lib/hooks";
 import { cn, parseISODate } from "@/lib/utils";
-import { whatsappHref } from "@/lib/site";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarX2, Hourglass, Luggage } from "lucide-react";
+import { CalendarX2, Luggage } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { bookingDate, bookingImage } from "./bookingVisuals";
@@ -27,7 +26,7 @@ function tabOf(b: BookingDetail, today: string | null): Tab {
   return "upcoming";
 }
 
-/** /account/bookings: GET /me/bookings (PENDING BACKEND: falls back to an explanatory empty state). */
+/** /account/bookings: GET /me/bookings with the customer token (error state with retry when the API cannot be reached). */
 export function MyBookings() {
   const t = useTranslations("account.bookings");
   const tg = useTranslations("guard");
@@ -57,25 +56,8 @@ export function MyBookings() {
     );
   }
 
-  if (query.isError) {
+  if (query.isError || query.data.status === "error") {
     return <EmptyState className="mt-8" tone="warning" icon={<CalendarX2 aria-hidden />} title={t("error")} action={<button type="button" className={buttonClasses("primary", "md")} onClick={() => query.refetch()}>{tg("retry")}</button>} />;
-  }
-
-  if (query.data.status === "unavailable") {
-    return (
-      <EmptyState
-        className="mt-8"
-        icon={<Hourglass aria-hidden />}
-        title={t("pendingTitle")}
-        text={t("pendingText")}
-        action={
-          <>
-            <Link href="/trips" className={buttonClasses("cta", "md")}>{t("browse")}</Link>
-            <a href={whatsappHref()} target="_blank" rel="noopener noreferrer" className={buttonClasses("outline", "md")}>WhatsApp</a>
-          </>
-        }
-      />
-    );
   }
 
   const bookings = query.data.data;

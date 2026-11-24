@@ -77,7 +77,7 @@
   },
   "cookies": {
     "title": "Cookie su questo sito",
-    "text": "Usiamo cookie essenziali per il funzionamento del sito e, con il tuo consenso, cookie analitici per migliorarlo.",
+    "text": "Usiamo cookie essenziali per il funzionamento del sito e, con il tuo consenso, cookie analitici e Google Maps (che può impostare i propri cookie) per migliorarlo.",
     "policy": "Privacy policy",
     "essential": "Solo essenziali",
     "acceptAll": "Accetta tutti"
@@ -512,7 +512,8 @@
     "total": "Totale",
     "totalPending": "Totale (età bambino mancante)",
     "payToday": "Paghi oggi ({percent}%)",
-    "balanceLater": "Saldo dopo"
+    "balanceLater": "Saldo dopo",
+    "discount": "Codice promo {code}"
   },
   "accommodation": {
     "crumb": "Alloggi",
@@ -531,7 +532,13 @@
     "allBuildings": "Tutte le strutture",
     "freeCancellationHelper": "Cancellazione gratuita entro la scadenza dell'hotel",
     "emptyTitle": "Nessuna camera per questa ricerca",
-    "emptyText": "Prova altre date, meno ospiti o un'altra destinazione."
+    "emptyText": "Prova altre date, meno ospiti o un'altra destinazione.",
+    "viewLabel": "Mostra i risultati come",
+    "viewList": "Elenco",
+    "viewMap": "Mappa",
+    "mapLabel": "Mappa delle strutture trovate",
+    "mapListTitle": "Camere sulla mappa",
+    "mapUnmapped": "{count, plural, one {# camera non ha} other {# camere non hanno}} ancora una posizione sulla mappa e compaiono solo nell'elenco."
   },
   "roomPage": {
     "taxIncluded": "Tasse incluse",
@@ -655,7 +662,8 @@
     "emptyTitle": "Il checkout è vuoto",
     "emptyText": "Scegli un'escursione o una camera e premi Prenota per iniziare.",
     "browse": "Sfoglia le escursioni",
-    "nationalityMissing": "Scegli la tua nazionalità in alto nella pagina prima di prenotare: i prezzi dipendono da essa."
+    "nationalityMissing": "Scegli la tua nazionalità in alto nella pagina prima di prenotare: i prezzi dipendono da essa.",
+    "couponRejected": "Non è stato possibile applicare il codice promo. Rimuovilo o prova un altro codice."
   },
   "confirmation": {
     "metaTitle": "Prenotazione ricevuta",
@@ -814,8 +822,6 @@
         "past": "Passate",
         "cancelled": "Cancellate"
       },
-      "pendingTitle": "Lo storico delle prenotazioni sta arrivando",
-      "pendingText": "Stiamo collegando il tuo account al sistema di prenotazione. Nel frattempo ogni email di conferma contiene il link per gestire la prenotazione, e puoi sempre scriverci su WhatsApp.",
       "emptyTitle": "Ancora nessuna prenotazione",
       "emptyUpcoming": "Quando prenoti un'escursione, una crociera sul Nilo o una camera, la trovi qui con lo stato del pagamento e il voucher.",
       "emptyPast": "Qui trovi i viaggi già completati.",
@@ -848,8 +854,7 @@
       "payNow": "Paga ora",
       "contact": "Contattaci per questa prenotazione",
       "notFoundTitle": "Non riusciamo ad aprire questa prenotazione",
-      "notFoundText": "La prenotazione {reference} non è collegata al tuo account, oppure il server non risponde. Aprila dal link nell'email di conferma o contattaci.",
-      "cancelInfo": "Devi modificare o cancellare? Scrivici con il codice e verifichiamo le opzioni secondo la tua politica di cancellazione."
+      "notFoundText": "La prenotazione {reference} non è collegata al tuo account, oppure il server non risponde. Aprila dal link nell'email di conferma o contattaci."
     },
     "profile": {
       "metaTitle": "Profilo e impostazioni",
@@ -867,7 +872,6 @@
       "preferencesNote": "Le preferenze valgono per le prossime visite. Le prenotazioni esistenti mantengono valuta e condizioni confermate al checkout.",
       "save": "Salva modifiche",
       "saved": "I tuoi dati sono stati salvati.",
-      "pending": "Il salvataggio online del profilo arriverà presto. Lingua e valuta sono state applicate su questo dispositivo.",
       "passwordTitle": "Cambia password",
       "currentPassword": "Password attuale",
       "newPassword": "Nuova password",
@@ -875,7 +879,6 @@
       "passwordHint": "Almeno 8 caratteri. Scegline una che non usi altrove.",
       "updatePassword": "Aggiorna password",
       "passwordSaved": "La password è stata cambiata.",
-      "passwordPending": "Il cambio password online arriverà presto. Contattaci se ti serve aiuto adesso.",
       "accountTitle": "Il tuo account",
       "signOut": "Esci",
       "deleteText": "Eliminare l'account non cancella le prenotazioni attive. Scrivici per chiedere la cancellazione dei tuoi dati.",
@@ -995,7 +998,11 @@
         "balance": "Da saldare"
       },
       "bookingsCount": "{count, plural, one {# prenotazione} other {# prenotazioni}}",
-      "exportNote": "Gli export PDF ed Excel compaiono qui quando sono disponibili per un periodo."
+      "exportNote": "Scarica ogni mese come estratto conto PDF o foglio Excel con tutte le prenotazioni.",
+      "downloadLabel": "Scarica l'estratto conto di {period} in {format}",
+      "downloading": "Preparazione del download…",
+      "downloadError": "Non è stato possibile scaricare il file. Riprova.",
+      "downloadMissing": "Non esiste un estratto conto per questo mese."
     },
     "priceList": {
       "metaTitle": "Listino partner",
@@ -1080,7 +1087,8 @@
       "nationalityNote": "Gruppo di nazionalità del cliente: {group}.",
       "season": "Stagione: {season}.",
       "noSeason": "Prezzo base (nessuna stagione in questa data).",
-      "empty": "Scegli le opzioni per vedere il prezzo partner aggiornato."
+      "empty": "Scegli le opzioni per vedere il prezzo partner aggiornato.",
+      "discount": "Codice promo {code}"
     },
     "newBooking": {
       "metaTitle": "Nuova prenotazione",
@@ -1190,7 +1198,8 @@
         "terms": "Confermo che i dati del cliente sono corretti e accetto i termini e condizioni per i partner.",
         "back": "Indietro",
         "confirm": "Conferma prenotazione",
-        "error": "Non è stato possibile creare la prenotazione. Riprova."
+        "error": "Non è stato possibile creare la prenotazione. Riprova.",
+        "couponRejected": "Non è stato possibile applicare il codice promo. Rimuovilo o prova un altro codice."
       },
       "confirmation": {
         "heading": "Prenotazione ricevuta",
@@ -1242,8 +1251,7 @@
       "voucher": "Voucher per il cliente",
       "voucherText": "Invia al cliente il voucher con o senza prezzi.",
       "voucherWith": "Voucher con prezzi",
-      "voucherWithout": "Voucher senza prezzi",
-      "cancel": "Richiedi la cancellazione"
+      "voucherWithout": "Voucher senza prezzi"
     },
     "voucher": {
       "metaTitle": "Voucher {reference}",
@@ -1276,7 +1284,7 @@
     "title": "Trova il tuo angolo d'Egitto",
     "subtitle": "Dalle barriere coralline del Mar Rosso ai templi della Valle del Nilo, scegli i luoghi adatti al viaggio che hai in mente.",
     "explore": "Scopri {name}",
-    "count": "{count, plural, =0 {Esperienze in arrivo} one {# esperienza} other {# esperienze}}",
+    "count": "{count, plural, =0 {Viaggi su misura} one {# esperienza} other {# esperienze}}",
     "emptyTitle": "Le destinazioni stanno arrivando",
     "emptyText": "Non riusciamo a caricare le destinazioni in questo momento. Riprova tra poco.",
     "routeTitle": "Un itinerario che sa d'Egitto",
@@ -1308,13 +1316,17 @@
     "buildingsTitle": "Hotel e residence",
     "whyTitle": "Perché visitare {name}",
     "mapTitle": "Esplora {name} sulla mappa",
-    "mapPlaceholder": "Mappa interattiva in arrivo.",
     "openMaps": "Apri {name} su Google Maps",
     "faqTitle": "Domande frequenti su {name}",
     "relatedTitle": "Destinazioni collegate",
     "relatedSubtitle": "Aggiungi una tappa al tuo viaggio.",
     "seeAll": "Vedi tutte",
-    "noTrips": "Nuove esperienze a {name} in arrivo. Scrivici su WhatsApp e ne organizziamo una per te."
+    "noTrips": "Stiamo preparando nuove esperienze a {name}. Scrivici su WhatsApp e ne organizziamo una per te.",
+    "mapLabel": "Mappa di {name}",
+    "mapViewStay": "Vedi le camere",
+    "mapViewTrip": "Vedi l'escursione",
+    "mapMeetingPoint": "Punto d'incontro dell'escursione",
+    "mapNoPlaces": "Stiamo aggiungendo i luoghi di {name} alla mappa. Nel frattempo aprila in Google Maps."
   },
   "legal": {
     "lastUpdated": "Ultimo aggiornamento {date}",
@@ -1352,8 +1364,8 @@
     "send": "Invia messaggio",
     "successTitle": "Messaggio inviato",
     "successText": "Grazie, {name}. Di solito rispondiamo entro poche ore negli orari di apertura.",
-    "fallbackTitle": "Il modulo di contatto non è ancora collegato",
-    "fallbackText": "Il messaggio non è stato inviato. Usa una di queste opzioni e ti risponderemo subito:",
+    "fallbackTitle": "Non è stato possibile inviare il messaggio",
+    "fallbackText": "Non siamo riusciti a raggiungere il nostro server. Il tuo messaggio è pronto per essere inviato con una di queste opzioni:",
     "emailDraft": "Invialo via email",
     "directTitle": "Una conversazione vera",
     "whatsapp": "Scrivici su WhatsApp",
@@ -1365,9 +1377,10 @@
     "responseTitle": "Tempi di risposta",
     "responseText": "Meno di 2 ore su WhatsApp, in giornata via email.",
     "findUs": "Dove siamo in Egitto",
-    "mapPlaceholder": "Mappa in arrivo",
     "openMaps": "Apri in Google Maps",
-    "sendError": "Qualcosa è andato storto. Riprova."
+    "sendError": "Qualcosa è andato storto. Riprova.",
+    "mapLabel": "Mappa del nostro ufficio a Naama Bay",
+    "directions": "Indicazioni stradali"
   },
   "faqPage": {
     "metaTitle": "Domande frequenti",
@@ -1390,14 +1403,13 @@
     "inThisGuide": "In questa guida",
     "related": "Dai vita al racconto",
     "back": "Tutti gli articoli",
-    "by": "Di {author}"
+    "by": "Di {author}",
+    "empty": "Non ci sono ancora articoli pubblicati."
   },
   "payment": {
     "title": "Paga ora",
     "subtitle": "Scegli come pagare l'acconto di {amount}.",
     "loading": "Caricamento dei metodi di pagamento…",
-    "comingSoonTitle": "Il pagamento online arriverà presto",
-    "comingSoonText": "La tua prenotazione è salvata. Ti invieremo a breve via email il link di pagamento e le coordinate bancarie, oppure scrivici su WhatsApp con il codice per pagare subito.",
     "methodsLabel": "Metodo di pagamento",
     "online": "Pagamento online",
     "manual": "Bonifico o wallet",
@@ -1407,7 +1419,6 @@
     "payOnline": "Paga {amount} in sicurezza",
     "redirecting": "Ti stiamo portando alla pagina di pagamento sicura…",
     "checkoutError": "Non siamo riusciti ad avviare il pagamento. Riprova o scegli un altro metodo.",
-    "checkoutUnavailable": "Il pagamento online non è ancora disponibile. Scegli il bonifico o riprova più tardi.",
     "secure": "Verrai reindirizzato al fornitore del pagamento. Non vediamo mai i dati della tua carta.",
     "manualTitle": "Dati per il bonifico",
     "amountLabel": "Importo da inviare",
@@ -1427,10 +1438,14 @@
     "senderName": "Nome dell'ordinante",
     "submit": "Invia ricevuta",
     "uploadError": "Non siamo riusciti a caricare la ricevuta. Riprova.",
-    "uploadUnavailable": "Il caricamento della ricevuta non è ancora disponibile. Inviala su WhatsApp o via email indicando il codice prenotazione.",
     "reviewTitle": "Ricevuta in verifica",
     "reviewText": "Grazie. Abbiamo ricevuto la tua ricevuta e confermeremo la prenotazione dopo averla verificata, di solito entro poche ore lavorative. Riceverai un'email con il voucher.",
-    "filesRequired": "Aggiungi almeno un file."
+    "filesRequired": "Aggiungi almeno un file.",
+    "loadErrorTitle": "Non siamo riusciti a caricare i metodi di pagamento",
+    "loadErrorText": "La tua prenotazione è salvata. Controlla la connessione e riprova, oppure scrivici su WhatsApp con il codice e ti aiutiamo a pagare.",
+    "noMethodsTitle": "Nessun metodo di pagamento disponibile per questa prenotazione",
+    "noMethodsText": "La tua prenotazione è salvata. Scrivici su WhatsApp con il codice e ti invieremo i dati per il pagamento.",
+    "retry": "Riprova"
   },
   "upload": {
     "label": "File della ricevuta",
@@ -1471,5 +1486,79 @@
     "privacy": "Salviamo la tua scelta in un cookie e nel tuo account e la usiamo solo per mostrare i prezzi. Leggi la <link>Privacy policy</link>.",
     "chipLabel": "Nazionalità: {country}. Cambia nazionalità",
     "chipEmpty": "Nazionalità"
+  },
+  "map": {
+    "from": "da",
+    "loading": "Caricamento della mappa…",
+    "listTitle": "Luoghi sulla mappa",
+    "keyboardHint": "Usa Tab per spostarti tra i segnaposto e Invio per aprire i dettagli. Premi Esc per chiuderli.",
+    "showMap": "Mostra la mappa — carica Google Maps",
+    "consentText": "Questa mappa è fornita da Google Maps, che può impostare cookie. Viene caricata solo con il tuo consenso.",
+    "openInGoogleMaps": "Apri in Google Maps",
+    "directions": "Indicazioni stradali",
+    "viewRoute": "Vedi il percorso su Google Maps",
+    "routeTitle": "Anteprima del percorso",
+    "routeLabel": "Percorso in auto da {from} a {to}",
+    "routeSummary": "{distance} · circa {duration} in auto (stima di Google Maps)",
+    "routeLoading": "Calcolo del percorso…",
+    "routeError": "Non è stato possibile mostrare il percorso sulla mappa.",
+    "loadError": "Non è stato possibile caricare la mappa.",
+    "embedTitle": "Google Maps: {name}",
+    "googlePlaces": "Altri luoghi · Google Maps",
+    "location": "Posizione",
+    "mapOf": "Mappa di {name}"
+  },
+  "coupon": {
+    "toggle": "Hai un codice promo?",
+    "label": "Codice promo",
+    "apply": "Applica",
+    "remove": "Rimuovi",
+    "applied": "{code} applicato: −{amount}",
+    "errors": {
+      "empty": "Inserisci un codice promo.",
+      "invalid": "Questo codice non esiste.",
+      "expired": "Questo codice è scaduto o non è più attivo.",
+      "notYet": "Questo codice non è ancora valido.",
+      "partner": "I codici promo non possono essere usati sulle prenotazioni partner del tuo account.",
+      "service": "Questo codice non vale per questo servizio.",
+      "minimum": "Questo codice richiede un totale minimo di {amount}.",
+      "limit": "Questo codice ha raggiunto il numero massimo di utilizzi.",
+      "used": "Hai già usato questo codice.",
+      "tooMany": "Troppi tentativi. Attendi un minuto e riprova.",
+      "network": "Al momento non riusciamo a verificare il codice. Riprova."
+    }
+  },
+  "cancellationRequest": {
+    "title": "Cancellazione",
+    "intro": "Hai cambiato programma? Inviaci una richiesta di cancellazione. Confermiamo la cancellazione e il rimborso secondo la politica di cancellazione.",
+    "button": "Richiedi la cancellazione",
+    "notAvailable": "Questa prenotazione non può più essere cancellata online.",
+    "dialogTitle": "Richiesta di cancellazione di {reference}",
+    "close": "Chiudi",
+    "policyTitle": "Come funzionano i rimborsi",
+    "policyText": "Il rimborso dipende da quanto tempo prima del servizio cancelli: prima cancelli, più ricevi. I prodotti con cancellazione gratuita sono rimborsati per intero entro la loro finestra. Spese bancarie e supplementi di pagamento non sono rimborsabili.",
+    "policyLink": "Leggi la politica di cancellazione",
+    "reason": "Perché vuoi cancellare?",
+    "reasonHint": "{count} / {max} caratteri",
+    "notAutomatic": "La prenotazione non viene cancellata automaticamente: il nostro team conferma la cancellazione e l'importo del rimborso via email, di solito in giornata.",
+    "keep": "Mantieni la prenotazione",
+    "submit": "Invia richiesta",
+    "sent": "La tua richiesta di cancellazione è stata inviata. Ti confermeremo il rimborso via email.",
+    "pendingTitle": "Cancellazione richiesta",
+    "pendingText": "Inviata il {date}. Il nostro team la sta verificando e ti confermerà il rimborso via email.",
+    "yourReason": "Il tuo motivo: {reason}",
+    "approvedTitle": "Cancellazione approvata",
+    "approvedRefund": "Rimborso: {amount}, accreditato sul metodo di pagamento originale entro 14 giorni.",
+    "approvedNoRefund": "In base alla politica di cancellazione non è dovuto alcun rimborso per questa prenotazione.",
+    "declinedTitle": "Richiesta di cancellazione rifiutata",
+    "declinedNoNote": "Contattaci se hai domande su questa decisione.",
+    "decidedAt": "Decisa il {date}",
+    "errors": {
+      "required": "Indicaci perché vuoi cancellare.",
+      "min": "Scrivi almeno {count} caratteri.",
+      "forbidden": "Non puoi richiedere la cancellazione di questa prenotazione da qui. Accedi con l'account che l'ha effettuata o usa il link nell'email di conferma.",
+      "tooMany": "Troppe richieste. Attendi un minuto e riprova.",
+      "network": "Non siamo riusciti a inviare la richiesta. Controlla la connessione e riprova."
+    }
   }
 }

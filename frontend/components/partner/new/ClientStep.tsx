@@ -1,13 +1,16 @@
 "use client";
 
+import { CouponField, type AppliedCoupon } from "@/components/booking/CouponField";
 import { Button } from "@/components/ui/Button";
+import type { CouponServiceType } from "@/lib/api/types";
+import { useAuth } from "@/lib/auth";
 import { Field, Input, Textarea } from "@/components/ui/Field";
 import { useCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useMemo, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { CountryLabel, PartnerPriceSummary } from "../shared";
@@ -23,6 +26,8 @@ export interface ClientValues {
   voucher: "with_prices" | "without_prices";
   notes: string;
   terms: true;
+  /** Applied promo code (partner bookings accept only partner-enabled codes). */
+  coupon_code?: string;
 }
 
 function Section({ id, title, text, children }: { id: string; title: string; text?: string; children: ReactNode }) {
@@ -58,6 +63,8 @@ export function ClientStep({
   isTransfer,
   initial,
   error,
+  couponError,
+  couponService,
   onBack,
   onSubmit,
 }: {
@@ -68,6 +75,9 @@ export function ClientStep({
   isTransfer: boolean;
   initial?: ClientValues | null;
   error: string | null;
+  /** 422 on coupon_code from POST /partner/bookings. */
+  couponError?: string | null;
+  couponService: CouponServiceType;
   onBack: () => void;
   onSubmit: (v: ClientValues) => Promise<void>;
 }) {
@@ -75,6 +85,9 @@ export function ClientStep({
   const tv = useTranslations("validation");
   const { format } = useCurrency();
   const q = config.quote;
+  const { token } = useAuth();
+  const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
+  const onCouponChange = useCallback((c: AppliedCoupon | null) => setCoupon(c), []);
 
   const schema = useMemo(
     () =>
@@ -129,7 +142,7 @@ export function ClientStep({
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-      <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="flex min-w-0 flex-col gap-5">
+      <form onSubmit={form.handleSubmit((v) => onSubmit({ ...v, coupon_code: coupon?.code }))} noValidate className="flex min-w-0 flex-col gap-5">
         <Section id="cl-lead" title={t("leadTitle")} text={t("leadText")}>
           <div className="grid gap-4 sm:grid-cols-2">
             {input("first_name", t("firstName"), "text", "off")}
@@ -222,7 +235,24 @@ export function ClientStep({
       </form>
       <div>
         <div className="xl:sticky xl:top-28">
-          <PartnerPriceSummary title={title} subtitle={config.subtitle} quote={q} serviceLabel={serviceLabel} />
+          <PartnerPriceSummary
+            title={title}
+            subtitle={config.subtitle}
+            quote={q}
+            serviceLabel={serviceLabel}
+            discount={coupon ? { code: coupon.code, amount: coupon.discount_eur } : null}
+            footer={
+              <CouponField
+                serviceType={couponService}
+                totalEur={q.partner_total}
+                forPartner
+                token={token}
+                applied={coupon}
+                onChange={onCouponChange}
+                serverError={couponError}
+              />
+            }
+          />
         </div>
       </div>
     </div>

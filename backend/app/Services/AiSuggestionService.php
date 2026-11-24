@@ -7,6 +7,7 @@ use App\DTOs\Ai\SeoValuesData;
 use App\DTOs\Ai\SuggestionFilterData;
 use App\DTOs\Building\BuildingData;
 use App\DTOs\Room\RoomData;
+use App\Enums\ActivityAction;
 use App\Enums\PublishStatus;
 use App\Enums\RoomPricingMode;
 use App\Enums\RoomStatus;
@@ -43,6 +44,7 @@ class AiSuggestionService
         private readonly RoomService $rooms,
         private readonly SeoService $seo,
         private readonly SettingsService $settings,
+        private readonly ActivityLogger $activity,
     ) {}
 
     /**
@@ -154,6 +156,7 @@ class AiSuggestionService
             }
 
             $this->seo->apply($subject, $values);
+            $this->activity->log(ActivityAction::SuggestionApproved, $suggestion, 'SEO suggestion #'.$suggestion->id.' approved for '.self::subjectLabel($subject), causer: $reviewer);
 
             return $this->markReviewed($suggestion, SuggestionStatus::Approved, $reviewer, null, [
                 ...$suggestion->payload,
@@ -196,6 +199,7 @@ class AiSuggestionService
             }
 
             $suggestion->subject()->associate($building);
+            $this->activity->log(ActivityAction::SuggestionApproved, $suggestion, 'Accommodation suggestion #'.$suggestion->id.' approved: '.$building->translate('name', 'en'), ['building_id' => $building->id, 'published' => $publish], $reviewer);
 
             return $this->markReviewed($suggestion, SuggestionStatus::Approved, $reviewer, null, [
                 ...$data->toArray(),
@@ -212,6 +216,7 @@ class AiSuggestionService
     {
         return DB::transaction(function () use ($suggestionId, $reason, $reviewer): AiSuggestion {
             $suggestion = $this->lockPending($suggestionId);
+            $this->activity->log(ActivityAction::SuggestionRejected, $suggestion, 'AI suggestion #'.$suggestion->id.' rejected', ['reason' => $reason], $reviewer);
 
             return $this->markReviewed($suggestion, SuggestionStatus::Rejected, $reviewer, $reason);
         });

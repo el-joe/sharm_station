@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['user_id', 'company', 'tax_number', 'country', 'website', 'phone', 'message', 'status', 'show_retail_price', 'coupons_allowed', 'approved_at', 'approved_by', 'contact_name', 'notify_bookings', 'notify_statements', 'price_list_enabled'])]
+#[Fillable(['user_id', 'company', 'tax_number', 'country', 'website', 'phone', 'message', 'status', 'show_retail_price', 'coupons_allowed', 'approved_at', 'approved_by', 'rejection_reason', 'rejected_at', 'contact_name', 'notify_bookings', 'notify_statements', 'price_list_enabled'])]
 class Partner extends Model
 {
     /** @use HasFactory<PartnerFactory> */
@@ -30,6 +30,7 @@ class Partner extends Model
             'notify_statements' => 'boolean',
             'price_list_enabled' => 'boolean',
             'approved_at' => 'datetime',
+            'rejected_at' => 'datetime',
         ];
     }
 

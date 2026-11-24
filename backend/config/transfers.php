@@ -2,10 +2,12 @@
 
 return [
     /*
-    | Distance provider used by the transfer pricing (SRS 5.2). Only "haversine" ships today; a maps
-    | provider (Google Routes, Mapbox, OSRM) can be added by implementing App\Services\Transfers\DistanceProvider.
+    | Distance provider used by the transfer pricing (SRS 5.2):
+    |   "auto"      = Google Routes API when services.google.maps_server_key is set, else Haversine (default);
+    |   "google"    = Google Routes API (still falls back to Haversine without a key or on errors);
+    |   "haversine" = always the offline estimate.
     */
-    'distance_driver' => env('TRANSFER_DISTANCE_DRIVER', 'haversine'),
+    'distance_driver' => env('TRANSFER_DISTANCE_DRIVER', 'auto'),
     'road_factor' => (float) env('TRANSFER_ROAD_FACTOR', 1.3),
     'average_speed_kmh' => (float) env('TRANSFER_AVERAGE_SPEED_KMH', 60),
 

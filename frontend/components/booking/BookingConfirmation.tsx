@@ -4,14 +4,15 @@ import { buttonClasses } from "@/components/ui/Button";
 import { Link } from "@/i18n/navigation";
 import { api } from "@/lib/api/client";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import type { BookingStatus, Locale } from "@/lib/api/types";
+import type { BookingDetail, BookingStatus, Locale } from "@/lib/api/types";
 import { useAuth } from "@/lib/auth";
 import { clearDraft, readBooking, type StoredBooking } from "@/lib/checkout";
-import { parseISODate } from "@/lib/utils";
+import { parseISODate, round2 } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Mail } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { use, useEffect, useMemo, useSyncExternalStore } from "react";
+import { CancellationRequest } from "./CancellationRequest";
 import { PaymentSection } from "./PaymentSection";
 import { PriceSummary } from "./PriceSummary";
 
@@ -65,6 +66,11 @@ export function BookingConfirmation({ params }: { params: Promise<{ reference: s
   const options = remote.data?.payment_options ?? stored?.payment_options ?? [];
   const status: BookingStatus = remote.data?.status ?? "awaiting_payment";
   const isConfirmed = status === "confirmed" || status === "fully_paid" || status === "completed";
+  // A promo code was applied by the server: show it against the quote the visitor saw.
+  const storedDetail = stored && "service_type" in stored ? (stored as unknown as BookingDetail) : null;
+  const couponCode = remote.data?.coupon_code ?? storedDetail?.coupon_code ?? null;
+  const couponAmount = stored && couponCode ? round2(stored.draft.quote.total - (total ?? stored.draft.quote.total)) : 0;
+  const couponDiscount = couponCode && couponAmount > 0 ? { code: couponCode, amount: couponAmount } : null;
   const date = stored?.draft.travel_date ?? stored?.draft.check_in ?? remote.data?.travel_date ?? remote.data?.check_in;
 
   if (!title) {
@@ -124,11 +130,19 @@ export function BookingConfirmation({ params }: { params: Promise<{ reference: s
           createdAt={remote.data?.created_at ?? (stored?.draft.created_at ? new Date(stored.draft.created_at).toISOString() : null)}
           fallbackOptions={options}
         />
+
+        <CancellationRequest
+          reference={reference}
+          cancellation={remote.data?.cancellation ?? storedDetail?.cancellation ?? null}
+          accessToken={accessToken}
+          token={authToken}
+          onChange={() => void remote.refetch()}
+        />
       </div>
       {stored && (
         <aside className="lg:sticky lg:top-28 lg:self-start">
           <div className="rounded-card border border-ink-100 bg-white p-6 shadow-card">
-            <PriceSummary quote={stored.draft.quote} />
+            <PriceSummary quote={stored.draft.quote} discount={couponDiscount} />
           </div>
         </aside>
       )}

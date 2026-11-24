@@ -2,7 +2,8 @@ import { expect, type APIRequestContext, type BrowserContext, type Page, request
 import fs from "node:fs";
 import path from "node:path";
 
-export const SITE_URL = process.env.E2E_SITE_URL ?? "http://sharm-station.loc";
+/** Website under test. E2E_BASE_URL (E2E_SITE_URL kept as an alias), e.g. http://localhost:3100. */
+export const SITE_URL = (process.env.E2E_BASE_URL ?? process.env.E2E_SITE_URL ?? "http://sharm-station.loc").replace(/\/$/, "");
 export const API_URL = process.env.E2E_API_URL ?? "http://api.sharm-station.loc/api/v1";
 export const API_ORIGIN = new URL(API_URL).origin;
 export const ADMIN_URL = process.env.E2E_ADMIN_URL ?? "http://admin.sharm-station.loc/admin";

@@ -969,11 +969,11 @@ export const MOCK_REVIEWS: GoogleReview[] = [
 export const MOCK_GOOGLE = { rating: 4.8, total: 1284 };
 
 export const MOCK_TRANSFER_HUBS = [
-  { code: "CAI", name: "Cairo Airport (CAI)" },
-  { code: "HRG", name: "Hurghada Airport (HRG)" },
-  { code: "SSH", name: "Sharm El Sheikh Airport (SSH)" },
-  { code: "LXR", name: "Luxor Airport (LXR)" },
-  { code: "ASW", name: "Aswan Airport (ASW)" },
+  { code: "CAI", name: "Cairo Airport (CAI)", city: "Cairo", lat: 30.1219, lng: 31.4056 },
+  { code: "HRG", name: "Hurghada Airport (HRG)", city: "Hurghada", lat: 27.1783, lng: 33.7994 },
+  { code: "SSH", name: "Sharm El Sheikh Airport (SSH)", city: "Sharm El Sheikh", lat: 27.9773, lng: 34.395 },
+  { code: "LXR", name: "Luxor Airport (LXR)", city: "Luxor", lat: 25.6711, lng: 32.7066 },
+  { code: "ASW", name: "Aswan Airport (ASW)", city: "Aswan", lat: 23.9644, lng: 32.82 },
 ];
 
 export const MOCK_VEHICLES = [

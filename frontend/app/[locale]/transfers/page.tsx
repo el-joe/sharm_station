@@ -51,7 +51,7 @@ export default async function TransfersPage({ searchParams }: PageProps<"/[local
         </div>
         <Suspense fallback={<TransferMiniForm catalog={catalog} headingLevel="h2" />}>
           {searchParams.then((sp) => (
-            <TransferMiniForm catalog={catalog} headingLevel="h2" initial={{ hub: one(sp.hub), destination: one(sp.to), date: one(sp.date), point: toPoint(one(sp.to_lat), one(sp.to_lng)) }} />
+            <TransferMiniForm catalog={catalog} headingLevel="h2" showRoute initial={{ hub: one(sp.hub), destination: one(sp.to), date: one(sp.date), point: toPoint(one(sp.to_lat), one(sp.to_lng)) }} />
           ))}
         </Suspense>
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

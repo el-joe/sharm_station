@@ -1,7 +1,7 @@
 "use client";
 
 import { api, ApiError } from "@/lib/api/client";
-import type { CatalogueService, Locale, PartnerBookingDetail, PartnerCatalogueItem } from "@/lib/api/types";
+import type { CatalogueService, CouponServiceType, Locale, PartnerBookingDetail, PartnerCatalogueItem } from "@/lib/api/types";
 import { useAuth } from "@/lib/auth";
 import { useCurrency } from "@/lib/currency";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,6 +19,15 @@ import { ConfirmationStep } from "./ConfirmationStep";
  * nationality -> configure with a live POST /partner/quotes -> client & payment -> POST /partner/bookings
  * -> confirmation with vouchers. The public website is never used for partner bookings.
  */
+const COUPON_SERVICE: Record<CatalogueService, CouponServiceType> = {
+  single_day_trips: "trip",
+  multi_day_trips: "trip",
+  nile_trips: "nile_trip",
+  packages: "package",
+  transfers: "transfer",
+  accommodation: "accommodation",
+};
+
 export function PartnerNewBooking() {
   const t = useTranslations("partnerPanel.newBooking");
   const ts = useTranslations("partnerPanel.services");
@@ -33,6 +42,7 @@ export function PartnerNewBooking() {
   const [client, setClient] = useState<ClientValues | null>(null);
   const [booking, setBooking] = useState<PartnerBookingDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const step: 1 | 2 | 3 | 4 = booking ? 4 : config && item && !editing ? 3 : item ? 2 : 1;
   const titleRef = useRef<HTMLDivElement>(null);
@@ -60,6 +70,7 @@ export function PartnerNewBooking() {
   const submit = async (v: ClientValues) => {
     if (!item || !config || !nationality || !token) return;
     setError(null);
+    setCouponError(null);
     setClient(v);
     try {
       const res = await api.partnerCreateBooking(
@@ -69,6 +80,7 @@ export function PartnerNewBooking() {
           lead: { name: `${v.first_name} ${v.last_name}`.trim(), email: v.email, phone: v.phone },
           travelers: item.product_type === "transfer" ? undefined : [{ first_name: v.first_name, last_name: v.last_name, type: "adult" }, ...v.travellers],
           payment_method: v.payment,
+          coupon_code: v.coupon_code,
           notes: [v.notes.trim(), v.voucher === "without_prices" ? "Voucher: without prices" : "Voucher: with prices"].filter(Boolean).join("\n"),
         },
         { locale, currency, token },
@@ -77,7 +89,11 @@ export function PartnerNewBooking() {
       void queryClient.invalidateQueries({ queryKey: ["partner"] });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return void signOut();
-      if (err instanceof ApiError && err.isValidation) setError([...new Set(Object.values(err.errors).flat())].join(" ") || err.message);
+      if (err instanceof ApiError && err.isValidation) {
+        const { coupon_code: couponErrors, ...rest } = err.errors;
+        if (couponErrors?.length) setCouponError(couponErrors[0]);
+        setError([...new Set(Object.values(rest).flat())].join(" ") || (couponErrors?.length ? t("client.couponRejected") : err.message));
+      }
       else setError(t("client.error"));
     }
   };
@@ -137,6 +153,8 @@ export function PartnerNewBooking() {
           isTransfer={item.product_type === "transfer"}
           initial={client}
           error={error}
+          couponError={couponError}
+          couponService={COUPON_SERVICE[item.service]}
           onBack={() => setEditing(true)}
           onSubmit={submit}
         />

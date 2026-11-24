@@ -1,5 +1,6 @@
 "use client";
 
+import { CancellationRequest } from "@/components/booking/CancellationRequest";
 import { PaymentSection } from "@/components/booking/PaymentSection";
 import { buttonClasses } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -191,9 +192,7 @@ export function PartnerBookingDetail({ params }: { params: Promise<{ reference: 
                     </Link>
                   </div>
                 </Card>
-                <Link href={{ pathname: "/contact", query: { subject: "booking", reference: b.reference } }} className="text-center font-semibold text-primary-700 hover:underline">
-                  {t("cancel")}
-                </Link>
+                <CancellationRequest reference={b.reference} cancellation={b.cancellation} token={token} onChange={() => void query.refetch()} />
               </div>
             </div>
           </div>

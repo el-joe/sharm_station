@@ -1,5 +1,6 @@
 "use client";
 
+import { CancellationRequest } from "@/components/booking/CancellationRequest";
 import { lineLabel } from "@/components/booking/PriceSummary";
 import { AppImage } from "@/components/ui/AppImage";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
@@ -117,7 +118,13 @@ export function AccountBookingDetail({ params }: { params: Promise<{ reference: 
               </ul>
             )}
           </section>
-          <p className="rounded-card bg-sand-50 p-5 text-ink-700">{t("cancelInfo")}</p>
+          <CancellationRequest
+            reference={b.reference}
+            cancellation={b.cancellation}
+            token={token}
+            accessToken={readBooking(reference)?.access_token ?? null}
+            onChange={() => void query.refetch()}
+          />
         </div>
         <aside className="flex flex-col gap-4 lg:sticky lg:top-28 lg:self-start">
           <section className="rounded-card border border-ink-100 bg-white p-5 shadow-card" aria-labelledby="price-title">

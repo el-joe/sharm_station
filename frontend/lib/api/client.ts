@@ -5,7 +5,7 @@
  * mapped by ./adapters.ts. Mock data is used only in these explicit cases:
  *  - NEXT_PUBLIC_USE_MOCKS=true                       -> mocks everywhere (offline demo)
  *  - transfers: the mock catalogue while GET /transfers/hubs|vehicles return no data
- *  - `planned(...)` endpoints still being built (account, partner panel, contact): 404 -> "unavailable"
+ *  - `settle(...)` calls (account, payments, contact) never crash the page: an unreachable API -> { status: "error" }
  *  - resilience: the API is unreachable, times out or answers 5xx -> mock answer + console warning.
  *    404 means "not found" (null), 401/403/422 are surfaced to the UI, never masked.
  */
@@ -13,6 +13,7 @@ import { API_URL, USE_MOCKS } from "../site";
 import {
   mapAuth,
   mapBooking,
+  mapCancellation,
   mapDestinationDetail,
   mapPackageCard,
   mapPackageDetail,
@@ -46,6 +47,9 @@ import {
 import { roomImage, tripImage } from "./images";
 import { mockApi } from "./mock-api";
 import type {
+  BookingCancellation,
+  CouponCheck,
+  CouponServiceType,
   SuggestGroup,
   SuggestScope,
   ApiValidationError,
@@ -68,7 +72,7 @@ import type {
   NationalityGroup,
   CommissionSource,
   PaymentMethod,
-  Planned,
+  Settled,
   ProfileUpdate,
   ProofUpload,
   BookingDetail,
@@ -205,19 +209,20 @@ async function live<T>(call: () => Promise<T>, fallback: () => T, notFound?: () 
 }
 
 /**
- * Endpoints the backend is building right now (contract agreed, not deployed yet).
- * 404/405/501 -> `{ status: "unavailable" }` so the UI shows a "coming soon" state;
- * network errors and 5xx are treated the same (never crash the page);
- * 401/403/422 are surfaced so the caller can sign out or show field errors.
+ * Account, payment and contact calls: the API being unreachable (network error, timeout,
+ * 5xx, unexpected 404/405) resolves to `{ status: "error" }` so the UI shows an error state
+ * with alternatives; 401/403/409/413/419/422/429 are thrown so the caller can sign out or
+ * show field errors. With NEXT_PUBLIC_USE_MOCKS (offline demo) there is no API: "error".
  */
-async function planned<T>(call: () => Promise<T>): Promise<Planned<T>> {
-  if (USE_MOCKS) return { status: "unavailable" };
+async function settle<T>(call: () => Promise<T>): Promise<Settled<T>> {
+  if (USE_MOCKS) return { status: "error" };
   try {
     return { status: "ok", data: await call() };
   } catch (error) {
     if (error instanceof ApiError && [401, 403, 409, 413, 419, 422, 429].includes(error.status)) throw error;
     if (error instanceof DOMException && error.name === "AbortError") throw error;
-    return { status: "unavailable" };
+    console.warn(`[api] request failed: ${(error as Error).message}`);
+    return { status: "error" };
   }
 }
 
@@ -265,6 +270,7 @@ function bookingBody(b: CreateBookingRequest) {
     child_ages: b.child_ages,
     notes: notes || undefined,
     nationality_code: b.nationality_code,
+    coupon_code: b.coupon_code || undefined,
   };
   if (b.service_type === "room") return { ...common, room_id: b.room_id, check_in: b.check_in, check_out: b.check_out };
   if (b.product_type === "package") return { ...common, package_slug: b.product_slug, booking_type: b.booking_type, travel_date: b.travel_date, addons: b.addons };
@@ -470,7 +476,7 @@ export const api = {
       ]);
       if (!isArray(hubs.data) || !isArray(vehicles.data) || !hubs.data.length || !vehicles.data.length) return mock;
       return {
-        hubs: hubs.data.map((h) => ({ code: String(h.id), id: h.id, name: h.name, city: h.destination?.name, type: h.type, places: h.places ?? [], vehicle_type_ids: h.vehicle_type_ids })),
+        hubs: hubs.data.map((h) => ({ code: String(h.id), id: h.id, name: h.name, city: h.destination?.name, type: h.type, places: h.places ?? [], vehicle_type_ids: h.vehicle_type_ids, lat: h.location?.lat ?? null, lng: h.location?.lng ?? null, radius_km: h.radius_km ?? null })),
         vehicles: vehicles.data.map((v) => ({ code: String(v.id), name: v.name, capacity: v.capacity })),
         live: true,
       };
@@ -532,20 +538,20 @@ export const api = {
     }
   },
 
-  /** GET /me/bookings?status=upcoming|past|cancelled -> paginated BookingResource. PENDING BACKEND. */
+  /** GET /me/bookings?status=upcoming|past|cancelled -> paginated BookingResource. */
   getMyBookings: (o: RequestOptions & { token: string }) =>
-    planned<BookingDetail[]>(async () => {
+    settle<BookingDetail[]>(async () => {
       const res = await request<Paged<RawBooking>>("GET", "/me/bookings", o, { per_page: 50 });
       if (!isArray(res.data)) throw new ApiError(502, "Unexpected API response");
       return res.data.map(mapBooking);
     }),
 
-  /** PATCH /me/profile {name, phone, locale, currency, newsletter} -> UserResource. PENDING BACKEND. */
+  /** PATCH /me/profile {name, phone, locale, currency, newsletter} -> UserResource. */
   updateProfile: (body: Partial<ProfileUpdate>, o: RequestOptions & { token: string }) =>
-    planned<AuthUser>(async () => mapUser(data(await request<Envelope<RawUser>>("PATCH", "/me/profile", o, {}, body)))),
+    settle<AuthUser>(async () => mapUser(data(await request<Envelope<RawUser>>("PATCH", "/me/profile", o, {}, body)))),
 
-  /** PUT /me/password {current_password, password, password_confirmation} -> 204. PENDING BACKEND. */
-  updatePassword: (body: PasswordUpdate, o: RequestOptions & { token: string }) => planned<void>(() => request<void>("PUT", "/me/password", o, {}, body)),
+  /** PUT /me/password {current_password, password, password_confirmation} -> 204. */
+  updatePassword: (body: PasswordUpdate, o: RequestOptions & { token: string }) => settle<void>(() => request<void>("PUT", "/me/password", o, {}, body)),
 
   /* ---------------------------------------------------------------- nationality (CR-10) */
 
@@ -618,6 +624,30 @@ export const api = {
       excel_url: (s.excel_url as string | null) ?? null,
     })),
 
+  /**
+   * GET /partner/statements/{YYYY-MM}/export?format=pdf|xlsx with the partner token -> the file as a Blob.
+   * The filename comes from Content-Disposition when the API exposes it, else statement-{period}.{ext}.
+   */
+  partnerStatementFile: async (period: string, format: "pdf" | "xlsx", o: RequestOptions & { token: string }): Promise<{ blob: Blob; filename: string }> => {
+    const url = buildUrl(`/partner/statements/${encodeURIComponent(period)}/export`, { format }, o);
+    const res = await fetch(url, {
+      headers: { Accept: format === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Accept-Language": o.locale, Authorization: `Bearer ${o.token}` },
+      signal: o.signal ? AbortSignal.any([o.signal, AbortSignal.timeout(60000)]) : AbortSignal.timeout(60000),
+    });
+    if (!res.ok) {
+      let message = res.statusText;
+      try {
+        message = ((await res.json()) as { message?: string }).message ?? message;
+      } catch {
+        /* binary or HTML error */
+      }
+      throw new ApiError(res.status, message);
+    }
+    const disposition = res.headers.get("Content-Disposition") ?? "";
+    const named = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1] ?? disposition.match(/filename="?([^";]+)"?/i)?.[1];
+    return { blob: await res.blob(), filename: named ? decodeURIComponent(named) : `statement-${period}.${format}` };
+  },
+
   /** GET /partner/price-list?nationality=&service= (403 when the admin has not enabled it). */
   partnerPriceList: async (filters: { nationality: string; service?: string }, o: RequestOptions & { token: string }): Promise<PartnerPriceRow[]> =>
     data(await request<Envelope<Record<string, unknown>[]>>("GET", "/partner/price-list", o, filters), isArray).map((r) => ({
@@ -679,11 +709,11 @@ export const api = {
   partnerCreateBooking: async (body: PartnerBookingRequest, o: RequestOptions & { token: string }): Promise<PartnerBookingDetail> =>
     mapPartnerBookingDetail(data(await request<Envelope<RawBookingFull>>("POST", "/partner/bookings", o, {}, body), (b) => typeof b.reference === "string")),
 
-  /* ---------------------------------------------------------------- payments (PENDING BACKEND, SRS 10) */
+  /* ---------------------------------------------------------------- payments (SRS 10) */
 
   /** GET /bookings/{reference}/payment-methods?token= -> { data: PaymentMethod[], meta }. */
   paymentMethods: (reference: string, o: RequestOptions & { accessToken?: string | null }) =>
-    planned<PaymentMethod[]>(async () =>
+    settle<PaymentMethod[]>(async () =>
       data(await request<Envelope<(Omit<PaymentMethod, "account_details"> & { account_details: unknown })[]>>("GET", `/bookings/${encodeURIComponent(reference)}/payment-methods`, o, { token: o.accessToken ?? undefined }), isArray).map((m) => ({
         ...m,
         account_details: accountDetails(m.account_details),
@@ -694,7 +724,7 @@ export const api = {
 
   /** POST /bookings/{reference}/checkout?token= {payment_method_id} -> 201 { data: { checkout_url, session_reference, expires_at } } (also accepts { redirect_url }). */
   checkout: (reference: string, paymentMethodId: number, o: RequestOptions & { accessToken?: string | null }) =>
-    planned<{ redirect_url: string }>(async () => {
+    settle<{ redirect_url: string }>(async () => {
       const res = await request<{ redirect_url?: string; data?: { redirect_url?: string; checkout_url?: string } }>(
         "POST",
         `/bookings/${encodeURIComponent(reference)}/checkout`,
@@ -709,7 +739,7 @@ export const api = {
 
   /** POST /bookings/{reference}/proofs?token= multipart: files[], transaction_number, transfer_date, amount, sender_name, payment_method_id. */
   uploadProofs: (reference: string, body: ProofUpload & { payment_method_id: number }, o: RequestOptions & { accessToken?: string | null }) =>
-    planned<{ status: string }>(async () => {
+    settle<{ status: string }>(async () => {
       const form = new FormData();
       body.files.forEach((f) => form.append("files[]", f, f.name));
       form.append("payment_method_id", String(body.payment_method_id));
@@ -723,10 +753,44 @@ export const api = {
       return { status: res?.meta?.payment_status ?? res?.data?.status ?? "awaiting_receipt_review" };
     }),
 
+  /* ---------------------------------------------------------------- coupons and cancellations */
+
+  /** POST /coupons/validate {code, service_type, total_eur, email?, for_partner?} (partner checks need the partner token). */
+  validateCoupon: async (
+    body: { code: string; service_type: CouponServiceType; total_eur: number; email?: string; for_partner?: boolean },
+    o: RequestOptions,
+  ): Promise<CouponCheck> => {
+    const raw = await request<Partial<CouponCheck> & { data?: Partial<CouponCheck> }>("POST", "/coupons/validate", o, {}, body);
+    const r = raw.data ?? raw;
+    return {
+      valid: Boolean(r.valid),
+      code: String(r.code ?? body.code),
+      discount_type: r.discount_type ?? null,
+      value: r.value != null ? Number(r.value) : null,
+      discount_eur: Number(r.discount_eur ?? 0),
+      message: String(r.message ?? ""),
+    };
+  },
+
+  /**
+   * POST /bookings/{reference}/cancellation-request {reason} with ?token= (booking link) or the
+   * owner's / partner's bearer token. 201 = recorded, 200 = already requested; both return the booking.
+   */
+  requestCancellation: async (reference: string, reason: string, o: RequestOptions & { accessToken?: string | null }): Promise<{ cancellation: BookingCancellation | null; message: string }> => {
+    const res = await request<{ data: RawBooking; message?: string }>(
+      "POST",
+      `/bookings/${encodeURIComponent(reference)}/cancellation-request`,
+      o,
+      { token: o.accessToken ?? undefined },
+      { reason },
+    );
+    return { cancellation: mapCancellation(res.data?.cancellation), message: res.message ?? "" };
+  },
+
   /* ---------------------------------------------------------------- content */
 
-  /** POST /contact {name, email, phone, subject, booking_reference, message} -> 201/202. PENDING BACKEND. */
-  contact: (body: ContactRequest, o: RequestOptions) => planned<void>(async () => void (await request<unknown>("POST", "/contact", o, {}, { ...body, locale: o.locale }))),
+  /** POST /contact {name, email, phone, subject, booking_reference, message} -> 201/202. */
+  contact: (body: ContactRequest, o: RequestOptions) => settle<void>(async () => void (await request<unknown>("POST", "/contact", o, {}, { ...body, locale: o.locale }))),
 
   /** GET /destinations/{slug} with its trips and buildings (null when unknown). */
   destinationDetail: (slug: string, o: RequestOptions) =>
@@ -760,6 +824,8 @@ interface RawTransferHub {
   destination?: { name: string; slug: string } | null;
   places?: { name: string; lat: number; lng: number }[];
   vehicle_type_ids?: number[] | null;
+  location?: { lat: number; lng: number } | null;
+  radius_km?: number | null;
 }
 
 interface RawPartnerBooking {
@@ -878,6 +944,8 @@ interface RawBookingFull {
   payment_summary?: { paid?: number; due?: number } | null;
   payments?: { type: string; status: string; amount: number; method: string | null; paid_at: string | null }[];
   transfer?: PartnerBookingDetail["transfer"];
+  coupon_code?: string | null;
+  cancellation?: Partial<BookingCancellation> | null;
   created_at: string;
 }
 
@@ -919,6 +987,8 @@ function mapPartnerBookingDetail(raw: RawBookingFull): PartnerBookingDetail {
     payments: raw.payments ?? [],
     payment_options: raw.payment_options ?? [],
     transfer: raw.transfer ?? null,
+    coupon_code: raw.coupon_code ?? null,
+    cancellation: mapCancellation(raw.cancellation),
     created_at: raw.created_at,
   };
 }

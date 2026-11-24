@@ -1,27 +1,36 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\AddonController;
 use App\Http\Controllers\Admin\AiSuggestionController;
 use App\Http\Controllers\Admin\Auth\LoginController;
+use App\Http\Controllers\Admin\BlogPostController;
+use App\Http\Controllers\Admin\BookingCancellationController;
 use App\Http\Controllers\Admin\BookingController;
 use App\Http\Controllers\Admin\BuildingController;
-use App\Http\Controllers\Admin\ComingSoonController;
+use App\Http\Controllers\Admin\CalendarController;
 use App\Http\Controllers\Admin\CommissionMatrixController;
 use App\Http\Controllers\Admin\CommissionSettingController;
 use App\Http\Controllers\Admin\ContactMessageController;
+use App\Http\Controllers\Admin\ContentController;
+use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\CurrencyController;
+use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DestinationController;
+use App\Http\Controllers\Admin\FaqController;
 use App\Http\Controllers\Admin\GoogleReviewController;
 use App\Http\Controllers\Admin\McpAccessController;
 use App\Http\Controllers\Admin\NationalityGroupController;
 use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\Admin\PartnerController;
 use App\Http\Controllers\Admin\PaymentController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RoomAvailabilityController;
 use App\Http\Controllers\Admin\RoomController;
 use App\Http\Controllers\Admin\SeasonPriceController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\StaffUserController;
 use App\Http\Controllers\Admin\TransferController;
 use App\Http\Controllers\Admin\TripController;
 use Illuminate\Support\Facades\Route;
@@ -62,6 +71,8 @@ Route::middleware(['auth', 'staff'])->group(function (): void {
     Route::resource('rooms', RoomController::class)->except('show');
     Route::get('rooms/{room}/calendar', [RoomAvailabilityController::class, 'show'])->name('rooms.calendar');
     Route::post('rooms/{room}/availability', [RoomAvailabilityController::class, 'update'])->name('rooms.availability.update');
+    Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
+    Route::post('calendar/block', [CalendarController::class, 'block'])->name('calendar.block');
 
     // Price lists (seasons)
     Route::middleware('can:manage-prices')->group(function (): void {
@@ -77,6 +88,27 @@ Route::middleware(['auth', 'staff'])->group(function (): void {
     Route::put('google-reviews/place', [GoogleReviewController::class, 'updatePlace'])->name('google-reviews.place');
     Route::post('google-reviews/sync', [GoogleReviewController::class, 'sync'])->middleware('throttle:10,1')->name('google-reviews.sync');
     Route::patch('google-reviews/{review}', [GoogleReviewController::class, 'update'])->name('google-reviews.update');
+
+    // Website content: pages, blog and FAQ (every staff role)
+    Route::middleware('can:manage-content')->prefix('content')->name('content.')->group(function (): void {
+        Route::get('/', [ContentController::class, 'index'])->name('index');
+        Route::get('blog/data', [ContentController::class, 'blogData'])->name('blog.data');
+        Route::get('pages/{slug}', [ContentController::class, 'editPage'])->name('pages.edit');
+        Route::put('pages/{slug}', [ContentController::class, 'updatePage'])->name('pages.update');
+        Route::resource('posts', BlogPostController::class)->except(['index', 'show']);
+        Route::controller(FaqController::class)->prefix('faq')->name('faq.')->group(function (): void {
+            Route::post('reorder', 'reorder')->name('reorder');
+            Route::post('categories', 'storeCategory')->name('categories.store');
+            Route::get('categories/{category}/edit', 'editCategory')->name('categories.edit');
+            Route::put('categories/{category}', 'updateCategory')->name('categories.update');
+            Route::delete('categories/{category}', 'destroyCategory')->name('categories.destroy');
+            Route::get('items/create', 'createItem')->name('items.create');
+            Route::post('items', 'storeItem')->name('items.store');
+            Route::get('items/{item}/edit', 'editItem')->name('items.edit');
+            Route::put('items/{item}', 'updateItem')->name('items.update');
+            Route::delete('items/{item}', 'destroyItem')->name('items.destroy');
+        });
+    });
 
     // AI suggestions from Claude (CR-14): every staff role reviews; creating accommodation needs "manage-prices".
     Route::prefix('ai-suggestions')->name('ai-suggestions.')->controller(AiSuggestionController::class)->group(function (): void {
@@ -96,6 +128,20 @@ Route::middleware(['auth', 'staff'])->group(function (): void {
         Route::get('bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
         Route::patch('bookings/{booking}/status', [BookingController::class, 'updateStatus'])->name('bookings.status');
         Route::post('bookings/{booking}/payments', [PaymentController::class, 'recordPayment'])->name('bookings.payments.store');
+        Route::post('bookings/{booking}/cancellation/approve', [BookingCancellationController::class, 'approve'])->name('bookings.cancellation.approve');
+        Route::post('bookings/{booking}/cancellation/decline', [BookingCancellationController::class, 'decline'])->name('bookings.cancellation.decline');
+
+        Route::get('customers/data', [CustomerController::class, 'data'])->name('customers.data');
+        Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
+        Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+        Route::put('customers/{customer}/notes', [CustomerController::class, 'updateNotes'])->name('customers.notes');
+        Route::patch('customers/{customer}/active', [CustomerController::class, 'toggleActive'])->name('customers.toggle-active');
+
+        Route::get('coupons/data', [CouponController::class, 'data'])->name('coupons.data');
+        Route::resource('coupons', CouponController::class)->except('show');
+
+        Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('reports/export/{table}', [ReportController::class, 'export'])->name('reports.export');
 
         Route::get('contact-messages', [ContactMessageController::class, 'index'])->name('contact-messages.index');
         Route::get('contact-messages/data', [ContactMessageController::class, 'data'])->name('contact-messages.data');
@@ -126,6 +172,7 @@ Route::middleware(['auth', 'staff'])->group(function (): void {
         Route::get('partners', [PartnerController::class, 'index'])->name('partners.index');
         Route::get('partners/{partner}', [PartnerController::class, 'show'])->name('partners.show');
         Route::put('partners/{partner}/commissions', [PartnerController::class, 'updateCommissions'])->name('partners.commissions.override');
+        Route::patch('partners/{partner}/coupons', [PartnerController::class, 'updateCoupons'])->name('partners.coupons');
 
         // Pricing configuration (CR-10, CR-11)
         Route::get('settings/commissions', [CommissionSettingController::class, 'edit'])->name('commissions.edit');
@@ -136,6 +183,7 @@ Route::middleware(['auth', 'staff'])->group(function (): void {
         Route::delete('nationality-groups/{nationalityGroup}', [NationalityGroupController::class, 'destroy'])->name('nationality-groups.destroy');
         Route::post('partners/{partner}/approve', [PartnerController::class, 'approve'])->name('partners.approve');
         Route::post('partners/{partner}/suspend', [PartnerController::class, 'suspend'])->name('partners.suspend');
+        Route::post('partners/{partner}/reject', [PartnerController::class, 'reject'])->name('partners.reject');
 
         // Transfers (SRS 5)
         Route::prefix('transfers')->name('transfers.')->controller(TransferController::class)->group(function (): void {
@@ -183,10 +231,11 @@ Route::middleware(['auth', 'staff'])->group(function (): void {
         Route::get('settings/mcp', [McpAccessController::class, 'index'])->name('mcp.index');
         Route::post('settings/mcp', [McpAccessController::class, 'store'])->name('mcp.store');
         Route::delete('settings/mcp/{token}', [McpAccessController::class, 'destroy'])->whereNumber('token')->name('mcp.destroy');
-    });
 
-    // Modules from the SRS that are not built yet render an honest placeholder page.
-    Route::get('soon/{module}', ComingSoonController::class)
-        ->whereIn('module', ['packages', 'calendar', 'receipts', 'payments', 'customers', 'coupons', 'transfers', 'content', 'users'])
-        ->name('soon');
+        // Users and roles, activity log (A5, A7)
+        Route::get('users/data', [StaffUserController::class, 'data'])->name('users.data');
+        Route::resource('users', StaffUserController::class)->except('show');
+        Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity.index');
+        Route::get('activity-log/data', [ActivityLogController::class, 'data'])->name('activity.data');
+    });
 });

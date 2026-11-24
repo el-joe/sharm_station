@@ -59,7 +59,12 @@ export function AccommodationSearch({ query, destinations, buildings, total }: {
   const checkIn = draft.check_in ?? defaultIn;
   const checkOut = draft.check_out ?? (checkIn ? toISODate(addDays(parseISODate(checkIn), 3)) : "");
 
-  const go = (q: AccommodationQuery) => startTransition(() => router.push({ pathname, query: toAccommodationQuery(q) }, { scroll: false }));
+  const go = (q: AccommodationQuery) =>
+    startTransition(() => {
+      // Keep the List / Map choice (?view=map, see AccommodationResults) when the filters change.
+      const view = new URLSearchParams(window.location.search).get("view");
+      router.push({ pathname, query: { ...toAccommodationQuery(q), ...(view === "map" ? { view } : {}) } }, { scroll: false });
+    });
 
   const submit = (e: FormEvent) => {
     e.preventDefault();

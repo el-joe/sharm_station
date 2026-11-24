@@ -78,6 +78,17 @@ export interface Meta {
     google_rating: number;
     google_reviews_total: number;
   };
+  /** Office contact details and location (GET /meta `contact`). */
+  contact: MetaContact | null;
+}
+
+export interface MetaContact {
+  address: string;
+  lat: number | null;
+  lng: number | null;
+  phone: string;
+  email: string;
+  whatsapp: string;
 }
 
 /** One price period (season). Dates are ISO `YYYY-MM-DD`; with `recurring_yearly` only month/day matter. */
@@ -311,7 +322,7 @@ export interface RoomSummary {
   name: string;
   room_type: string;
   type_label: string;
-  building: Pick<Building, "slug" | "name" | "stars" | "location" | "taxes_included">;
+  building: Pick<Building, "slug" | "name" | "stars" | "location" | "taxes_included"> & { lat?: number | null; lng?: number | null };
   image: MediaImage;
   max_adults: number;
   max_children: number;
@@ -430,6 +441,33 @@ export interface CreateBookingRequest {
   product_type?: TripType;
   /** ISO-2 nationality of the booker (required by POST /bookings, CR-10). */
   nationality_code: string;
+  /** Promo code checked with POST /coupons/validate; applied again by the server (422 on coupon_code when invalid). */
+  coupon_code?: string;
+}
+
+/** Service types known by the coupon rules (backend App\Enums\ServiceType). */
+export type CouponServiceType = "trip" | "nile_trip" | "package" | "transfer" | "accommodation";
+
+/** POST /coupons/validate */
+export interface CouponCheck {
+  valid: boolean;
+  code: string;
+  discount_type: "percent" | "fixed" | null;
+  value: number | null;
+  discount_eur: number;
+  message: string;
+}
+
+/** BookingResource `cancellation` block (POST /bookings/{reference}/cancellation-request). */
+export interface BookingCancellation {
+  can_request: boolean;
+  requested_at: string | null;
+  reason: string | null;
+  status: "pending" | "approved" | "declined" | null;
+  decided_at: string | null;
+  decision_note: string | null;
+  /** EUR; null when not decided yet (or hidden from this viewer). */
+  refund_amount: number | null;
 }
 
 export interface BookingTotals {
@@ -471,8 +509,10 @@ export interface BookingDetail extends CreateBookingResponse {
   season_name?: string | null;
   lines: QuoteLine[];
   travellers?: Traveller[];
-  /** ISO date-time the deposit is due by (planned field; derived from created_at + 48 h when absent). */
+  /** ISO date-time the deposit is due by (derived from created_at + 48 h when absent). */
   payment_due_at?: string | null;
+  coupon_code?: string | null;
+  cancellation?: BookingCancellation | null;
   created_at: string;
 }
 
@@ -523,6 +563,11 @@ export interface TransferHub {
   id?: number;
   /** API only: known destinations (fixed routes) with coordinates. */
   places?: { name: string; lat: number; lng: number }[];
+  /** Pick-up point (route preview origin, Places Autocomplete bias). */
+  lat?: number | null;
+  lng?: number | null;
+  /** Service radius in km (Places Autocomplete bias). */
+  radius_km?: number | null;
   vehicle_type_ids?: number[] | null;
 }
 
@@ -575,15 +620,15 @@ export interface TransferQuoteResult {
   duration_minutes: number;
 }
 
-/* ------------------------------------------------------------------ planned endpoints
- * Shapes below are what the frontend expects from endpoints the backend is still
- * building (see docs/BACKLOG.md). Each call resolves to `Planned<T>` so the UI can
- * show a "coming soon / no data" state when the endpoint answers 404/405.
+/* ------------------------------------------------------------------ account, payments, contact
+ * Calls that must never crash the page resolve to `Settled<T>`: "error" means the API
+ * could not be reached (network error, timeout, 5xx, unexpected 404); the UI then shows
+ * an error state with alternatives (WhatsApp, email). 401/403/409/422/429 still throw.
  */
 
-export type Planned<T> = { status: "ok"; data: T } | { status: "unavailable" };
+export type Settled<T> = { status: "ok"; data: T } | { status: "error" };
 
-/** GET /me/bookings item (PENDING BACKEND). Same shape as BookingDetail, list subset. */
+/** GET /me/bookings item. Same shape as BookingDetail, list subset. */
 export type MyBooking = BookingDetail;
 
 export interface ProfileUpdate {
@@ -813,6 +858,7 @@ export interface PartnerQuote {
 /** POST /partner/bookings */
 export interface PartnerBookingRequest extends PartnerQuoteRequest {
   lead: { name: string; email: string; phone?: string };
+  coupon_code?: string;
   travelers?: { first_name: string; last_name: string; type: "adult" | "child"; age?: number | null }[];
   payment_method?: string;
   notes?: string;
@@ -853,6 +899,8 @@ export interface PartnerBookingDetail {
   payments: { type: string; status: string; amount: number; method: string | null; paid_at: string | null }[];
   payment_options: { id?: number; code?: string; type?: string; name: string; proof_required?: boolean }[];
   transfer: { destination: { name: string }; pickup_at: string; passengers: number } | null;
+  coupon_code?: string | null;
+  cancellation?: BookingCancellation | null;
   created_at: string;
 }
 

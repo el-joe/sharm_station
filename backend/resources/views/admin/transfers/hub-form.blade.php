@@ -17,11 +17,10 @@
             <x-admin.select name="destination_id" label="Destination" :options="$destinations" :selected="$hub->destination_id" placeholder="None" data-s2-clear span="md:col-span-2" />
             <x-admin.input name="sort" label="Order" type="number" min="0" :value="$hub->sort ?? 0" span="md:col-span-1" />
             <x-admin.switch name="is_enabled" label="Enabled" :checked="$hub->is_enabled" span="md:col-span-1" />
-            <x-admin.input name="lat" label="Latitude" type="number" step="0.0000001" :value="$hub->lat" span="md:col-span-2" />
-            <x-admin.input name="lng" label="Longitude" type="number" step="0.0000001" :value="$hub->lng" span="md:col-span-2" />
             <x-admin.input name="radius_km" label="Service radius (km)" type="number" step="0.1" :value="$hub->radius_km" span="md:col-span-1" />
             <x-admin.input name="max_distance_km" label="Max ride (km)" type="number" step="0.1" :value="$hub->max_distance_km" span="md:col-span-1" />
             <x-admin.select name="vehicle_type_ids[]" label="Vehicles available" :options="$vehicles" :selected="$hub->vehicle_type_ids ?? []" multiple placeholder="All vehicles" span="md:col-span-6" />
+            <x-admin.location-picker :lat="$hub->lat" :lng="$hub->lng" search-label="Search the hub (airport, port, hotel…)" />
         </x-admin.form-section>
 
         <x-admin.form-section title="Fares" description="EUR. Waiting is charged after the grace period; the night surcharge applies from 22:00 to 06:00; fees (airport, tolls) are added after the minimum.">

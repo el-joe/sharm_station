@@ -17,7 +17,7 @@ import { z } from "zod";
 
 const SUBJECTS = ["booking", "trip", "partner", "other"] as const;
 
-/** Contact form: POST /contact (PENDING BACKEND). On 404/network error it offers WhatsApp and a prefilled email instead. */
+/** Contact form: POST /contact. When the API cannot be reached it offers WhatsApp and a prefilled email with the same message. */
 export function ContactForm({ email, whatsapp }: { email: string; whatsapp: string }) {
   const t = useTranslations("contact");
   const tv = useTranslations("validation");

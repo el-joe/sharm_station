@@ -36,6 +36,7 @@ final readonly class CreateBookingData
         public ?TransferQuoteRequestData $transferQuote = null,
         public ?string $nationalityCode = null,
         public ?int $nationalityGroupId = null,
+        public ?string $couponCode = null,
     ) {}
 
     /**
@@ -68,6 +69,7 @@ final readonly class CreateBookingData
             transferQuote: $isTransfer ? TransferQuoteRequestData::fromArray($data['transfer'], $partner, $currency, $nationalityCode, $nationalityGroupId) : null,
             nationalityCode: $nationalityCode,
             nationalityGroupId: $nationalityGroupId,
+            couponCode: filled($data['coupon_code'] ?? null) ? strtoupper(trim((string) $data['coupon_code'])) : null,
         );
     }
 

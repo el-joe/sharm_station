@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\PaymentMethodType;
 use App\Models\Concerns\HasTranslations;
+use App\Models\Concerns\LogsActivity;
 use Database\Factories\PaymentMethodFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -27,7 +28,7 @@ use Illuminate\Database\Eloquent\Model;
 class PaymentMethod extends Model
 {
     /** @use HasFactory<PaymentMethodFactory> */
-    use HasFactory, HasTranslations;
+    use HasFactory, HasTranslations, LogsActivity;
 
     /**
      * @var list<string>

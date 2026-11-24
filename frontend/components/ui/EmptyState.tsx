@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 
-/** Empty / coming-soon / error block used across account and partner pages. */
+/** Empty / error block used across account and partner pages. */
 export function EmptyState({
   icon,
   title,

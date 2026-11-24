@@ -10,6 +10,7 @@ use App\Models\Concerns\HasChildPolicy;
 use App\Models\Concerns\HasProductPrices;
 use App\Models\Concerns\HasSeasonPrices;
 use App\Models\Concerns\HasTranslations;
+use App\Models\Concerns\LogsActivity;
 use App\Models\Contracts\Priceable;
 use Carbon\CarbonInterface;
 use Database\Factories\RoomFactory;
@@ -29,7 +30,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Room extends Model implements Priceable
 {
     /** @use HasFactory<RoomFactory> */
-    use HasChildPolicy, HasFactory, HasProductPrices, HasSeasonPrices, HasTranslations;
+    use HasChildPolicy, HasFactory, HasProductPrices, HasSeasonPrices, HasTranslations, LogsActivity;
 
     /**
      * @var list<string>

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\BookingStatus;
 use App\Enums\BookingType;
+use App\Enums\CancellationDecision;
 use App\Enums\PaymentRecordStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\PaymentType;
@@ -25,7 +26,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
     'start_date', 'check_in', 'check_out', 'user_id', 'partner_id', 'lead_name', 'lead_email', 'lead_phone', 'adults',
     'children', 'retail_total', 'partner_total', 'commission_amount', 'commission_percent', 'nationality_code', 'nationality_group_id', 'price_rule', 'total', 'deposit_percent',
     'deposit_amount', 'balance_amount', 'currency', 'exchange_rate', 'total_in_currency', 'status', 'payment_status', 'payment_due_at',
-    'locale', 'notes', 'price_lines',
+    'locale', 'notes', 'price_lines', 'coupon_id', 'coupon_code', 'discount_amount', 'cancellation_requested_at', 'cancellation_reason',
+    'cancellation_requested_by', 'cancellation_decision', 'cancellation_decided_at', 'cancellation_decision_note', 'refund_amount',
 ])]
 #[Hidden(['access_token'])]
 class Booking extends Model
@@ -62,6 +64,11 @@ class Booking extends Model
             'total_in_currency' => 'decimal:2',
             'price_lines' => 'array',
             'payment_due_at' => 'immutable_datetime',
+            'discount_amount' => 'decimal:2',
+            'cancellation_requested_at' => 'immutable_datetime',
+            'cancellation_decision' => CancellationDecision::class,
+            'cancellation_decided_at' => 'immutable_datetime',
+            'refund_amount' => 'decimal:2',
         ];
     }
 
@@ -195,5 +202,29 @@ class Booking extends Model
     public function nationalityGroup(): BelongsTo
     {
         return $this->belongsTo(NationalityGroup::class);
+    }
+
+    /**
+     * @return BelongsTo<Coupon, $this>
+     */
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function cancellationRequester(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancellation_requested_by');
+    }
+
+    /**
+     * A cancellation request waiting for the admin's decision.
+     */
+    public function hasPendingCancellationRequest(): bool
+    {
+        return $this->cancellation_requested_at !== null && $this->cancellation_decision === null;
     }
 }

@@ -4,6 +4,7 @@ use App\Enums\BookingType;
 use App\Enums\PricingMode;
 use App\Enums\TripType;
 use App\Enums\UserRole;
+use App\Models\ActivityLog;
 use App\Models\Addon;
 use App\Models\Destination;
 use App\Models\SeasonPrice;
@@ -194,6 +195,11 @@ test('the price list saves, updates and deletes seasons and refreshes the from p
         ->and($old->fresh()->recurring_yearly)->toBeTrue()
         ->and($old->fresh()->unitPriceFor($option->id))->toBe(25.0)
         ->and((float) $trip->fresh()->from_price)->toBe(25.0);
+
+    // The save is in the activity log (A7).
+    expect(ActivityLog::query()->where('subject_type', 'trip')->where('subject_id', $trip->id)->latest('id')->first())
+        ->description->toBe('Price matrix of trip “'.$trip->title.'” saved')
+        ->properties->toMatchArray(['seasons' => 2]);
 });
 
 test('a season can be copied to the next year', function () {

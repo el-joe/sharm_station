@@ -6,6 +6,7 @@ use App\DTOs\Payment\CheckoutSessionData;
 use App\DTOs\Payment\PaymentMethodData;
 use App\DTOs\Payment\ProofSubmissionData;
 use App\DTOs\Payment\RecordPaymentData;
+use App\Enums\ActivityAction;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentMethodType;
 use App\Enums\PaymentRecordStatus;
@@ -52,6 +53,7 @@ class PaymentService
         private readonly TransferService $transfers,
         private readonly CurrencyService $currencies,
         private readonly PaymentGatewayManager $gateways,
+        private readonly ActivityLogger $activity,
     ) {}
 
     /**
@@ -171,6 +173,7 @@ class PaymentService
             ]);
 
             $this->settle($booking, $reviewer, 'Proof of payment approved');
+            $this->activity->log(ActivityAction::ProofApproved, $proof, "Proof #{$proof->id} of booking {$booking->reference} approved (€".number_format($amount, 2).')', ['payment_id' => $payment->id, 'amount' => $amount], $reviewer);
 
             return $payment;
         });
@@ -200,6 +203,7 @@ class PaymentService
             }
 
             $this->transfers->syncWithPayment($booking, TransferStatus::AwaitingPayment);
+            $this->activity->log(ActivityAction::ProofRejected, $proof, "Proof #{$proof->id} of booking {$booking->reference} rejected", ['reason' => $reason], $reviewer);
 
             return $proof;
         });
@@ -224,6 +228,9 @@ class PaymentService
             ]);
 
             $this->settle($booking, $actor, $data->type === PaymentType::Balance ? 'Balance payment recorded' : 'Payment recorded');
+            $this->activity->log(ActivityAction::PaymentRecorded, $booking, 'Payment of €'.number_format($data->amount, 2)." recorded on booking {$booking->reference}", [
+                'payment_id' => $payment->id, 'type' => $data->type->value, 'amount' => $data->amount, 'note' => $data->note,
+            ], $actor);
 
             return $payment;
         });

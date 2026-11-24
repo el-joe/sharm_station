@@ -6,7 +6,8 @@ import { ADMIN_URL, ACCOUNTS, AUTH_DIR, SITE_URL, apiContext, apiLogin, authFile
  * Signs the demo accounts in once and saves Playwright storage states in e2e/.auth (git-ignored):
  *  - customer / partner: Sanctum token in localStorage (`ssv_token`) on the site origin + nationality cookie IT;
  *  - admin / editor: Laravel session cookie for the admin host.
- * The API allows 10 logins/min and the admin 5/min per email, so a still-valid saved token or session is reused.
+ * The API allows 10 logins/min and the admin 5/min per email, so a still-valid saved token or session is reused
+ * (and an invalid or expired one is replaced by a fresh sign-in).
  */
 setup.beforeAll(() => {
   fs.mkdirSync(AUTH_DIR, { recursive: true });
@@ -47,6 +48,9 @@ for (const role of ["admin", "editor"] as Role[]) {
       const page = await saved.newPage();
       await page.goto(`${ADMIN_URL}/dashboard`);
       const ok = /\/admin\/dashboard/.test(page.url());
+      // Save again: the response refreshed the session cookie's expiry (SESSION_LIFETIME). Without this the
+      // browser drops the old cookie part-way through a long run and later admin tests land on the login page.
+      if (ok) await saved.storageState({ path: authFile(role) });
       await saved.close();
       if (ok) return;
     }

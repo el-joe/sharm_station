@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\DTOs\Pricing\SeasonPriceData;
+use App\Enums\ActivityAction;
 use App\Exceptions\DomainValidationException;
 use App\Exceptions\SeasonOverlapException;
 use App\Models\Contracts\Priceable;
@@ -23,6 +24,7 @@ class PriceMatrixService
         private readonly ProductPriceRepositoryInterface $productPrices,
         private readonly SeasonPriceService $seasons,
         private readonly NationalityService $nationalities,
+        private readonly ActivityLogger $activity,
     ) {}
 
     /**
@@ -86,6 +88,15 @@ class PriceMatrixService
 
             $this->seasons->sync($priceable, $seasonRows);
         });
+
+        // Price changes are part of the audit trail (A7): one entry per save of the matrix.
+        $name = (string) ($priceable->getAttribute('title') ?? $priceable->getAttribute('name') ?? '#'.$priceable->getKey());
+        $this->activity->log(
+            ActivityAction::Updated,
+            $priceable,
+            'Price matrix of '.str($priceable->getMorphClass())->headline()->lower().' “'.$name.'” saved',
+            ['base_groups' => count(array_filter($base, fn ($values): bool => $this->baseAttributes((array) $values) !== null)), 'seasons' => count($seasonRows)],
+        );
     }
 
     /**

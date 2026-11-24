@@ -77,7 +77,7 @@
   },
   "cookies": {
     "title": "Cookies on this site",
-    "text": "We use essential cookies to make the site work and, with your consent, analytics cookies to improve it.",
+    "text": "We use essential cookies to make the site work and, with your consent, analytics cookies and Google Maps (which may set its own cookies) to improve it.",
     "policy": "Privacy policy",
     "essential": "Essential only",
     "acceptAll": "Accept all"
@@ -512,7 +512,8 @@
     "total": "Total",
     "totalPending": "Total (child pending)",
     "payToday": "Pay today ({percent}%)",
-    "balanceLater": "Balance later"
+    "balanceLater": "Balance later",
+    "discount": "Promo code {code}"
   },
   "accommodation": {
     "crumb": "Accommodation",
@@ -531,7 +532,13 @@
     "allBuildings": "All buildings",
     "freeCancellationHelper": "Free cancellation before the hotel's deadline",
     "emptyTitle": "No rooms for this search",
-    "emptyText": "Try other dates, fewer guests or another destination."
+    "emptyText": "Try other dates, fewer guests or another destination.",
+    "viewLabel": "Show results as",
+    "viewList": "List",
+    "viewMap": "Map",
+    "mapLabel": "Map of the accommodation results",
+    "mapListTitle": "Rooms on the map",
+    "mapUnmapped": "{count, plural, one {# room has} other {# rooms have}} no map location yet and appear only in the list."
   },
   "roomPage": {
     "taxIncluded": "Tax included",
@@ -655,7 +662,8 @@
     "emptyTitle": "Your checkout is empty",
     "emptyText": "Choose a trip or a room and press Reserve to start a booking.",
     "browse": "Browse trips",
-    "nationalityMissing": "Choose your nationality at the top of the page before booking: prices depend on it."
+    "nationalityMissing": "Choose your nationality at the top of the page before booking: prices depend on it.",
+    "couponRejected": "The promo code could not be applied. Remove it or try another code."
   },
   "confirmation": {
     "metaTitle": "Booking received",
@@ -675,7 +683,7 @@
     "lookupText": "We could not load booking {reference} on this device. Check the confirmation email or contact us.",
     "home": "Back to home",
     "titleConfirmed": "Booking confirmed",
-    "textConfirmed": "Your deposit has been received and your booking is confirmed. Your voucher is on its way by email."
+    "textConfirmed": "Your deposit has been received and your booking is confirmed. We have emailed your voucher."
   },
   "auth": {
     "signInTitle": "Sign in",
@@ -814,8 +822,6 @@
         "past": "Past",
         "cancelled": "Cancelled"
       },
-      "pendingTitle": "Your booking history is on its way",
-      "pendingText": "We are connecting your account to our booking system. In the meantime, every booking confirmation email has a link to manage that booking, and you can always reach us on WhatsApp.",
       "emptyTitle": "No bookings here yet",
       "emptyUpcoming": "When you book a trip, a Nile cruise or a room, it will appear here with its payment status and voucher.",
       "emptyPast": "Trips you have completed will appear here.",
@@ -848,8 +854,7 @@
       "payNow": "Pay now",
       "contact": "Contact us about this booking",
       "notFoundTitle": "We could not open this booking",
-      "notFoundText": "Booking {reference} is not linked to your account, or our server is not answering. Open it from the link in your confirmation email, or contact us.",
-      "cancelInfo": "Need to change or cancel? Message us with your reference and we will check the options under your cancellation policy."
+      "notFoundText": "Booking {reference} is not linked to your account, or our server is not answering. Open it from the link in your confirmation email, or contact us."
     },
     "profile": {
       "metaTitle": "Profile and settings",
@@ -867,7 +872,6 @@
       "preferencesNote": "Preferences apply to future visits. Existing bookings keep the currency and terms confirmed at checkout.",
       "save": "Save changes",
       "saved": "Your details have been saved.",
-      "pending": "Saving your profile online is coming soon. Your language and currency were applied on this device.",
       "passwordTitle": "Change password",
       "currentPassword": "Current password",
       "newPassword": "New password",
@@ -875,7 +879,6 @@
       "passwordHint": "At least 8 characters. Choose one you don't use elsewhere.",
       "updatePassword": "Update password",
       "passwordSaved": "Your password has been changed.",
-      "passwordPending": "Changing your password online is coming soon. Contact us if you need help now.",
       "accountTitle": "Your account",
       "signOut": "Sign out",
       "deleteText": "Deleting an account does not cancel active bookings. Write to us to request deletion of your data.",
@@ -995,7 +998,11 @@
         "balance": "Outstanding"
       },
       "bookingsCount": "{count, plural, one {# booking} other {# bookings}}",
-      "exportNote": "PDF and Excel exports appear here when they are available for a period."
+      "exportNote": "Download any month as a PDF statement or an Excel sheet with every booking.",
+      "downloadLabel": "Download the {period} statement as {format}",
+      "downloading": "Preparing the download…",
+      "downloadError": "The file could not be downloaded. Please try again.",
+      "downloadMissing": "There is no statement file for this month."
     },
     "priceList": {
       "metaTitle": "Partner price list",
@@ -1080,7 +1087,8 @@
       "nationalityNote": "Client nationality group {group}.",
       "season": "Season: {season}.",
       "noSeason": "Base price (no season on this date).",
-      "empty": "Choose the options to see the live partner price."
+      "empty": "Choose the options to see the live partner price.",
+      "discount": "Promo code {code}"
     },
     "newBooking": {
       "metaTitle": "New booking",
@@ -1190,7 +1198,8 @@
         "terms": "I confirm the client details are correct and accept the partner terms and conditions.",
         "back": "Back",
         "confirm": "Confirm booking",
-        "error": "The booking could not be created. Please try again."
+        "error": "The booking could not be created. Please try again.",
+        "couponRejected": "The promo code could not be applied. Remove it or try another code."
       },
       "confirmation": {
         "heading": "Booking received",
@@ -1242,8 +1251,7 @@
       "voucher": "Client voucher",
       "voucherText": "Send your client the voucher with or without prices.",
       "voucherWith": "Voucher with prices",
-      "voucherWithout": "Voucher without prices",
-      "cancel": "Request cancellation"
+      "voucherWithout": "Voucher without prices"
     },
     "voucher": {
       "metaTitle": "Voucher {reference}",
@@ -1276,7 +1284,7 @@
     "title": "Find your corner of Egypt",
     "subtitle": "From the coral reefs of the Red Sea to the temples of the Nile Valley, choose the places that fit the trip you have in mind.",
     "explore": "Explore {name}",
-    "count": "{count, plural, =0 {Trips coming soon} one {# experience} other {# experiences}}",
+    "count": "{count, plural, =0 {Tailor-made trips} one {# experience} other {# experiences}}",
     "emptyTitle": "Destinations are on their way",
     "emptyText": "We could not load destinations right now. Please try again shortly.",
     "routeTitle": "A route that feels like Egypt",
@@ -1308,13 +1316,17 @@
     "buildingsTitle": "Hotels and residences",
     "whyTitle": "Why visit {name}",
     "mapTitle": "Explore {name} on the map",
-    "mapPlaceholder": "Interactive map coming soon.",
     "openMaps": "Open {name} in Google Maps",
     "faqTitle": "Frequently asked questions about {name}",
     "relatedTitle": "Related destinations",
     "relatedSubtitle": "Add a stop to your trip.",
     "seeAll": "See all",
-    "noTrips": "New experiences in {name} are coming soon. Ask us on WhatsApp and we will plan one for you."
+    "noTrips": "We are planning new experiences in {name}. Ask us on WhatsApp and we will plan one for you.",
+    "mapLabel": "Map of {name}",
+    "mapViewStay": "See the rooms",
+    "mapViewTrip": "See the trip",
+    "mapMeetingPoint": "Trip meeting point",
+    "mapNoPlaces": "We are adding places in {name} to the map. Open it in Google Maps meanwhile."
   },
   "legal": {
     "lastUpdated": "Last updated {date}",
@@ -1352,8 +1364,8 @@
     "send": "Send message",
     "successTitle": "Message sent",
     "successText": "Thank you, {name}. We usually reply within a few hours during our opening times.",
-    "fallbackTitle": "Our contact form is not connected yet",
-    "fallbackText": "Your message was not sent. Please use one of these options and we will answer quickly:",
+    "fallbackTitle": "Your message could not be sent",
+    "fallbackText": "We could not reach our server. Your message is ready to send with one of these options instead:",
     "emailDraft": "Send it by email",
     "directTitle": "A real conversation",
     "whatsapp": "Chat on WhatsApp",
@@ -1365,9 +1377,10 @@
     "responseTitle": "Typical reply time",
     "responseText": "Under 2 hours on WhatsApp, same day by email.",
     "findUs": "Find us in Egypt",
-    "mapPlaceholder": "Map coming soon",
     "openMaps": "Open in Google Maps",
-    "sendError": "Something went wrong. Please try again."
+    "sendError": "Something went wrong. Please try again.",
+    "mapLabel": "Map of our office in Naama Bay",
+    "directions": "Get directions"
   },
   "faqPage": {
     "metaTitle": "Frequently asked questions",
@@ -1390,14 +1403,13 @@
     "inThisGuide": "In this guide",
     "related": "Bring the story to life",
     "back": "All stories",
-    "by": "By {author}"
+    "by": "By {author}",
+    "empty": "No stories have been published yet."
   },
   "payment": {
     "title": "Pay now",
     "subtitle": "Choose how you would like to pay the {amount} deposit.",
     "loading": "Loading payment methods…",
-    "comingSoonTitle": "Online payment is coming soon",
-    "comingSoonText": "Your booking is saved. We will email you the payment link and bank details shortly, or you can message us on WhatsApp with your reference to pay now.",
     "methodsLabel": "Payment method",
     "online": "Pay online",
     "manual": "Bank transfer or wallet",
@@ -1407,7 +1419,6 @@
     "payOnline": "Pay {amount} securely",
     "redirecting": "Taking you to the secure payment page…",
     "checkoutError": "We could not start the payment. Please try again or choose another method.",
-    "checkoutUnavailable": "Online payment is not available yet. Please choose a bank transfer, or try again later.",
     "secure": "You will be redirected to the payment provider. We never see your card details.",
     "manualTitle": "Transfer details",
     "amountLabel": "Amount to send",
@@ -1427,10 +1438,14 @@
     "senderName": "Sender name",
     "submit": "Submit proof",
     "uploadError": "We could not upload your proof. Please try again.",
-    "uploadUnavailable": "Proof upload is not available yet. Please send the receipt on WhatsApp or by email with your booking reference.",
     "reviewTitle": "Awaiting receipt review",
     "reviewText": "Thank you. We have your proof of payment and will confirm your booking after checking it, usually within a few working hours. You will get an email with your voucher.",
-    "filesRequired": "Please add at least one file."
+    "filesRequired": "Please add at least one file.",
+    "loadErrorTitle": "We could not load the payment methods",
+    "loadErrorText": "Your booking is saved. Check your connection and try again, or message us on WhatsApp with your reference and we will help you pay.",
+    "noMethodsTitle": "No payment method is available for this booking",
+    "noMethodsText": "Your booking is saved. Message us on WhatsApp with your reference and we will send you the payment details.",
+    "retry": "Try again"
   },
   "upload": {
     "label": "Receipt files",
@@ -1471,5 +1486,79 @@
     "privacy": "We save your choice in a cookie and in your account, and use it only to show prices. See our <link>Privacy policy</link>.",
     "chipLabel": "Nationality: {country}. Change nationality",
     "chipEmpty": "Nationality"
+  },
+  "map": {
+    "from": "from",
+    "loading": "Loading map…",
+    "listTitle": "Places on this map",
+    "keyboardHint": "Use Tab to move between map markers and Enter to open details. Press Escape to close them.",
+    "showMap": "Show map — loads Google Maps",
+    "consentText": "This map is provided by Google Maps, which may set cookies. It loads only with your consent.",
+    "openInGoogleMaps": "Open in Google Maps",
+    "directions": "Get directions",
+    "viewRoute": "View route on Google Maps",
+    "routeTitle": "Route preview",
+    "routeLabel": "Driving route from {from} to {to}",
+    "routeSummary": "{distance} · about {duration} by car (Google Maps estimate)",
+    "routeLoading": "Calculating the route…",
+    "routeError": "The route could not be shown on the map.",
+    "loadError": "The map could not be loaded.",
+    "embedTitle": "Google Maps: {name}",
+    "googlePlaces": "More places · Google Maps",
+    "location": "Location",
+    "mapOf": "Map of {name}"
+  },
+  "coupon": {
+    "toggle": "Have a promo code?",
+    "label": "Promo code",
+    "apply": "Apply",
+    "remove": "Remove",
+    "applied": "{code} applied: −{amount}",
+    "errors": {
+      "empty": "Enter a promo code.",
+      "invalid": "This code does not exist.",
+      "expired": "This code has expired or is no longer active.",
+      "notYet": "This code is not valid yet.",
+      "partner": "Promo codes cannot be used on partner bookings for your account.",
+      "service": "This code does not apply to this service.",
+      "minimum": "This code needs a minimum total of {amount}.",
+      "limit": "This code has reached its usage limit.",
+      "used": "You have already used this code.",
+      "tooMany": "Too many attempts. Please wait a minute and try again.",
+      "network": "We could not check the code right now. Please try again."
+    }
+  },
+  "cancellationRequest": {
+    "title": "Cancellation",
+    "intro": "Plans changed? Send us a cancellation request. We confirm it and the refund under the cancellation policy.",
+    "button": "Request cancellation",
+    "notAvailable": "This booking can no longer be cancelled online.",
+    "dialogTitle": "Request cancellation of {reference}",
+    "close": "Close",
+    "policyTitle": "How refunds work",
+    "policyText": "The refund depends on how long before the service you cancel: the earlier you cancel, the more you get back. Free-cancellation products are fully refunded within their window. Bank charges and payment surcharges are not refundable.",
+    "policyLink": "Read the cancellation policy",
+    "reason": "Why do you want to cancel?",
+    "reasonHint": "{count} / {max} characters",
+    "notAutomatic": "Your booking is not cancelled automatically: our team confirms the cancellation and the refund amount by email, usually the same day.",
+    "keep": "Keep my booking",
+    "submit": "Send request",
+    "sent": "Your cancellation request has been sent. We will confirm the refund by email.",
+    "pendingTitle": "Cancellation requested",
+    "pendingText": "Sent on {date}. Our team is reviewing it and will confirm the refund by email.",
+    "yourReason": "Your reason: {reason}",
+    "approvedTitle": "Cancellation approved",
+    "approvedRefund": "Refund: {amount}, paid to the original payment method within 14 days.",
+    "approvedNoRefund": "Under the cancellation policy no refund is due for this booking.",
+    "declinedTitle": "Cancellation request declined",
+    "declinedNoNote": "Please contact us if you have questions about this decision.",
+    "decidedAt": "Decided on {date}",
+    "errors": {
+      "required": "Tell us why you want to cancel.",
+      "min": "Please write at least {count} characters.",
+      "forbidden": "You cannot request a cancellation for this booking from here. Sign in with the account that made it, or use the link in your confirmation email.",
+      "tooMany": "Too many requests. Please wait a minute and try again.",
+      "network": "We could not send your request. Check your connection and try again."
+    }
   }
 }

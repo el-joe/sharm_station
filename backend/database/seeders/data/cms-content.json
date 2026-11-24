@@ -1,0 +1,958 @@
+{
+  "pages": {
+    "about": {
+      "en": {
+        "title": "Egypt is more than a place to visit",
+        "description": "Sharm Station Viaggi is a small Egyptian travel team planning day trips, Nile cruises, packages, hotels and transfers with local guides and flexible payment.",
+        "intro": "We are a team of Egyptian guides, drivers and planners based in Naama Bay, Sharm El Sheikh. Since our first desert safari we have believed that a good trip is built on small, honest details: a clear price, a driver who is on time, and a guide who loves the place as much as you will.",
+        "updated": "2026-11-01",
+        "sections": [
+          {
+            "id": "story",
+            "heading": "Thoughtful journeys, from the first question",
+            "paragraphs": [
+              "Sharm Station Viaggi started by organising excursions for Italian and British travellers staying on the Red Sea. Guests kept asking for more: a night in Luxor, a few days on the Nile, a transfer to Cairo airport that would not leave them waiting. Today we plan complete journeys across Egypt, and we still answer every message ourselves.",
+              "Every trip on this website is run by people we know personally: boat captains in Ras Mohammed, Bedouin families in the Sinai, Egyptologists in Luxor and Aswan, and the crews of the cruise ships we work with."
+            ]
+          },
+          {
+            "id": "promise",
+            "heading": "A good journey is in the details",
+            "paragraphs": [
+              "We keep a few promises on every booking, whether it is a two-hour snorkelling trip or a twelve-day package."
+            ],
+            "list": [
+              "Clarity before checkout: the full price, what is included and the cancellation terms are shown before you pay.",
+              "Rooms to travel your way: private or group, one room or several, with children's prices calculated by age.",
+              "Respect for the place: small groups, licensed guides and operators who follow national park rules.",
+              "A deposit to reserve: you pay a deposit online or by bank transfer, and the balance later."
+            ]
+          },
+          {
+            "id": "people",
+            "heading": "The people behind your plans",
+            "paragraphs": [
+              "Our travel planners speak English, Italian and Arabic. They check availability with hotels and boats, build multi-stop routes and stay reachable on WhatsApp throughout your stay.",
+              "Our guest care team looks after changes and special requests, from a vegetarian lunch on a boat to a wheelchair-friendly vehicle. On the ground, our coordinators meet you at the airport and make sure every pick-up happens as planned."
+            ]
+          },
+          {
+            "id": "partners",
+            "heading": "Working with travel partners",
+            "paragraphs": [
+              "Agencies, hotels and tour operators can book every service on this website at partner prices, with their own panel for bookings, statements and payments. If you sell Egypt to your clients, we would be glad to work with you."
+            ]
+          }
+        ]
+      },
+      "it": {
+        "title": "L'Egitto è più di un luogo da visitare",
+        "description": "Sharm Station Viaggi è un piccolo team egiziano che organizza escursioni, crociere sul Nilo, pacchetti, hotel e transfer con guide locali e pagamenti flessibili.",
+        "intro": "Siamo un team di guide, autisti e organizzatori egiziani con sede a Naama Bay, Sharm El Sheikh. Dal nostro primo safari nel deserto crediamo che un buon viaggio si costruisca con piccoli dettagli onesti: un prezzo chiaro, un autista puntuale e una guida che ama il luogo quanto lo amerai tu.",
+        "updated": "2026-11-01",
+        "sections": [
+          {
+            "id": "story",
+            "heading": "Viaggi pensati, fin dalla prima domanda",
+            "paragraphs": [
+              "Sharm Station Viaggi è nata organizzando escursioni per viaggiatori italiani e britannici in vacanza sul Mar Rosso. Gli ospiti chiedevano sempre di più: una notte a Luxor, qualche giorno sul Nilo, un transfer per l'aeroporto del Cairo senza attese. Oggi organizziamo viaggi completi in tutto l'Egitto e rispondiamo ancora personalmente a ogni messaggio.",
+              "Ogni esperienza su questo sito è gestita da persone che conosciamo di persona: capitani di barca a Ras Mohammed, famiglie beduine nel Sinai, egittologi a Luxor e Assuan e gli equipaggi delle navi da crociera con cui lavoriamo."
+            ]
+          },
+          {
+            "id": "promise",
+            "heading": "Un buon viaggio sta nei dettagli",
+            "paragraphs": [
+              "Manteniamo alcune promesse su ogni prenotazione, che sia uno snorkeling di due ore o un pacchetto di dodici giorni."
+            ],
+            "list": [
+              "Chiarezza prima del pagamento: prezzo completo, servizi inclusi e condizioni di cancellazione sono visibili prima di pagare.",
+              "Camere a modo tuo: privato o di gruppo, una camera o più, con prezzi bambini calcolati in base all'età.",
+              "Rispetto per i luoghi: gruppi piccoli, guide autorizzate e operatori che rispettano le regole dei parchi nazionali.",
+              "Un acconto per prenotare: paghi un acconto online o con bonifico, e il saldo più avanti."
+            ]
+          },
+          {
+            "id": "people",
+            "heading": "Le persone dietro i tuoi programmi",
+            "paragraphs": [
+              "I nostri consulenti di viaggio parlano italiano, inglese e arabo. Verificano la disponibilità con hotel e barche, costruiscono itinerari a più tappe e restano raggiungibili su WhatsApp per tutto il soggiorno.",
+              "Il team di assistenza gestisce modifiche e richieste speciali, da un pranzo vegetariano in barca a un veicolo accessibile. Sul posto, i nostri coordinatori ti accolgono in aeroporto e controllano che ogni prelievo avvenga come previsto."
+            ]
+          },
+          {
+            "id": "partners",
+            "heading": "Collaborare con i partner",
+            "paragraphs": [
+              "Agenzie, hotel e tour operator possono prenotare tutti i servizi del sito a prezzi partner, con un'area dedicata per prenotazioni, estratti conto e pagamenti. Se vendi l'Egitto ai tuoi clienti, saremo felici di lavorare con te."
+            ]
+          }
+        ]
+      }
+    },
+    "booking-terms": {
+      "en": {
+        "title": "Booking terms",
+        "description": "The terms that apply when you book a trip, Nile cruise, package, transfer or room with Sharm Station Viaggi.",
+        "intro": "These terms apply to every booking made on this website, by phone or on WhatsApp. Please read them together with the cancellation policy and the privacy notice. By completing a booking you accept them.",
+        "updated": "2026-11-01",
+        "sections": [
+          {
+            "id": "who",
+            "heading": "1. Who we are",
+            "paragraphs": [
+              "Sharm Station Viaggi (\"we\", \"us\") is a travel organiser based in Naama Bay, Sharm El Sheikh, Egypt. We sell excursions, Nile cruises, multi-day packages, transfers and accommodation operated by us or by local suppliers we select."
+            ]
+          },
+          {
+            "id": "booking",
+            "heading": "2. Making a booking",
+            "paragraphs": [
+              "A booking request is created when you complete checkout and receive a booking reference. Its status is \"Awaiting payment\" until we receive the deposit. Accommodation may be held for a limited time shown at checkout; trips and packages are not held.",
+              "The person who books (the lead traveller, or the travel partner booking for a client) must be at least 18 years old and is responsible for the accuracy of the traveller details, including children's ages, which determine the price."
+            ]
+          },
+          {
+            "id": "prices",
+            "heading": "3. Prices",
+            "paragraphs": [
+              "Prices are calculated in euro for the travel date and season you select and include the services listed under \"Included\" on each page. Prices in other currencies are shown for convenience; the exchange rate is fixed at the moment of booking.",
+              "Prices for private trips depend on the number of travellers; group trips are priced per person; some trips are priced per vehicle or unit (for example per buggy). Room prices are per night; city or tourist taxes are shown as included or extra on each room."
+            ]
+          },
+          {
+            "id": "payment",
+            "heading": "4. Deposit and balance",
+            "paragraphs": [
+              "To confirm a booking you pay the deposit shown at checkout (usually 30% of the total) online by card or wallet, or by bank transfer with proof of payment. The booking becomes \"Confirmed\" when the deposit is received or the proof is approved, and you receive a voucher by email.",
+              "The balance is due before the service date, in cash on the day or by any accepted method, as shown on your voucher. A payment method may carry a small surcharge, which is always displayed before you pay."
+            ]
+          },
+          {
+            "id": "changes",
+            "heading": "5. Changes by you",
+            "paragraphs": [
+              "You can ask to change the date, the number of travellers or the rooms of a booking. We will recalculate the price for the new details and confirm the change if availability allows. Changes made inside the cancellation window may be treated as a cancellation."
+            ]
+          },
+          {
+            "id": "changes-us",
+            "heading": "6. Changes by us",
+            "paragraphs": [
+              "Weather, sea conditions, national park closures or official instructions can require a change of itinerary, time or vessel. We will offer an equivalent alternative or a full refund of what you paid for the affected service."
+            ]
+          },
+          {
+            "id": "conduct",
+            "heading": "7. On the day",
+            "paragraphs": [
+              "Please be ready at the pick-up point at the time on your voucher. Guides and captains may refuse participation for safety reasons, for example to travellers under the influence of alcohol. Follow the safety briefings and the rules of protected areas."
+            ]
+          },
+          {
+            "id": "liability",
+            "heading": "8. Liability and insurance",
+            "paragraphs": [
+              "We choose our suppliers with care and are responsible for the services we sell, within the limits of applicable law. We strongly recommend travel insurance covering medical costs and cancellation. We are not responsible for losses caused by the traveller, by third parties unrelated to the services, or by unforeseeable events beyond our control."
+            ]
+          },
+          {
+            "id": "complaints",
+            "heading": "9. Complaints and law",
+            "paragraphs": [
+              "If something is not right, tell your guide or message us immediately so we can fix it on the spot. Written complaints can be sent to our email within 28 days of the service. These terms are governed by Egyptian law, without prejudice to mandatory consumer rights in your country of residence."
+            ]
+          }
+        ]
+      },
+      "it": {
+        "title": "Condizioni di prenotazione",
+        "description": "Le condizioni che si applicano quando prenoti un'escursione, una crociera sul Nilo, un pacchetto, un transfer o una camera con Sharm Station Viaggi.",
+        "intro": "Queste condizioni si applicano a ogni prenotazione effettuata sul sito, per telefono o su WhatsApp. Leggile insieme alla politica di cancellazione e all'informativa privacy. Completando una prenotazione le accetti.",
+        "updated": "2026-11-01",
+        "sections": [
+          {
+            "id": "who",
+            "heading": "1. Chi siamo",
+            "paragraphs": [
+              "Sharm Station Viaggi (\"noi\") è un organizzatore di viaggi con sede a Naama Bay, Sharm El Sheikh, Egitto. Vendiamo escursioni, crociere sul Nilo, pacchetti di più giorni, transfer e alloggi gestiti da noi o da fornitori locali selezionati."
+            ]
+          },
+          {
+            "id": "booking",
+            "heading": "2. Come si prenota",
+            "paragraphs": [
+              "La richiesta di prenotazione nasce quando completi il checkout e ricevi un codice di prenotazione. Lo stato resta \"In attesa di pagamento\" finché non riceviamo l'acconto. Gli alloggi possono essere bloccati per un tempo limitato indicato al checkout; escursioni e pacchetti non vengono bloccati.",
+              "Chi prenota (il viaggiatore principale, o il partner che prenota per un cliente) deve avere almeno 18 anni ed è responsabile della correttezza dei dati dei viaggiatori, comprese le età dei bambini, che determinano il prezzo."
+            ]
+          },
+          {
+            "id": "prices",
+            "heading": "3. Prezzi",
+            "paragraphs": [
+              "I prezzi sono calcolati in euro per la data e la stagione scelte e comprendono i servizi indicati come \"Incluso\" su ogni pagina. I prezzi in altre valute sono indicativi; il tasso di cambio è fissato al momento della prenotazione.",
+              "Le escursioni private hanno prezzi che dipendono dal numero di viaggiatori; quelle di gruppo sono a persona; alcune escursioni hanno un prezzo per veicolo o unità (ad esempio per buggy). Le camere hanno prezzi a notte; le tasse di soggiorno sono indicate come incluse o extra su ogni camera."
+            ]
+          },
+          {
+            "id": "payment",
+            "heading": "4. Acconto e saldo",
+            "paragraphs": [
+              "Per confermare la prenotazione paghi l'acconto indicato al checkout (di solito il 30% del totale) online con carta o wallet, oppure con bonifico e caricamento della ricevuta. La prenotazione diventa \"Confermata\" quando riceviamo l'acconto o approviamo la ricevuta, e ricevi un voucher via email.",
+              "Il saldo è dovuto prima della data del servizio, in contanti il giorno stesso o con uno dei metodi accettati, come indicato sul voucher. Alcuni metodi di pagamento possono prevedere una piccola commissione, sempre mostrata prima del pagamento."
+            ]
+          },
+          {
+            "id": "changes",
+            "heading": "5. Modifiche richieste da te",
+            "paragraphs": [
+              "Puoi chiedere di cambiare data, numero di viaggiatori o camere. Ricalcoliamo il prezzo con i nuovi dati e confermiamo la modifica se c'è disponibilità. Le modifiche richieste all'interno del periodo di cancellazione possono essere trattate come una cancellazione."
+            ]
+          },
+          {
+            "id": "changes-us",
+            "heading": "6. Modifiche da parte nostra",
+            "paragraphs": [
+              "Meteo, condizioni del mare, chiusure dei parchi nazionali o disposizioni ufficiali possono richiedere modifiche di itinerario, orario o imbarcazione. Ti offriremo un'alternativa equivalente o il rimborso completo di quanto pagato per il servizio interessato."
+            ]
+          },
+          {
+            "id": "conduct",
+            "heading": "7. Il giorno del servizio",
+            "paragraphs": [
+              "Fatti trovare al punto di prelievo all'orario indicato sul voucher. Guide e capitani possono negare la partecipazione per motivi di sicurezza, ad esempio a chi è sotto l'effetto di alcol. Segui le istruzioni di sicurezza e le regole delle aree protette."
+            ]
+          },
+          {
+            "id": "liability",
+            "heading": "8. Responsabilità e assicurazione",
+            "paragraphs": [
+              "Scegliamo con cura i nostri fornitori e rispondiamo dei servizi venduti nei limiti della legge applicabile. Consigliamo vivamente un'assicurazione di viaggio con copertura spese mediche e annullamento. Non rispondiamo di danni causati dal viaggiatore, da terzi estranei ai servizi o da eventi imprevedibili fuori dal nostro controllo."
+            ]
+          },
+          {
+            "id": "complaints",
+            "heading": "9. Reclami e legge applicabile",
+            "paragraphs": [
+              "Se qualcosa non va, dillo subito alla guida o scrivici, così possiamo rimediare sul posto. I reclami scritti possono essere inviati alla nostra email entro 28 giorni dal servizio. Queste condizioni sono regolate dalla legge egiziana, fatti salvi i diritti inderogabili dei consumatori del tuo paese di residenza."
+            ]
+          }
+        ]
+      }
+    },
+    "cancellation-policy": {
+      "en": {
+        "title": "Cancellation policy",
+        "description": "How cancellations and refunds work for trips, Nile cruises, packages, transfers and rooms booked with Sharm Station Viaggi.",
+        "intro": "Each trip, cruise, package, transfer and building has its own cancellation terms, shown on its page and on your voucher. This page explains how they work and what happens to your deposit.",
+        "updated": "2026-11-01",
+        "sections": [
+          {
+            "id": "how",
+            "heading": "How cancellation windows work",
+            "paragraphs": [
+              "A cancellation policy is a set of time bands counted back from the start of the service (the pick-up time for trips, the check-in date for rooms). The band you are in when you cancel decides the refund. A typical policy looks like this:"
+            ],
+            "list": [
+              "More than 7 days before: full refund of what you paid.",
+              "Between 3 and 7 days before: 50% refund.",
+              "Less than 3 days before, or no-show: no refund."
+            ]
+          },
+          {
+            "id": "free",
+            "heading": "Free cancellation",
+            "paragraphs": [
+              "Products marked \"Free cancellation\" can be cancelled up to the time shown (for example 24 hours before departure) for a full refund of the deposit. The exact window is shown in the booking widget and on your voucher."
+            ]
+          },
+          {
+            "id": "how-to",
+            "heading": "How to cancel",
+            "paragraphs": [
+              "Send us your booking reference by email or WhatsApp, or use the contact link on your booking page. Requesting a cancellation does not cancel the booking automatically: we confirm the cancellation and the refund amount in writing, usually the same day."
+            ]
+          },
+          {
+            "id": "refunds",
+            "heading": "Refunds",
+            "paragraphs": [
+              "The suggested refund is calculated automatically from the policy and confirmed by our team. Refunds are paid to the original payment method within 14 days of confirmation. Bank charges and payment surcharges are not refundable. Refunds in a currency other than euro use the exchange rate fixed at booking."
+            ]
+          },
+          {
+            "id": "weather",
+            "heading": "Weather and official closures",
+            "paragraphs": [
+              "When we cancel a trip because of weather, sea conditions or an official closure, you choose between another date, an equivalent alternative or a full refund."
+            ]
+          },
+          {
+            "id": "partners",
+            "heading": "Bookings made by travel partners",
+            "paragraphs": [
+              "If a travel agency booked for you, please contact the agency: they will request the cancellation from us under the same policy."
+            ]
+          }
+        ]
+      },
+      "it": {
+        "title": "Politica di cancellazione",
+        "description": "Come funzionano cancellazioni e rimborsi per escursioni, crociere sul Nilo, pacchetti, transfer e camere prenotati con Sharm Station Viaggi.",
+        "intro": "Ogni escursione, crociera, pacchetto, transfer e struttura ha le proprie condizioni di cancellazione, indicate sulla pagina e sul voucher. Qui spieghiamo come funzionano e cosa succede al tuo acconto.",
+        "updated": "2026-11-01",
+        "sections": [
+          {
+            "id": "how",
+            "heading": "Come funzionano le fasce di cancellazione",
+            "paragraphs": [
+              "Una politica di cancellazione è un insieme di fasce temporali contate a ritroso dall'inizio del servizio (l'orario di prelievo per le escursioni, la data di check-in per le camere). La fascia in cui cancelli determina il rimborso. Una politica tipica è questa:"
+            ],
+            "list": [
+              "Più di 7 giorni prima: rimborso completo di quanto pagato.",
+              "Tra 3 e 7 giorni prima: rimborso del 50%.",
+              "Meno di 3 giorni prima, o mancata presentazione: nessun rimborso."
+            ]
+          },
+          {
+            "id": "free",
+            "heading": "Cancellazione gratuita",
+            "paragraphs": [
+              "I prodotti con \"Cancellazione gratuita\" si possono cancellare fino al momento indicato (ad esempio 24 ore prima della partenza) con rimborso completo dell'acconto. La finestra esatta è indicata nel modulo di prenotazione e sul voucher."
+            ]
+          },
+          {
+            "id": "how-to",
+            "heading": "Come cancellare",
+            "paragraphs": [
+              "Inviaci il codice di prenotazione via email o WhatsApp, oppure usa il link di contatto nella pagina della prenotazione. La richiesta non cancella automaticamente la prenotazione: confermiamo per iscritto cancellazione e importo del rimborso, di solito in giornata."
+            ]
+          },
+          {
+            "id": "refunds",
+            "heading": "Rimborsi",
+            "paragraphs": [
+              "Il rimborso suggerito è calcolato automaticamente in base alla politica e confermato dal nostro team. I rimborsi vengono effettuati sul metodo di pagamento originale entro 14 giorni dalla conferma. Spese bancarie e commissioni di pagamento non sono rimborsabili. I rimborsi in valute diverse dall'euro usano il cambio fissato alla prenotazione."
+            ]
+          },
+          {
+            "id": "weather",
+            "heading": "Meteo e chiusure ufficiali",
+            "paragraphs": [
+              "Se cancelliamo un'escursione per meteo, condizioni del mare o chiusure ufficiali, puoi scegliere un'altra data, un'alternativa equivalente o il rimborso completo."
+            ]
+          },
+          {
+            "id": "partners",
+            "heading": "Prenotazioni fatte da agenzie partner",
+            "paragraphs": [
+              "Se un'agenzia ha prenotato per te, contatta l'agenzia: richiederà la cancellazione a noi secondo la stessa politica."
+            ]
+          }
+        ]
+      }
+    },
+    "privacy": {
+      "en": {
+        "title": "Privacy notice",
+        "description": "How Sharm Station Viaggi collects, uses and protects your personal data when you browse, book or contact us.",
+        "intro": "This notice explains what personal data we collect, why we use it and the choices you have. We collect only what we need to plan and run your trip.",
+        "updated": "2026-11-01",
+        "sections": [
+          {
+            "id": "controller",
+            "heading": "Who is responsible",
+            "paragraphs": [
+              "Sharm Station Viaggi, Naama Bay, Sharm El Sheikh, Egypt, is responsible for your data. You can reach us for any privacy question at the email address shown on our contact page."
+            ]
+          },
+          {
+            "id": "data",
+            "heading": "What we collect",
+            "paragraphs": [
+              "Depending on how you use the website, we process:"
+            ],
+            "list": [
+              "Booking data: lead traveller name, email, phone, country, names and ages of travellers, pick-up hotel and special requests.",
+              "Account data: name, email, password (stored hashed), language and currency preferences.",
+              "Payment data: amounts, payment method and proofs of payment you upload. Card details are handled by the payment provider and never reach us.",
+              "Messages you send us by form, email or WhatsApp.",
+              "Technical data: IP address, browser and pages visited, used for security and, with consent, statistics."
+            ]
+          },
+          {
+            "id": "why",
+            "heading": "Why we use it",
+            "paragraphs": [
+              "To create and manage your booking and send your voucher (contract); to keep accounting records (legal obligation); to prevent fraud and keep the website secure (legitimate interest); to send travel ideas by email only if you opted in (consent, which you can withdraw at any time)."
+            ]
+          },
+          {
+            "id": "sharing",
+            "heading": "Who we share it with",
+            "paragraphs": [
+              "We share the minimum necessary with the suppliers who deliver your services (hotels, boats, guides, drivers), with payment providers, and with IT providers who host our systems under contract. We never sell your data."
+            ]
+          },
+          {
+            "id": "retention",
+            "heading": "How long we keep it",
+            "paragraphs": [
+              "Booking and accounting records are kept for the period required by tax law (up to 10 years). Proofs of payment are stored privately and deleted when no longer needed. Account data is kept until you ask us to delete the account."
+            ]
+          },
+          {
+            "id": "rights",
+            "heading": "Your rights",
+            "paragraphs": [
+              "You can ask to access, correct, delete or export your data, object to its use or withdraw consent. Write to us from the email linked to your booking. If you live in the EU or UK you can also complain to your data protection authority."
+            ]
+          }
+        ]
+      },
+      "it": {
+        "title": "Informativa privacy",
+        "description": "Come Sharm Station Viaggi raccoglie, usa e protegge i tuoi dati personali quando navighi, prenoti o ci contatti.",
+        "intro": "Questa informativa spiega quali dati personali raccogliamo, perché li usiamo e quali scelte hai. Raccogliamo solo ciò che serve per organizzare e gestire il tuo viaggio.",
+        "updated": "2026-11-01",
+        "sections": [
+          {
+            "id": "controller",
+            "heading": "Titolare del trattamento",
+            "paragraphs": [
+              "Il titolare è Sharm Station Viaggi, Naama Bay, Sharm El Sheikh, Egitto. Per qualsiasi domanda sulla privacy puoi scriverci all'indirizzo email indicato nella pagina contatti."
+            ]
+          },
+          {
+            "id": "data",
+            "heading": "Quali dati raccogliamo",
+            "paragraphs": [
+              "A seconda di come usi il sito, trattiamo:"
+            ],
+            "list": [
+              "Dati di prenotazione: nome, email, telefono e paese del viaggiatore principale, nomi ed età dei viaggiatori, hotel di prelievo e richieste speciali.",
+              "Dati dell'account: nome, email, password (conservata in forma cifrata), preferenze di lingua e valuta.",
+              "Dati di pagamento: importi, metodo di pagamento e ricevute caricate. I dati della carta sono gestiti dal fornitore del pagamento e non ci arrivano mai.",
+              "Messaggi inviati tramite modulo, email o WhatsApp.",
+              "Dati tecnici: indirizzo IP, browser e pagine visitate, usati per la sicurezza e, con il consenso, per statistiche."
+            ]
+          },
+          {
+            "id": "why",
+            "heading": "Perché li usiamo",
+            "paragraphs": [
+              "Per creare e gestire la prenotazione e inviarti il voucher (contratto); per tenere la contabilità (obbligo di legge); per prevenire frodi e proteggere il sito (legittimo interesse); per inviarti idee di viaggio via email solo se lo hai richiesto (consenso, revocabile in qualsiasi momento)."
+            ]
+          },
+          {
+            "id": "sharing",
+            "heading": "Con chi li condividiamo",
+            "paragraphs": [
+              "Condividiamo il minimo necessario con i fornitori che erogano i servizi (hotel, barche, guide, autisti), con i fornitori di pagamento e con i fornitori informatici che ospitano i nostri sistemi sotto contratto. Non vendiamo mai i tuoi dati."
+            ]
+          },
+          {
+            "id": "retention",
+            "heading": "Per quanto tempo li conserviamo",
+            "paragraphs": [
+              "I dati di prenotazione e contabili sono conservati per il periodo previsto dalla legge fiscale (fino a 10 anni). Le ricevute di pagamento sono conservate in modo riservato ed eliminate quando non servono più. I dati dell'account restano finché non ci chiedi di eliminarlo."
+            ]
+          },
+          {
+            "id": "rights",
+            "heading": "I tuoi diritti",
+            "paragraphs": [
+              "Puoi chiedere accesso, rettifica, cancellazione o portabilità dei dati, opporti al trattamento o revocare il consenso. Scrivici dall'email collegata alla prenotazione. Se risiedi nell'UE o nel Regno Unito puoi anche presentare reclamo all'autorità di controllo."
+            ]
+          }
+        ]
+      }
+    },
+    "cookie-policy": {
+      "en": {
+        "title": "Cookie policy",
+        "description": "Which cookies and local storage Sharm Station Viaggi uses and how to manage them.",
+        "intro": "We use a small number of cookies and browser storage items. Essential ones make the website work; optional ones are used only if you accept them in the cookie banner.",
+        "updated": "2026-11-01",
+        "sections": [
+          {
+            "id": "essential",
+            "heading": "Essential",
+            "paragraphs": [
+              "These are needed for the website to work and cannot be switched off:"
+            ],
+            "list": [
+              "NEXT_LOCALE: remembers your language (1 year).",
+              "ssv_currency: remembers the currency you chose (1 year).",
+              "ssv_cookie_consent (local storage): remembers your cookie choice.",
+              "ssv_token (local storage): keeps you signed in until you sign out.",
+              "Checkout and booking data (session storage): keeps your booking details while you complete checkout; deleted when you close the tab."
+            ]
+          },
+          {
+            "id": "preferences",
+            "heading": "Preferences",
+            "paragraphs": [
+              "ssv_favourites (local storage) keeps the trips and rooms you saved with the heart button, on this device only."
+            ]
+          },
+          {
+            "id": "analytics",
+            "heading": "Statistics",
+            "paragraphs": [
+              "If you accept all cookies, we may use privacy-friendly statistics to understand which pages are useful. We do not use advertising cookies."
+            ]
+          },
+          {
+            "id": "manage",
+            "heading": "Managing your choice",
+            "paragraphs": [
+              "You can change your choice at any time by clearing this site's data in your browser settings; the cookie banner will appear again. Blocking essential cookies may stop sign-in and checkout from working."
+            ]
+          }
+        ]
+      },
+      "it": {
+        "title": "Cookie policy",
+        "description": "Quali cookie e archiviazione locale usa Sharm Station Viaggi e come gestirli.",
+        "intro": "Usiamo pochi cookie ed elementi di archiviazione del browser. Quelli essenziali fanno funzionare il sito; quelli facoltativi sono usati solo se li accetti nel banner dei cookie.",
+        "updated": "2026-11-01",
+        "sections": [
+          {
+            "id": "essential",
+            "heading": "Essenziali",
+            "paragraphs": [
+              "Sono necessari al funzionamento del sito e non si possono disattivare:"
+            ],
+            "list": [
+              "NEXT_LOCALE: ricorda la lingua (1 anno).",
+              "ssv_currency: ricorda la valuta scelta (1 anno).",
+              "ssv_cookie_consent (archiviazione locale): ricorda la tua scelta sui cookie.",
+              "ssv_token (archiviazione locale): mantiene l'accesso finché non esci.",
+              "Dati di checkout e prenotazione (archiviazione di sessione): conservano i dettagli mentre completi il checkout; vengono eliminati alla chiusura della scheda."
+            ]
+          },
+          {
+            "id": "preferences",
+            "heading": "Preferenze",
+            "paragraphs": [
+              "ssv_favourites (archiviazione locale) conserva le escursioni e le camere salvate con il cuore, solo su questo dispositivo."
+            ]
+          },
+          {
+            "id": "analytics",
+            "heading": "Statistiche",
+            "paragraphs": [
+              "Se accetti tutti i cookie, potremmo usare statistiche rispettose della privacy per capire quali pagine sono utili. Non usiamo cookie pubblicitari."
+            ]
+          },
+          {
+            "id": "manage",
+            "heading": "Gestire la tua scelta",
+            "paragraphs": [
+              "Puoi cambiare scelta in qualsiasi momento cancellando i dati di questo sito dalle impostazioni del browser; il banner comparirà di nuovo. Bloccare i cookie essenziali può impedire accesso e checkout."
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "blog": [
+    {
+      "slug": "first-trip-to-egypt-8-days",
+      "image": "/images/cairo.webp",
+      "published": "2026-10-20",
+      "readMinutes": 7,
+      "author": "Sara Mahmoud",
+      "related": [
+        {
+          "label": {
+            "en": "Cairo and the Pyramids",
+            "it": "Il Cairo e le Piramidi"
+          },
+          "href": "/destinations/cairo"
+        },
+        {
+          "label": {
+            "en": "Nile trips",
+            "it": "Crociere sul Nilo"
+          },
+          "href": "/nile"
+        }
+      ],
+      "locales": {
+        "en": {
+          "title": "Your first trip to Egypt: a thoughtful 8-day plan",
+          "excerpt": "Cairo, Luxor and Aswan with enough room to breathe: the route we suggest to friends visiting for the first time.",
+          "tags": [
+            "Itinerary",
+            "First time"
+          ],
+          "sections": [
+            {
+              "id": "route",
+              "heading": "Start with a route, not a checklist",
+              "paragraphs": [
+                "Egypt rewards slow travel. Eight days is enough to see the Pyramids, the temples of Luxor and the river at Aswan without spending every afternoon in a minibus. The secret is to fly the long distances and let the Nile do the rest.",
+                "Our suggested route: three nights in Cairo, two nights in Luxor, then a short cruise or two nights in Aswan. Fly back to Cairo for your flight home, or add a few days on the Red Sea."
+              ]
+            },
+            {
+              "id": "cairo",
+              "heading": "Days 1–3: Cairo and Giza",
+              "paragraphs": [
+                "Arrive, rest, and keep the first evening simple. On day two, visit the Pyramids and the Sphinx early, before the heat and the crowds, then spend the afternoon at the Grand Egyptian Museum. Day three is for Islamic Cairo and the Khan el-Khalili bazaar."
+              ]
+            },
+            {
+              "id": "luxor",
+              "heading": "Days 4–5: Luxor's two banks",
+              "paragraphs": [
+                "Take the morning flight to Luxor. Karnak and Luxor temple sit on the East Bank; see Luxor temple at dusk when it is lit. Cross the river on day five for the Valley of the Kings and Hatshepsut's temple. If you can, start with a sunrise balloon flight."
+              ]
+            },
+            {
+              "id": "aswan",
+              "heading": "Days 6–8: the river rhythm of Aswan",
+              "paragraphs": [
+                "Aswan is slower and greener. Sail a felucca at sunset, visit Philae temple by boat and spend an afternoon in a Nubian village. Abu Simbel is a long but unforgettable early-morning excursion."
+              ]
+            },
+            {
+              "id": "tips",
+              "heading": "What to book before you go",
+              "paragraphs": [
+                "Book internal flights and the cruise first: they sell out in winter. Day trips can be booked a few days ahead, and most have free cancellation up to 24 hours before. Pack light layers, a hat and comfortable shoes for uneven temple floors."
+              ]
+            }
+          ]
+        },
+        "it": {
+          "title": "Il primo viaggio in Egitto: un itinerario di 8 giorni",
+          "excerpt": "Cairo, Luxor e Assuan con il tempo di respirare: il percorso che consigliamo agli amici che partono per la prima volta.",
+          "tags": [
+            "Itinerario",
+            "Prima volta"
+          ],
+          "sections": [
+            {
+              "id": "route",
+              "heading": "Parti da un itinerario, non da una lista",
+              "paragraphs": [
+                "L'Egitto premia chi viaggia con calma. Otto giorni bastano per le Piramidi, i templi di Luxor e il fiume ad Assuan senza passare ogni pomeriggio in minibus. Il segreto è volare sulle lunghe distanze e lasciare che il Nilo faccia il resto.",
+                "Il nostro itinerario: tre notti al Cairo, due a Luxor, poi una breve crociera o due notti ad Assuan. Rientra in volo al Cairo per il ritorno, oppure aggiungi qualche giorno sul Mar Rosso."
+              ]
+            },
+            {
+              "id": "cairo",
+              "heading": "Giorni 1–3: Cairo e Giza",
+              "paragraphs": [
+                "Arriva, riposa e tieni semplice la prima sera. Il secondo giorno visita Piramidi e Sfinge di prima mattina, prima del caldo e della folla, poi il Grand Egyptian Museum nel pomeriggio. Il terzo giorno è per il Cairo islamico e il bazar di Khan el-Khalili."
+              ]
+            },
+            {
+              "id": "luxor",
+              "heading": "Giorni 4–5: le due rive di Luxor",
+              "paragraphs": [
+                "Prendi il volo del mattino per Luxor. Karnak e il tempio di Luxor sono sulla riva est; visita il tempio di Luxor al tramonto, quando è illuminato. Il quinto giorno attraversa il fiume per la Valle dei Re e il tempio di Hatshepsut. Se puoi, inizia con il volo in mongolfiera all'alba."
+              ]
+            },
+            {
+              "id": "aswan",
+              "heading": "Giorni 6–8: il ritmo del fiume ad Assuan",
+              "paragraphs": [
+                "Assuan è più lenta e più verde. Naviga in feluca al tramonto, raggiungi in barca il tempio di Philae e trascorri un pomeriggio in un villaggio nubiano. Abu Simbel è un'escursione lunga all'alba, ma indimenticabile."
+              ]
+            },
+            {
+              "id": "tips",
+              "heading": "Cosa prenotare prima di partire",
+              "paragraphs": [
+                "Prenota per primi i voli interni e la crociera: in inverno si esauriscono. Le escursioni si possono prenotare pochi giorni prima e molte hanno cancellazione gratuita fino a 24 ore prima. Porta strati leggeri, un cappello e scarpe comode per i pavimenti irregolari dei templi."
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "slug": "choosing-a-nile-cruise",
+      "image": "/images/nile-cruise.webp",
+      "published": "2026-09-28",
+      "readMinutes": 5,
+      "author": "Marco Bianchi",
+      "related": [
+        {
+          "label": {
+            "en": "Nile trips",
+            "it": "Crociere sul Nilo"
+          },
+          "href": "/nile"
+        },
+        {
+          "label": {
+            "en": "Discover Luxor",
+            "it": "Scopri Luxor"
+          },
+          "href": "/destinations/luxor"
+        }
+      ],
+      "locales": {
+        "en": {
+          "title": "Choosing a Nile cruise: what to ask before you book",
+          "excerpt": "Three, four or seven nights? Upstream or downstream? The questions that make the difference between a good cruise and a great one.",
+          "tags": [
+            "Nile",
+            "Guide"
+          ],
+          "sections": [
+            {
+              "id": "length",
+              "heading": "How many nights?",
+              "paragraphs": [
+                "Four nights from Luxor to Aswan (or three in the other direction) cover the essential temples: Karnak, the West Bank, Edfu, Kom Ombo and Philae. Seven nights add a slower pace and the return journey, ideal if the cruise is the heart of your holiday."
+              ]
+            },
+            {
+              "id": "boat",
+              "heading": "The boat matters more than the stars",
+              "paragraphs": [
+                "Ask about the size of the sun deck, whether there is a pool and how many cabins the boat has. Smaller boats feel calmer and dock closer to the temples. Cabins are booked by type; the deck is assigned on board."
+              ]
+            },
+            {
+              "id": "included",
+              "heading": "What is included",
+              "paragraphs": [
+                "Most cruises are full board with guided visits. Check whether entrance fees, drinks and the Abu Simbel excursion are included, and whether the price is per person in a shared cabin."
+              ]
+            },
+            {
+              "id": "season",
+              "heading": "When to go",
+              "paragraphs": [
+                "October to April is the most comfortable season. Summer cruises are cheaper and quieter, with visits early in the morning and late in the afternoon to avoid the heat."
+              ]
+            }
+          ]
+        },
+        "it": {
+          "title": "Scegliere una crociera sul Nilo: cosa chiedere prima di prenotare",
+          "excerpt": "Tre, quattro o sette notti? Controcorrente o a favore? Le domande che fanno la differenza tra una buona crociera e una crociera speciale.",
+          "tags": [
+            "Nilo",
+            "Guida"
+          ],
+          "sections": [
+            {
+              "id": "length",
+              "heading": "Quante notti?",
+              "paragraphs": [
+                "Quattro notti da Luxor ad Assuan (o tre nel senso opposto) coprono i templi essenziali: Karnak, la riva ovest, Edfu, Kom Ombo e Philae. Sette notti aggiungono un ritmo più lento e il viaggio di ritorno, ideali se la crociera è il cuore della vacanza."
+              ]
+            },
+            {
+              "id": "boat",
+              "heading": "La nave conta più delle stelle",
+              "paragraphs": [
+                "Chiedi quanto è grande il ponte sole, se c'è una piscina e quante cabine ha la nave. Le navi più piccole sono più tranquille e attraccano più vicino ai templi. Le cabine si prenotano per tipologia; il ponte viene assegnato a bordo."
+              ]
+            },
+            {
+              "id": "included",
+              "heading": "Cosa è incluso",
+              "paragraphs": [
+                "La maggior parte delle crociere è in pensione completa con visite guidate. Verifica se ingressi, bevande ed escursione ad Abu Simbel sono inclusi, e se il prezzo è a persona in cabina condivisa."
+              ]
+            },
+            {
+              "id": "season",
+              "heading": "Quando partire",
+              "paragraphs": [
+                "Da ottobre ad aprile è la stagione più piacevole. Le crociere estive costano meno e sono più tranquille, con visite al mattino presto e nel tardo pomeriggio per evitare il caldo."
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "faq": {
+    "en": [
+      {
+        "id": "booking",
+        "title": "Booking",
+        "items": [
+          {
+            "question": "Can I book without an account?",
+            "answer": "Yes. You can book any trip or room as a guest. Your confirmation email contains a private link to view and pay your booking. An account simply keeps all your bookings and favourites in one place."
+          },
+          {
+            "question": "What is the difference between a private and a group trip?",
+            "answer": "A private trip is just for your party, with a vehicle and guide only for you and a price that depends on how many you are. A group trip runs on set days with other travellers and is priced per person."
+          },
+          {
+            "question": "How are children's prices calculated?",
+            "answer": "Each trip and building has age bands. Depending on the age you enter, a child travels free, pays a child price or pays the adult price. You see the result line by line before you book."
+          },
+          {
+            "question": "Can I book several rooms in one booking?",
+            "answer": "Yes. Add the guests and we suggest how to split them across rooms; you can also choose rooms yourself as long as each room's capacity is respected."
+          }
+        ]
+      },
+      {
+        "id": "payments",
+        "title": "Payments",
+        "items": [
+          {
+            "question": "How much do I pay today?",
+            "answer": "Only the deposit shown at checkout, usually 30% of the total. The balance is due before the service, as shown on your voucher."
+          },
+          {
+            "question": "Which payment methods do you accept?",
+            "answer": "Cards and wallets through our online payment providers, and bank transfer or InstaPay with an uploaded proof of payment. Available methods are shown on your booking page."
+          },
+          {
+            "question": "I paid by bank transfer. What happens next?",
+            "answer": "Upload a photo or PDF of the receipt on your booking page. Your booking shows \"Awaiting receipt review\" until our team checks it, usually within a few working hours. You then receive your voucher by email."
+          },
+          {
+            "question": "In which currency am I charged?",
+            "answer": "Prices are set in euro. If you choose another currency, the exchange rate is fixed at the moment you book, so the amount does not change later."
+          }
+        ]
+      },
+      {
+        "id": "rooms",
+        "title": "Rooms and children",
+        "items": [
+          {
+            "question": "Are city taxes included?",
+            "answer": "Each room card says \"Tax included\" or shows the tax per night that is added at checkout."
+          },
+          {
+            "question": "Can children share a room with adults?",
+            "answer": "Yes, within the room's capacity. Some buildings offer an extra bed for a fee, shown on the room page."
+          }
+        ]
+      },
+      {
+        "id": "transfers",
+        "title": "Transfers",
+        "items": [
+          {
+            "question": "Is hotel pick-up included in day trips?",
+            "answer": "Most day trips include pick-up and drop-off from hotels in the destination; the timeline on each trip shows it. Packages include every transfer between stages."
+          },
+          {
+            "question": "Can you collect me from the airport?",
+            "answer": "Yes. Request a transfer from any airport or station; you get a live price by vehicle type, and the driver tracks your flight."
+          }
+        ]
+      },
+      {
+        "id": "cancellations",
+        "title": "Cancellations",
+        "items": [
+          {
+            "question": "Can I cancel my booking?",
+            "answer": "Yes. Each product shows its cancellation terms. Many trips have free cancellation up to 24 hours before departure. Send us your reference and we confirm the refund in writing."
+          },
+          {
+            "question": "What if the weather cancels my trip?",
+            "answer": "If we cancel because of weather or an official closure, you choose another date, an equivalent alternative or a full refund."
+          }
+        ]
+      }
+    ],
+    "it": [
+      {
+        "id": "booking",
+        "title": "Prenotazione",
+        "items": [
+          {
+            "question": "Posso prenotare senza account?",
+            "answer": "Sì. Puoi prenotare qualsiasi escursione o camera come ospite. L'email di conferma contiene un link privato per vedere e pagare la prenotazione. Un account serve solo a tenere prenotazioni e preferiti in un unico posto."
+          },
+          {
+            "question": "Che differenza c'è tra escursione privata e di gruppo?",
+            "answer": "L'escursione privata è solo per il tuo gruppo, con veicolo e guida dedicati e un prezzo che dipende da quanti siete. Quella di gruppo si svolge in giorni prestabiliti con altri viaggiatori e ha un prezzo a persona."
+          },
+          {
+            "question": "Come si calcolano i prezzi dei bambini?",
+            "answer": "Ogni escursione e struttura ha fasce d'età. In base all'età indicata, il bambino viaggia gratis, paga la tariffa bambino o la tariffa adulto. Vedi il risultato riga per riga prima di prenotare."
+          },
+          {
+            "question": "Posso prenotare più camere in una sola prenotazione?",
+            "answer": "Sì. Aggiungi gli ospiti e ti suggeriamo come distribuirli nelle camere; puoi anche scegliere tu, rispettando la capienza di ogni camera."
+          }
+        ]
+      },
+      {
+        "id": "payments",
+        "title": "Pagamenti",
+        "items": [
+          {
+            "question": "Quanto pago oggi?",
+            "answer": "Solo l'acconto indicato al checkout, di solito il 30% del totale. Il saldo è dovuto prima del servizio, come indicato sul voucher."
+          },
+          {
+            "question": "Quali metodi di pagamento accettate?",
+            "answer": "Carte e wallet tramite i nostri fornitori di pagamento online, e bonifico o InstaPay con caricamento della ricevuta. I metodi disponibili sono indicati nella pagina della prenotazione."
+          },
+          {
+            "question": "Ho pagato con bonifico. E adesso?",
+            "answer": "Carica una foto o un PDF della ricevuta nella pagina della prenotazione. Lo stato resta \"Ricevuta in verifica\" finché il team non la controlla, di solito entro poche ore lavorative. Poi ricevi il voucher via email."
+          },
+          {
+            "question": "In che valuta vengo addebitato?",
+            "answer": "I prezzi sono in euro. Se scegli un'altra valuta, il tasso di cambio è fissato al momento della prenotazione e l'importo non cambia in seguito."
+          }
+        ]
+      },
+      {
+        "id": "rooms",
+        "title": "Camere e bambini",
+        "items": [
+          {
+            "question": "La tassa di soggiorno è inclusa?",
+            "answer": "Ogni camera indica \"Tasse incluse\" oppure la tassa per notte che viene aggiunta al checkout."
+          },
+          {
+            "question": "I bambini possono dormire in camera con gli adulti?",
+            "answer": "Sì, nei limiti della capienza della camera. Alcune strutture offrono un letto aggiunto a pagamento, indicato nella pagina della camera."
+          }
+        ]
+      },
+      {
+        "id": "transfers",
+        "title": "Transfer",
+        "items": [
+          {
+            "question": "Il prelievo in hotel è incluso nelle escursioni?",
+            "answer": "La maggior parte delle escursioni include prelievo e rientro dagli hotel della destinazione; lo vedi nel programma di ogni escursione. I pacchetti includono tutti i transfer tra le tappe."
+          },
+          {
+            "question": "Potete venirmi a prendere in aeroporto?",
+            "answer": "Sì. Richiedi un transfer da qualsiasi aeroporto o stazione; ricevi un prezzo immediato per tipo di veicolo e l'autista segue il tuo volo."
+          }
+        ]
+      },
+      {
+        "id": "cancellations",
+        "title": "Cancellazioni",
+        "items": [
+          {
+            "question": "Posso cancellare la prenotazione?",
+            "answer": "Sì. Ogni prodotto indica le proprie condizioni di cancellazione. Molte escursioni hanno cancellazione gratuita fino a 24 ore prima. Inviaci il codice e confermiamo il rimborso per iscritto."
+          },
+          {
+            "question": "E se il meteo annulla l'escursione?",
+            "answer": "Se annulliamo per meteo o chiusure ufficiali, scegli un'altra data, un'alternativa equivalente o il rimborso completo."
+          }
+        ]
+      }
+    ]
+  }
+}

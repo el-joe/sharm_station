@@ -5,8 +5,10 @@ namespace App\Services;
 use App\DTOs\Booking\BookingFilterData;
 use App\DTOs\Booking\CreateBookingData;
 use App\DTOs\Booking\TravelerData;
+use App\DTOs\Coupon\CouponCheckData;
 use App\DTOs\Pricing\QuoteLineData;
 use App\DTOs\Pricing\QuoteResultData;
+use App\Enums\ActivityAction;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\PricingMode;
@@ -17,6 +19,7 @@ use App\Enums\TravelerType;
 use App\Exceptions\DomainValidationException;
 use App\Models\Booking;
 use App\Models\BookingTraveler;
+use App\Models\Coupon;
 use App\Models\PaymentMethod;
 use App\Models\Room;
 use App\Models\RoomAvailability;
@@ -62,6 +65,8 @@ class BookingService
         private readonly TransferPricingService $transferPricing,
         private readonly TransferService $transfers,
         private readonly PaymentMethodRepositoryInterface $paymentMethods,
+        private readonly ActivityLogger $activity,
+        private readonly CouponService $coupons,
     ) {}
 
     /**
@@ -117,6 +122,14 @@ class BookingService
 
             if (in_array($status, [BookingStatus::Cancelled, BookingStatus::Refunded], true)) {
                 RoomAvailability::query()->where('booking_id', $booking->id)->delete();
+            }
+
+            if ($actor?->isStaff() && $from !== $status) {
+                $this->activity->log(ActivityAction::StatusChanged, $booking, "Booking {$booking->reference}: {$from?->label()} → {$status->label()}", array_filter([
+                    'from' => $from?->value,
+                    'to' => $status->value,
+                    'note' => $note,
+                ]), $actor);
             }
 
             return $booking;
@@ -338,6 +351,8 @@ class BookingService
      */
     private function createBookingRecord(CreateBookingData $data, QuoteResultData $quote, array $attributes): Booking
     {
+        [$quote, $coupon] = $this->applyCoupon($data, $quote, $attributes['service_type']);
+
         $booking = $this->bookings->create([
             ...$attributes,
             'reference' => $this->nextReference(),
@@ -370,7 +385,14 @@ class BookingService
             'locale' => $data->locale,
             'notes' => $data->notes,
             'price_lines' => array_map(fn (QuoteLineData $line): array => $line->toArray($quote->isPartnerQuote()), $quote->lines),
+            'coupon_id' => $coupon?->id,
+            'coupon_code' => $coupon?->code,
+            'discount_amount' => $coupon !== null ? -array_sum(array_map(fn (QuoteLineData $line): float => $line->total, $quote->linesOfType(QuoteLineData::TYPE_DISCOUNT))) : 0,
         ]);
+
+        if ($coupon !== null) {
+            $this->coupons->redeem($coupon, $booking, (float) $booking->discount_amount);
+        }
 
         $booking->statusLogs()->create([
             'from_status' => null,
@@ -380,6 +402,35 @@ class BookingService
         ]);
 
         return $booking;
+    }
+
+    /**
+     * Applies the coupon code (validated again on the server, with the coupon row locked) as a discount line.
+     *
+     * @return array{0: QuoteResultData, 1: Coupon|null}
+     *
+     * @throws DomainValidationException when the code cannot be used on this booking.
+     */
+    private function applyCoupon(CreateBookingData $data, QuoteResultData $quote, ServiceType $service): array
+    {
+        if ($data->couponCode === null) {
+            return [$quote, null];
+        }
+
+        $result = $this->coupons->check(new CouponCheckData(
+            code: $data->couponCode,
+            serviceType: $service,
+            totalEur: $quote->total,
+            userId: $data->partner === null ? $data->userId : null,
+            email: $data->leadEmail,
+            partner: $data->partner?->isActive() ? $data->partner : null,
+        ), lock: true);
+
+        if (! $result->valid || $result->coupon === null) {
+            throw DomainValidationException::withErrors(['coupon_code' => [$result->message]]);
+        }
+
+        return [$quote->withDiscount($result->discountEur, 'Coupon '.$result->coupon->code, ['coupon_code' => $result->coupon->code]), $result->coupon];
     }
 
     private function storeAddons(Booking $booking, QuoteResultData $quote): void
@@ -473,7 +524,7 @@ class BookingService
         return $booking->load([
             'travelers', 'units', 'addons', 'rooms.guests', 'bookable', 'partner.user', 'user', 'nationalityGroup',
             'statusLogs.user:id,name', 'includedTransfers', 'transferRequest.hub', 'transferRequest.vehicleType',
-            'payments.method', 'payments.recorder:id,name', 'proofs.method', 'proofs.reviewer:id,name',
+            'payments.method', 'payments.recorder:id,name', 'proofs.method', 'proofs.reviewer:id,name', 'cancellationRequester:id,name,email',
         ]);
     }
 

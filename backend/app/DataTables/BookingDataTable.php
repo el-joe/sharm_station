@@ -31,7 +31,7 @@ class BookingDataTable
             ->editColumn('total', fn (Booking $booking): string => $this->money($booking->total))
             ->addColumn('paid', fn (Booking $booking): string => $this->money($booking->paidAmount()))
             ->addColumn('balance', fn (Booking $booking): string => $this->money($booking->dueAmount()))
-            ->editColumn('status', fn (Booking $booking): string => StatusChip::html($booking->status))
+            ->editColumn('status', fn (Booking $booking): string => StatusChip::html($booking->status).($booking->hasPendingCancellationRequest() ? '<div class="mt-1">'.StatusChip::html('cancellation_requested', 'Cancellation requested', 'warning').'</div>' : ''))
             ->editColumn('payment_status', fn (Booking $booking): string => StatusChip::html($booking->payment_status))
             ->addColumn('actions', fn (Booking $booking): string => $this->actions($this->editLink(route('admin.bookings.show', $booking), 'Open')))
             ->orderColumn('service_date', fn (Builder $query, string $direction) => $query->orderByRaw('COALESCE(start_date, check_in) '.($direction === 'asc' ? 'asc' : 'desc')))

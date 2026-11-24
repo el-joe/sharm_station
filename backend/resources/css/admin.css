@@ -344,3 +344,21 @@ div.dt-container .dt-processing > div:last-child > div {
 .sortable-ghost {
     opacity: 0.4;
 }
+
+/* Content editor preview (pages, blog, FAQ answers). */
+.rich-preview h2 { font-family: var(--font-display); font-size: 1.25rem; margin: 1rem 0 0.5rem; color: var(--color-ink-900); }
+.rich-preview h3 { font-size: 1.05rem; font-weight: 600; margin: 0.875rem 0 0.375rem; }
+.rich-preview p { margin: 0 0 0.75rem; line-height: 1.6; color: var(--color-ink-700); }
+.rich-preview ul { list-style: disc; padding-left: 1.25rem; margin: 0 0 0.75rem; }
+.rich-preview ol { list-style: decimal; padding-left: 1.25rem; margin: 0 0 0.75rem; }
+.rich-preview li { margin: 0.25rem 0; }
+.rich-preview a { color: var(--color-primary-700); text-decoration: underline; }
+.rich-preview blockquote { border-left: 3px solid var(--color-brand-500); padding-left: 0.75rem; color: var(--color-ink-500); margin: 0 0 0.75rem; }
+.rich-preview > :first-child { margin-top: 0; }
+
+/* Accommodation occupancy grid: sticky room column, horizontal scroll inside the card. */
+.occupancy-grid { border-collapse: separate; border-spacing: 0; }
+.occupancy-grid th, .occupancy-grid td { border-bottom: 1px solid var(--color-ink-100); }
+.occupancy-grid .room-cell { position: sticky; left: 0; z-index: 2; background: #fff; box-shadow: 1px 0 0 var(--color-ink-100); }
+.occupancy-grid .day-cell { width: 2.25rem; min-width: 2.25rem; height: 2.5rem; padding: 0.125rem; text-align: center; }
+.occupancy-grid .day-cell.is-selected > * { outline: 2px solid var(--color-primary-500); outline-offset: -2px; }

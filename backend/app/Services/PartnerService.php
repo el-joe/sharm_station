@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\DTOs\Partner\CommissionMatrixData;
 use App\DTOs\Partner\PartnerApplicationData;
+use App\Enums\ActivityAction;
 use App\Enums\CommissionCategory;
 use App\Enums\PartnerStatus;
 use App\Enums\UserRole;
@@ -24,6 +25,7 @@ class PartnerService
     public function __construct(
         private readonly PartnerRepositoryInterface $partners,
         private readonly UserRepositoryInterface $users,
+        private readonly ActivityLogger $activity,
     ) {}
 
     /**
@@ -84,17 +86,73 @@ class PartnerService
                 'status' => PartnerStatus::Active,
                 'approved_at' => now(),
                 'approved_by' => $approver->id,
+                'rejection_reason' => null,
+                'rejected_at' => null,
             ]);
 
             $this->users->update($partner->user, ['role' => UserRole::Partner]);
+            $this->activity->log(ActivityAction::PartnerApproved, $partner, "Partner “{$partner->company}” approved", causer: $approver);
 
             return $partner;
         });
     }
 
-    public function suspend(Partner $partner): Partner
+    public function suspend(Partner $partner, ?User $actor = null): Partner
     {
-        return $this->partners->update($partner, ['status' => PartnerStatus::Suspended]);
+        $partner = $this->partners->update($partner, ['status' => PartnerStatus::Suspended]);
+        $this->activity->log(ActivityAction::PartnerSuspended, $partner, "Partner “{$partner->company}” suspended", causer: $actor);
+
+        return $partner;
+    }
+
+    /**
+     * Whether the partner may apply coupon codes to its bookings (the coupon must also allow partners).
+     */
+    public function setCouponsAllowed(Partner $partner, bool $allowed, ?User $actor = null): Partner
+    {
+        if ($partner->coupons_allowed === $allowed) {
+            return $partner;
+        }
+
+        $partner = $this->partners->update($partner, ['coupons_allowed' => $allowed]);
+        $this->activity->log(
+            ActivityAction::Updated,
+            $partner,
+            $allowed ? "Coupons allowed for partner “{$partner->company}”" : "Coupons disabled for partner “{$partner->company}”",
+            ['coupons_allowed' => $allowed],
+            $actor,
+        );
+
+        return $partner;
+    }
+
+    /**
+     * Rejects a pending application with a reason (shown on the partner page, ready for the email to the applicant).
+     * The account stays a customer account and cannot open the partner panel.
+     *
+     * @throws DomainValidationException when the partner is already active.
+     */
+    public function reject(Partner $partner, string $reason, User $actor): Partner
+    {
+        if ($partner->status === PartnerStatus::Active) {
+            throw DomainValidationException::withErrors(['rejection_reason' => ['Active partners are suspended, not rejected.']]);
+        }
+
+        return DB::transaction(function () use ($partner, $reason, $actor): Partner {
+            $this->partners->update($partner, [
+                'status' => PartnerStatus::Rejected,
+                'rejection_reason' => $reason,
+                'rejected_at' => now(),
+            ]);
+
+            if ($partner->user?->role === UserRole::Partner) {
+                $this->users->update($partner->user, ['role' => UserRole::Customer]);
+            }
+
+            $this->activity->log(ActivityAction::PartnerRejected, $partner, "Partner application “{$partner->company}” rejected", ['reason' => $reason], $actor);
+
+            return $partner;
+        });
     }
 
     /**

@@ -2,7 +2,7 @@
 
 import type { QuoteLine, QuoteResult } from "@/lib/api/types";
 import { useCurrency } from "@/lib/currency";
-import { cn } from "@/lib/utils";
+import { cn, round2 } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -28,10 +28,27 @@ export function lineLabel(line: QuoteLine, t: Translate, money: (n: number) => s
 }
 
 /** Live price summary: itemised lines, add-ons, total, deposit and balance (SRS 10.1). */
-export function PriceSummary({ quote, loading, pendingNote, className }: { quote: QuoteResult | undefined; loading?: boolean; pendingNote?: string | null; className?: string }) {
+export function PriceSummary({
+  quote,
+  loading,
+  pendingNote,
+  className,
+  discount,
+}: {
+  quote: QuoteResult | undefined;
+  loading?: boolean;
+  pendingNote?: string | null;
+  className?: string;
+  /** Promo code preview (POST /coupons/validate); the server applies it again on booking. */
+  discount?: { code: string; amount: number } | null;
+}) {
   const t = useTranslations("summary");
   const { format } = useCurrency();
   const money = (n: number) => format(n);
+  const off = quote && discount ? Math.min(discount.amount, quote.total) : 0;
+  const total = quote ? round2(quote.total - off) : 0;
+  const deposit = quote ? (off > 0 ? round2((total * quote.deposit_percent) / 100) : quote.deposit) : 0;
+  const balance = quote ? (off > 0 ? round2(total - deposit) : quote.balance) : 0;
 
   return (
     <section aria-labelledby="summary-title" aria-busy={loading} className={cn("flex flex-col gap-3", className)}>
@@ -72,18 +89,27 @@ export function PriceSummary({ quote, loading, pendingNote, className }: { quote
               </ul>
             </>
           )}
+          {off > 0 && discount && (
+            <div className="flex justify-between gap-3 border-t border-ink-100 pt-3 text-sm font-medium text-success">
+              <span>{t("discount", { code: discount.code })}</span>
+              <span className="tabular-nums">−{money(off)}</span>
+            </div>
+          )}
           <div className="flex items-end justify-between border-t border-ink-100 pt-3">
             <span className="font-semibold text-ink-900">{pendingNote ? t("totalPending") : t("total")}</span>
-            <span className="text-[26px] font-bold leading-8 tabular-nums text-ink-900">{money(quote.total)}</span>
+            <span className="flex flex-col items-end">
+              {off > 0 && <s className="text-sm tabular-nums text-ink-500">{money(quote.total)}</s>}
+              <span className="text-[26px] font-bold leading-8 tabular-nums text-ink-900">{money(total)}</span>
+            </span>
           </div>
           <dl className="rounded-image bg-primary-100 px-4 py-3">
             <div className="flex justify-between font-medium text-ink-900">
               <dt>{t("payToday", { percent: quote.deposit_percent })}</dt>
-              <dd className="font-bold tabular-nums">{money(quote.deposit)}</dd>
+              <dd className="font-bold tabular-nums">{money(deposit)}</dd>
             </div>
             <div className="mt-1 flex justify-between text-sm text-ink-700">
               <dt>{t("balanceLater")}</dt>
-              <dd className="tabular-nums">{money(quote.balance)}</dd>
+              <dd className="tabular-nums">{money(balance)}</dd>
             </div>
           </dl>
           {pendingNote && <p className="text-xs text-ink-500">{pendingNote}</p>}

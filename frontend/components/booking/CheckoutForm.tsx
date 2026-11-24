@@ -7,16 +7,17 @@ import { Button, buttonClasses } from "@/components/ui/Button";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Link, useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api/client";
-import type { CreateBookingRequest, Locale } from "@/lib/api/types";
+import type { CouponServiceType, CreateBookingRequest, Locale } from "@/lib/api/types";
 import { saveBooking, type CheckoutDraft } from "@/lib/checkout";
 import { useCurrency } from "@/lib/currency";
 import { parseISODate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarDays, Lock, ShoppingBag, Users } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { useMemo, useState, useSyncExternalStore } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
+import { CouponField, type AppliedCoupon } from "./CouponField";
 import { PriceSummary } from "./PriceSummary";
 
 const DRAFT_KEY = "ssv_checkout_draft";
@@ -34,6 +35,14 @@ function useDraftRaw(): string | null | undefined {
     },
     () => undefined,
   );
+}
+
+/** Coupon rules use the backend service types. */
+function couponService(draft: CheckoutDraft): CouponServiceType {
+  if (draft.service_type === "room") return "accommodation";
+  if (draft.product.href.includes("/packages/")) return "package";
+  if (draft.product.href.includes("/nile/")) return "nile_trip";
+  return "trip";
 }
 
 const COUNTRIES = ["IT", "GB", "DE", "FR", "ES", "US", "EG", "CH", "NL", "OTHER"] as const;
@@ -75,6 +84,12 @@ function CheckoutWithDraft({ draft }: { draft: CheckoutDraft }) {
   const nationality = useNationalityCode();
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const onCouponChange = useCallback((c: AppliedCoupon | null) => {
+    setCoupon(c);
+    setCouponError(null);
+  }, []);
 
   const schema = useMemo(
     () =>
@@ -115,9 +130,11 @@ function CheckoutWithDraft({ draft }: { draft: CheckoutDraft }) {
   });
   const { fields } = useFieldArray({ control, name: "travellers" });
   const e = formState.errors;
+  const leadEmail = useWatch({ control, name: "email" });
 
   const onSubmit = handleSubmit(async (values) => {
     setServerError(null);
+    setCouponError(null);
     if (!nationality) {
       setServerError(t("nationalityMissing"));
       return;
@@ -144,6 +161,7 @@ function CheckoutWithDraft({ draft }: { draft: CheckoutDraft }) {
       locale,
       currency,
       nationality_code: nationality,
+      coupon_code: coupon?.code,
     };
     try {
       // Signed-in customers send their token so the booking is linked to their account (My bookings).
@@ -151,8 +169,12 @@ function CheckoutWithDraft({ draft }: { draft: CheckoutDraft }) {
       saveBooking({ ...res, draft, lead });
       router.push(`/booking/${res.reference}`);
     } catch (err) {
-      if (err instanceof ApiError && err.isValidation) setServerError(Object.values(err.errors).flat().join(" ") || err.message);
-      else setServerError(t("genericError"));
+      if (err instanceof ApiError && err.isValidation) {
+        const { coupon_code: couponErrors, ...rest } = err.errors;
+        if (couponErrors?.length) setCouponError(couponErrors[0]);
+        const other = Object.values(rest).flat().join(" ");
+        setServerError(other || (couponErrors?.length ? t("couponRejected") : err.message));
+      } else setServerError(t("genericError"));
     }
   });
 
@@ -268,7 +290,16 @@ function CheckoutWithDraft({ draft }: { draft: CheckoutDraft }) {
             <li className="flex items-center gap-2"><Users className="size-4" aria-hidden />{t("party", { adults: draft.adults, children: draft.children })}{draft.booking_type ? ` · ${t(`type.${draft.booking_type}`)}` : ""}</li>
             {draft.season_note && <li className="text-xs font-medium text-ink-900">{t("season", { season: draft.season_note })}</li>}
           </ul>
-          <PriceSummary quote={draft.quote} />
+          <PriceSummary quote={draft.quote} discount={coupon ? { code: coupon.code, amount: coupon.discount_eur } : null} />
+          <CouponField
+            serviceType={couponService(draft)}
+            totalEur={draft.quote.total}
+            email={leadEmail}
+            token={authToken}
+            applied={coupon}
+            onChange={onCouponChange}
+            serverError={couponError}
+          />
           <p className="text-xs text-ink-500">{t("currencyNote")}</p>
         </div>
       </aside>

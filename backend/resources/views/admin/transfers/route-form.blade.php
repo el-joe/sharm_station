@@ -10,8 +10,7 @@
             <x-admin.select name="transfer_hub_id" label="Hub" :options="$hubs" :selected="$route->transfer_hub_id" placeholder="Choose a hub" span="md:col-span-3" />
             <x-admin.select name="vehicle_type_id" label="Vehicle" :options="$vehicles" :selected="$route->vehicle_type_id" placeholder="All vehicles" data-s2-clear span="md:col-span-3" />
             <x-admin.translatable name="destination_name" label="Destination" :value="$route->getTranslations('destination_name')" required-locale="en" span="md:col-span-6" />
-            <x-admin.input name="lat" label="Latitude" type="number" step="0.0000001" :value="$route->lat" span="md:col-span-2" />
-            <x-admin.input name="lng" label="Longitude" type="number" step="0.0000001" :value="$route->lng" span="md:col-span-2" />
+            <x-admin.location-picker :lat="$route->lat" :lng="$route->lng" lat-label="Destination latitude" lng-label="Destination longitude" search-label="Search the destination point" />
             <x-admin.input name="match_radius_km" label="Match radius (km)" type="number" step="0.1" min="0.1" :value="$route->match_radius_km" span="md:col-span-2" />
             <x-admin.money name="price" label="Base price" :value="$route->price" hint="Used when no group or season price is set" span="md:col-span-2" />
             <x-admin.switch name="is_enabled" label="Enabled" :checked="$route->is_enabled" span="md:col-span-2" />

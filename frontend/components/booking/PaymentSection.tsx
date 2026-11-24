@@ -39,11 +39,12 @@ export interface PaymentSectionProps {
 }
 
 /**
- * "Pay now" step on /booking/[reference] (SRS 10). Planned contract:
+ * "Pay now" step on /booking/[reference] (SRS 10):
  *  GET  /bookings/{ref}/payment-methods?token=  -> { data: PaymentMethod[] }
  *  POST /bookings/{ref}/checkout?token=        {payment_method_id} -> { redirect_url }
  *  POST /bookings/{ref}/proofs?token=          multipart files[], transaction_number, transfer_date, amount, sender_name
- * Any 404 shows a friendly "online payment coming soon" block with the booking's payment options.
+ * When the methods cannot be loaded (API unreachable) an error block offers a retry, WhatsApp
+ * and the booking's payment options.
  */
 export function PaymentSection(props: PaymentSectionProps) {
   const { reference, accessToken, authToken, status, deposit, fallbackOptions } = props;
@@ -95,11 +96,18 @@ export function PaymentSection(props: PaymentSectionProps) {
     return shell(
       <>
         <div className="rounded-image bg-sand-50 p-4">
-          <p className="font-semibold text-ink-900">{t("comingSoonTitle")}</p>
-          <p className="mt-1 text-sm text-ink-700">{t("comingSoonText")}</p>
-          <a href={whatsappHref(`${reference}: `)} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 font-semibold text-primary-700 underline">
-            <MessageCircle className="size-4" aria-hidden /> WhatsApp
-          </a>
+          <p className="font-semibold text-ink-900">{list.length === 0 && !methods.isError && methods.data?.status === "ok" ? t("noMethodsTitle") : t("loadErrorTitle")}</p>
+          <p className="mt-1 text-sm text-ink-700">{list.length === 0 && !methods.isError && methods.data?.status === "ok" ? t("noMethodsText") : t("loadErrorText")}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-4">
+            {(methods.isError || methods.data?.status === "error") && (
+              <button type="button" onClick={() => void methods.refetch()} className="font-semibold text-primary-700 underline">
+                {t("retry")}
+              </button>
+            )}
+            <a href={whatsappHref(`${reference}: `)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 font-semibold text-primary-700 underline">
+              <MessageCircle className="size-4" aria-hidden /> WhatsApp
+            </a>
+          </div>
         </div>
         {fallbackOptions.length > 0 && (
           <ul className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -197,7 +205,7 @@ function OnlinePay({ method, reference, accessToken, authToken, deposit, booking
         window.location.assign(res.data.redirect_url);
         return;
       }
-      setError(t("checkoutUnavailable"));
+      setError(t("checkoutError"));
     } catch {
       setError(t("checkoutError"));
     }
@@ -263,7 +271,7 @@ function ManualPay({ method, reference, accessToken, authToken, deposit, booking
         setTimeout(onProofSent, 900);
         return;
       }
-      setUploadError(t("uploadUnavailable"));
+      setUploadError(t("uploadError"));
     } catch (err) {
       setUploadError(err instanceof ApiError && err.isValidation ? (Object.values(err.errors).flat()[0] ?? t("uploadError")) : t("uploadError"));
     }

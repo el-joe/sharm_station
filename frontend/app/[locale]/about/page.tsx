@@ -2,23 +2,24 @@ import { StaticDoc } from "@/components/content/StaticDoc";
 import { AppImage } from "@/components/ui/AppImage";
 import { buttonClasses } from "@/components/ui/Button";
 import { Link } from "@/i18n/navigation";
+import { getPage } from "@/lib/api/content";
 import type { Locale } from "@/lib/api/types";
-import { PAGES } from "@/lib/content/pages";
 import { pageMetadata } from "@/lib/seo";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { notFound } from "next/navigation";
 import { locale as rootLocale } from "next/root-params";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await rootLocale()) as Locale;
-  const doc = PAGES.about[locale];
-  return pageMetadata({ locale, path: "/about", title: (await getTranslations("about"))("metaTitle"), description: doc.description, image: "/images/nile-cruise.webp" });
+  const doc = await getPage("about", locale);
+  return pageMetadata({ locale, path: "/about", title: (await getTranslations("about"))("metaTitle"), description: doc?.seo.description ?? "", image: "/images/nile-cruise.webp" });
 }
 
 export default async function Page() {
   const locale = (await rootLocale()) as Locale;
-  const [t, tn] = await Promise.all([getTranslations("about"), getTranslations("nav")]);
-  const doc = PAGES.about[locale];
+  const [t, tn, doc] = await Promise.all([getTranslations("about"), getTranslations("nav"), getPage("about", locale)]);
+  if (!doc) notFound();
   return (
     <>
       <div className="container-page">
@@ -28,7 +29,6 @@ export default async function Page() {
       </div>
       <StaticDoc
         doc={doc}
-        slug="about"
         crumb={t("crumb")}
         after={
           <div className="mt-6 grid gap-4 sm:grid-cols-2">

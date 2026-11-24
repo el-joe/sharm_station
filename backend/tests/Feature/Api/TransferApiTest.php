@@ -27,6 +27,11 @@ beforeEach(function () {
     // 50 km road distance for every route: tiers 20 × 1.20 + 30 × 0.90 = 51.
     $this->app->instance(DistanceProvider::class, new class implements DistanceProvider
     {
+        public function name(): string
+        {
+            return 'test';
+        }
+
         public function route(float $fromLat, float $fromLng, float $toLat, float $toLng): RouteData
         {
             return new RouteData(50, 50, 'test');
@@ -111,6 +116,11 @@ test('a repeated quote reads the cached road distance from a serializing cache s
 test('the minimum fare applies to short rides', function () {
     $this->app->instance(DistanceProvider::class, new class implements DistanceProvider
     {
+        public function name(): string
+        {
+            return 'test';
+        }
+
         public function route(float $fromLat, float $fromLng, float $toLat, float $toLng): RouteData
         {
             return new RouteData(5, 6, 'test');

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\DTOs\Room\RoomData;
 use App\DTOs\Room\RoomFilterData;
+use App\Enums\ActivityAction;
 use App\Enums\RoomAvailabilityStatus;
 use App\Exceptions\DomainValidationException;
 use App\Models\Room;
@@ -20,6 +21,7 @@ class RoomService
         private readonly RoomRepositoryInterface $rooms,
         private readonly SeasonPriceService $seasons,
         private readonly CurrencyService $currencies,
+        private readonly ActivityLogger $activity,
     ) {}
 
     public function paginate(RoomFilterData $filters): LengthAwarePaginator
@@ -115,6 +117,78 @@ class RoomService
     }
 
     /**
+     * Occupancy grid of every room for one month (A1): rows grouped by building, one cell per night with
+     * free / held / booked / blocked and the booking reference. Two queries, whatever the number of rooms.
+     *
+     * @return array{days: list<array{date: string, day: int, weekday: string, weekend: bool, today: bool, past: bool}>, buildings: list<array{id: int, name: string, rooms: list<array<string, mixed>>}>, totals: array<string, int>}
+     */
+    public function occupancy(CarbonImmutable $month, ?int $buildingId = null): array
+    {
+        $first = $month->startOfMonth();
+        $last = $first->endOfMonth()->startOfDay();
+        $today = now()->toDateString();
+        $rooms = $this->rooms->forOccupancy($buildingId);
+        $rows = $this->rooms->availabilityForRooms($rooms->pluck('id')->all(), $first, $last)
+            ->groupBy('room_id')
+            ->map(fn ($days) => $days->keyBy(fn (RoomAvailability $day): string => $day->date->toDateString()));
+
+        $days = [];
+
+        for ($day = $first; $day->lte($last); $day = $day->addDay()) {
+            $days[] = [
+                'date' => $day->toDateString(),
+                'day' => $day->day,
+                'weekday' => $day->format('D'),
+                'weekend' => $day->isWeekend(),
+                'today' => $day->toDateString() === $today,
+                'past' => $day->toDateString() < $today,
+            ];
+        }
+
+        $totals = ['free' => 0, 'held' => 0, 'booked' => 0, 'blocked' => 0];
+        $buildings = [];
+
+        foreach ($rooms as $room) {
+            $cells = [];
+
+            foreach ($days as $day) {
+                /** @var RoomAvailability|null $row */
+                $row = $rows->get($room->id)?->get($day['date']);
+                $status = match (true) {
+                    $row === null, ! $row->blocksBooking() => 'free',
+                    $row->status === RoomAvailabilityStatus::Booked => 'booked',
+                    $row->status === RoomAvailabilityStatus::Held => 'held',
+                    default => 'blocked',
+                };
+                $totals[$status]++;
+                $cells[] = [
+                    'date' => $day['date'],
+                    'status' => $status,
+                    'booking' => in_array($status, ['booked', 'held'], true) && $row?->booking !== null
+                        ? ['id' => $row->booking->id, 'reference' => $row->booking->reference, 'lead_name' => $row->booking->lead_name]
+                        : null,
+                ];
+            }
+
+            $buildings[$room->building_id] ??= ['id' => $room->building_id, 'name' => (string) $room->building?->name, 'rooms' => []];
+            $buildings[$room->building_id]['rooms'][] = [
+                'id' => $room->id,
+                'name' => (string) $room->name,
+                'number' => $room->number,
+                'inactive' => $room->status?->value === 'inactive',
+                'cells' => $cells,
+            ];
+        }
+
+        return ['days' => $days, 'buildings' => array_values($buildings), 'totals' => $totals];
+    }
+
+    public function findOrFail(int $id): Room
+    {
+        return $this->rooms->findOrFail($id);
+    }
+
+    /**
      * Manual blocks (maintenance, owner use). Only "open" and "closed" can be set by hand.
      *
      * @param  list<string>  $dates
@@ -127,6 +201,19 @@ class RoomService
             throw DomainValidationException::withErrors(['status' => ['Only open and closed can be set manually.']]);
         }
 
-        return $this->rooms->setManualStatus($room, $dates, $status);
+        $changed = $this->rooms->setManualStatus($room, $dates, $status);
+
+        if ($changed > 0) {
+            $nights = collect($dates)->sort()->values();
+            $range = $nights->first() === $nights->last() ? $nights->first() : $nights->first().' – '.$nights->last();
+            $this->activity->log(
+                ActivityAction::Updated,
+                $room,
+                'Room “'.$room->name.'”: '.$changed.' '.str('night')->plural($changed).' '.($status === RoomAvailabilityStatus::Closed ? 'blocked' : 'unblocked').' ('.$range.')',
+                ['status' => $status->value, 'dates' => $nights->all(), 'changed' => $changed],
+            );
+        }
+
+        return $changed;
     }
 }

@@ -5,7 +5,7 @@ namespace App\DTOs\Settings;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Admin "Settings" page payload: company data, booking defaults and the Google Place ID.
+ * Admin "Settings" page payload: company data, office location (fed to /meta contact), booking defaults and the Google Place ID.
  */
 final readonly class SettingsData
 {
@@ -19,6 +19,8 @@ final readonly class SettingsData
         public int $holdMinutes,
         public ?string $googlePlaceId,
         public float $previewCommission,
+        public ?float $siteLat = null,
+        public ?float $siteLng = null,
     ) {}
 
     /**
@@ -36,6 +38,8 @@ final readonly class SettingsData
             holdMinutes: (int) $data['hold_minutes'],
             googlePlaceId: filled($data['google_place_id'] ?? null) ? trim($data['google_place_id']) : null,
             previewCommission: (float) ($data['preview_commission'] ?? 0),
+            siteLat: is_numeric($data['site_lat'] ?? null) ? round((float) $data['site_lat'], 7) : null,
+            siteLng: is_numeric($data['site_lng'] ?? null) ? round((float) $data['site_lng'], 7) : null,
         );
     }
 
@@ -57,6 +61,8 @@ final readonly class SettingsData
             'site.phone' => $this->sitePhone,
             'site.whatsapp' => $this->siteWhatsapp,
             'site.address' => $this->siteAddress,
+            'site.lat' => $this->siteLat,
+            'site.lng' => $this->siteLng,
             'booking.default_deposit_percent' => $this->defaultDepositPercent,
             'accommodation.hold_minutes' => $this->holdMinutes,
             'google_reviews.place_id' => $this->googlePlaceId,

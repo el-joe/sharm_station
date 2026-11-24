@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Booking;
 use App\Models\BookingAddon;
@@ -108,6 +109,7 @@ class BookingResource extends JsonResource
                     'currency' => $this->currency,
                     'exchange_rate' => (float) $this->exchange_rate,
                     'total_in_currency' => (float) $this->total_in_currency,
+                    'discount_amount' => (float) $this->discount_amount,
                     ...($showPartner ? [
                         'partner_total' => (float) $this->partner_total,
                         'commission_amount' => (float) $this->commission_amount,
@@ -172,6 +174,16 @@ class BookingResource extends JsonResource
                     'car_plate' => $this->transferRequest->car_plate,
                 ] : null,
             ] : null,
+            'coupon_code' => $this->coupon_code,
+            'cancellation' => [
+                'can_request' => ! in_array($this->status, [...BookingStatus::voided(), BookingStatus::Completed], true) && $this->cancellation_requested_at === null,
+                'requested_at' => $this->cancellation_requested_at?->toIso8601String(),
+                'reason' => $this->cancellation_reason,
+                'status' => $this->cancellation_requested_at === null ? null : ($this->cancellation_decision?->value ?? 'pending'),
+                'decided_at' => $this->cancellation_decided_at?->toIso8601String(),
+                'decision_note' => $this->cancellation_decision_note,
+                'refund_amount' => $this->refund_amount !== null && ! $pricesHidden ? (float) $this->refund_amount : null,
+            ],
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

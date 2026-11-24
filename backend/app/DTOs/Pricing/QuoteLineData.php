@@ -16,6 +16,8 @@ final readonly class QuoteLineData
 
     public const TYPE_TAX = 'tax';
 
+    public const TYPE_DISCOUNT = 'discount';
+
     /**
      * @param  array<string, mixed>  $meta
      */

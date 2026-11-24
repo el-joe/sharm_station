@@ -78,7 +78,9 @@ class BookingRepository extends BaseRepository implements BookingRepositoryInter
             ->when($filters->paymentStatus, fn (Builder $query, $status) => $query->where('payment_status', $status))
             ->when($filters->partnerId, fn (Builder $query, int $partnerId) => $query->where('partner_id', $partnerId))
             ->when($filters->dateFrom, fn (Builder $query, CarbonInterface $from) => $query->whereRaw('COALESCE(start_date, check_in) >= ?', [$from->toDateString()]))
-            ->when($filters->dateTo, fn (Builder $query, CarbonInterface $to) => $query->whereRaw('COALESCE(start_date, check_in) <= ?', [$to->toDateString()]));
+            ->when($filters->dateTo, fn (Builder $query, CarbonInterface $to) => $query->whereRaw('COALESCE(start_date, check_in) <= ?', [$to->toDateString()]))
+            ->when($filters->cancellation === 'any', fn (Builder $query) => $query->whereNotNull('cancellation_requested_at'))
+            ->when($filters->cancellation === 'pending', fn (Builder $query) => $query->whereNotNull('cancellation_requested_at')->whereNull('cancellation_decision'));
     }
 
     public function countCreatedBetween(CarbonInterface $from, CarbonInterface $to): int

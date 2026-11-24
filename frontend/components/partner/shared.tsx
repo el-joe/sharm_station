@@ -102,6 +102,7 @@ export function PartnerPriceSummary({
   errors,
   serviceLabel,
   footer,
+  discount,
 }: {
   title: string;
   subtitle?: string;
@@ -110,10 +111,16 @@ export function PartnerPriceSummary({
   errors?: string[];
   serviceLabel?: string;
   footer?: ReactNode;
+  /** Promo code preview; the server applies it again when the booking is created. */
+  discount?: { code: string; amount: number } | null;
 }) {
   const t = useTranslations("partnerPanel.summary");
   const { format } = useCurrency();
   const source = useCommissionSource();
+  const off = quote && discount ? Math.min(discount.amount, quote.partner_total) : 0;
+  const partnerTotal = quote ? Math.round((quote.partner_total - off) * 100) / 100 : 0;
+  const deposit = quote ? (off > 0 ? Math.round(partnerTotal * quote.deposit_percent) / 100 : quote.deposit_amount) : 0;
+  const balance = quote ? (off > 0 ? Math.round((partnerTotal - deposit) * 100) / 100 : quote.balance_amount) : 0;
   return (
     <section className="rounded-card border border-ink-100 bg-white p-5 shadow-card" aria-labelledby="partner-summary-title" aria-busy={loading || undefined}>
       <div className="flex items-center justify-between gap-2">
@@ -159,19 +166,25 @@ export function PartnerPriceSummary({
               </dt>
               <dd className="font-semibold text-success">{quote.commission_amount > 0 ? `− ${format(quote.commission_amount, { decimals: true })}` : format(0)}</dd>
             </div>
+            {off > 0 && discount && (
+              <div className="flex justify-between gap-3">
+                <dt className="text-ink-700">{t("discount", { code: discount.code })}</dt>
+                <dd className="font-semibold text-success">− {format(off, { decimals: true })}</dd>
+              </div>
+            )}
             <div className="flex items-center justify-between gap-3 pt-1">
               <dt className="font-semibold text-ink-900">{t("partnerPrice")}</dt>
-              <dd className="text-[28px] font-bold leading-9 text-partner-600">{format(quote.partner_total, { decimals: true })}</dd>
+              <dd className="text-[28px] font-bold leading-9 text-partner-600">{format(partnerTotal, { decimals: true })}</dd>
             </div>
           </dl>
           <dl className="mt-3 flex flex-col gap-2 text-sm">
             <div className="flex justify-between gap-3">
               <dt className="text-ink-900">{t("deposit", { percent: quote.deposit_percent })}</dt>
-              <dd className="font-semibold text-ink-900">{format(quote.deposit_amount, { decimals: true })}</dd>
+              <dd className="font-semibold text-ink-900">{format(deposit, { decimals: true })}</dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-ink-500">{t("balance")}</dt>
-              <dd className="font-semibold text-ink-900">{format(quote.balance_amount, { decimals: true })}</dd>
+              <dd className="font-semibold text-ink-900">{format(balance, { decimals: true })}</dd>
             </div>
           </dl>
           <p className="mt-3 flex items-start gap-2 rounded-image bg-sand-50 p-3 text-xs text-ink-700">

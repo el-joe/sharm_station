@@ -39,9 +39,8 @@
                     <x-admin.select name="building[stars]" label="Star rating" :options="[1 => '1 star', 2 => '2 stars', 3 => '3 stars', 4 => '4 stars', 5 => '5 stars']" :selected="$building['stars'] ?? null" placeholder="No rating" :select2="false" span="md:col-span-2" />
                     <x-admin.input type="time" name="building[check_in_from]" label="Check-in from" :value="$building['check_in_from'] ?? null" span="md:col-span-2" />
                     <x-admin.input type="time" name="building[check_out_until]" label="Check-out until" :value="$building['check_out_until'] ?? null" span="md:col-span-2" />
-                    <x-admin.input name="building[address]" label="Address" :value="$building['address'] ?? null" span="md:col-span-4" maxlength="255" />
-                    <x-admin.input name="building[lat]" label="Latitude" :value="$building['lat'] ?? null" span="md:col-span-1" inputmode="decimal" />
-                    <x-admin.input name="building[lng]" label="Longitude" :value="$building['lng'] ?? null" span="md:col-span-1" inputmode="decimal" />
+                    <x-admin.location-picker address-name="building[address]" lat-name="building[lat]" lng-name="building[lng]"
+                                             :address="$building['address'] ?? null" :lat="$building['lat'] ?? null" :lng="$building['lng'] ?? null" />
                     <x-admin.input name="building[phone]" label="Phone" :value="$building['phone'] ?? null" span="md:col-span-3" />
                     <x-admin.input type="email" name="building[email]" label="E-mail" :value="$building['email'] ?? null" span="md:col-span-3" />
                     <x-admin.select name="building[amenities][]" label="Amenities" :options="$amenityOptions->all()" :selected="$building['amenities'] ?? []" multiple tags span="md:col-span-6" />

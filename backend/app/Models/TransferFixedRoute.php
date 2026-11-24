@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\HasProductPrices;
 use App\Models\Concerns\HasSeasonPrices;
 use App\Models\Concerns\HasTranslations;
+use App\Models\Concerns\LogsActivity;
 use App\Models\Contracts\Priceable;
 use Database\Factories\TransferFixedRouteFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -20,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class TransferFixedRoute extends Model implements Priceable
 {
     /** @use HasFactory<TransferFixedRouteFactory> */
-    use HasFactory, HasProductPrices, HasSeasonPrices, HasTranslations;
+    use HasFactory, HasProductPrices, HasSeasonPrices, HasTranslations, LogsActivity;
 
     /**
      * @var list<string>

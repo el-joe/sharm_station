@@ -26,6 +26,7 @@
             <x-admin.select name="booking_type" label="Booking type" :options="BookingType::options()" placeholder="Private and group" data-s2-clear span="" />
             <x-admin.select name="status" label="Status" :options="BookingStatus::options()" :selected="$initial['status'] ?? null" placeholder="Any status" data-s2-clear span="" />
             <x-admin.select name="payment_status" label="Payment" :options="PaymentStatus::options()" :selected="$initial['payment_status'] ?? null" placeholder="Any payment status" data-s2-clear span="" />
+            <x-admin.select name="cancellation" label="Cancellation" :options="['pending' => 'Pending requests', 'any' => 'All requests']" :selected="$initial['cancellation'] ?? null" placeholder="Any" data-s2-clear span="" />
             <x-admin.select name="partner_id" label="Partner" :options="$partners" :selected="$initial['partner_id'] ?? null" placeholder="All partners" data-s2-clear span="" />
             <div class="grid grid-cols-2 gap-2">
                 <x-admin.input name="date_from" label="From" data-datepicker placeholder="dd/mm/yyyy" span="" />

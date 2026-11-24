@@ -119,6 +119,33 @@ class RoomRepository extends BaseRepository implements RoomRepositoryInterface
             ->keyBy(fn (RoomAvailability $day): string => $day->date->toDateString());
     }
 
+    public function forOccupancy(?int $buildingId = null): Collection
+    {
+        return $this->query()
+            ->select(['rooms.id', 'rooms.building_id', 'rooms.name', 'rooms.number', 'rooms.status', 'rooms.sort'])
+            ->with('building:id,name')
+            ->when($buildingId, fn (Builder $query, int $id) => $query->where('rooms.building_id', $id))
+            ->join('buildings', 'buildings.id', '=', 'rooms.building_id')
+            ->orderBy('buildings.name->en')
+            ->orderBy('rooms.sort')
+            ->orderBy('rooms.id')
+            ->get();
+    }
+
+    public function availabilityForRooms(array $roomIds, CarbonInterface $from, CarbonInterface $to): \Illuminate\Support\Collection
+    {
+        if ($roomIds === []) {
+            return collect();
+        }
+
+        return RoomAvailability::query()
+            ->select(['id', 'room_id', 'date', 'status', 'booking_id', 'held_until'])
+            ->with('booking:id,reference,lead_name')
+            ->whereIn('room_id', $roomIds)
+            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->get();
+    }
+
     public function setManualStatus(Room $room, array $dates, RoomAvailabilityStatus $status): int
     {
         return DB::transaction(function () use ($room, $dates, $status): int {

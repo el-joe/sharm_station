@@ -33,6 +33,7 @@ class PartnerBookingRequest extends PartnerQuoteRequest
             'travelers.*.passport_number' => ['nullable', 'string', 'max:40'],
             'payment_method' => ['nullable', 'string', 'max:60'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'coupon_code' => ['nullable', 'string', 'max:40'],
         ];
     }
 }

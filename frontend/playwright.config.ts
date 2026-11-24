@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 /**
  * End-to-end suite (PLAN-v2.2 §10.5). Runs against the already running local servers:
- *   site  http://sharm-station.loc        (Next.js, `next start`)
+ *   site  E2E_BASE_URL, default http://sharm-station.loc (Next.js, `next start`), e.g. http://localhost:3100
  *   API   http://api.sharm-station.loc    (Laravel)
  *   admin http://admin.sharm-station.loc  (Laravel Blade admin)
  *
@@ -10,7 +10,7 @@ import { defineConfig, devices } from "@playwright/test";
  * One worker by default: the Laravel dev server (`php artisan serve`) handles one request at a time, and the
  * admin specs temporarily change commission settings that the partner specs assert on.
  */
-export const SITE_URL = process.env.E2E_SITE_URL ?? "http://sharm-station.loc";
+export const SITE_URL = (process.env.E2E_BASE_URL ?? process.env.E2E_SITE_URL ?? "http://sharm-station.loc").replace(/\/$/, "");
 
 export default defineConfig({
   testDir: "./e2e",
@@ -42,8 +42,8 @@ export default defineConfig({
     {
       name: "mobile-chromium",
       dependencies: ["setup"],
-      // Mobile-specific checks plus the public smoke pages (390 px overflow check).
-      testMatch: /(mobile|public-smoke)\.spec\.ts/,
+      // Mobile-specific checks, the public smoke pages, the crawl and the maps (390 px overflow check).
+      testMatch: /(mobile|public-smoke|crawl|maps)\.spec\.ts/,
       use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } },
     },
   ],

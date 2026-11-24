@@ -23,6 +23,7 @@ final readonly class BookingFilterData
         public ?int $partnerId = null,
         public ?CarbonImmutable $dateFrom = null,
         public ?CarbonImmutable $dateTo = null,
+        public ?string $cancellation = null,
     ) {}
 
     /**
@@ -41,6 +42,7 @@ final readonly class BookingFilterData
             partnerId: filled($data['partner_id'] ?? null) ? (int) $data['partner_id'] : null,
             dateFrom: $date('date_from'),
             dateTo: $date('date_to'),
+            cancellation: in_array($data['cancellation'] ?? null, ['pending', 'any'], true) ? $data['cancellation'] : null,
         );
     }
 

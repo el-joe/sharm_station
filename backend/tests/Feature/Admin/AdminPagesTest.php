@@ -33,7 +33,11 @@ test('every admin screen renders for a super admin', function () {
         route('admin.buildings.index'), route('admin.buildings.create'), route('admin.buildings.edit', $building), route('admin.rooms.index'),
         route('admin.rooms.create'), route('admin.rooms.edit', $room), route('admin.rooms.calendar', [$room, 'month' => '2027-02']),
         route('admin.bookings.index'), route('admin.bookings.show', $booking), route('admin.partners.index'), route('admin.partners.commissions.edit'),
-        route('admin.google-reviews.index'), route('admin.currencies.index'), route('admin.settings.edit'), route('admin.soon', 'packages'),
+        route('admin.google-reviews.index'), route('admin.currencies.index'), route('admin.settings.edit'),
+        route('admin.calendar.index'), route('admin.calendar.index', ['month' => '2027-02', 'building_id' => $building->id]), route('admin.customers.index'),
+        route('admin.coupons.index'), route('admin.coupons.create'), route('admin.content.index'), route('admin.content.pages.edit', 'about'),
+        route('admin.content.posts.create'), route('admin.content.faq.items.create'), route('admin.users.index'), route('admin.users.create'),
+        route('admin.users.edit', $this->admin), route('admin.reports.index'), route('admin.activity.index'),
     ];
 
     foreach ($urls as $url) {
@@ -51,7 +55,7 @@ test('every DataTables endpoint answers with the DataTables JSON shape', functio
     Room::factory()->create();
     Partner::factory()->create();
 
-    foreach (['trips', 'destinations', 'addons', 'buildings', 'rooms', 'bookings', 'partners'] as $table) {
+    foreach (['trips', 'destinations', 'addons', 'buildings', 'rooms', 'bookings', 'partners', 'coupons', 'customers', 'users', 'activity', 'content.blog'] as $table) {
         $this->actingAs($this->admin)->getJson(route("admin.{$table}.data", ['draw' => 1, 'start' => 0, 'length' => 10]))
             ->assertOk()->assertJsonStructure(['draw', 'recordsTotal', 'recordsFiltered', 'data']);
     }

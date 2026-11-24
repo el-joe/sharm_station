@@ -54,6 +54,7 @@ class StoreBookingRequest extends FormRequest
             'travelers.*.nationality' => ['nullable', 'string', 'size:2'],
             'travelers.*.passport_number' => ['nullable', 'string', 'max:40'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'coupon_code' => ['nullable', 'string', 'max:40'],
         ];
 
         $serviceRules = match ($service) {

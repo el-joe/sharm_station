@@ -10,7 +10,7 @@
             @if ($partner->status === PartnerStatus::Active)
                 <form method="POST" action="{{ route('admin.partners.suspend', $partner) }}" data-confirm="Suspend {{ $partner->company }}?">@csrf<button type="submit" class="btn-primary">Suspend</button></form>
             @else
-                <form method="POST" action="{{ route('admin.partners.approve', $partner) }}">@csrf<button type="submit" class="btn-primary">{{ $partner->status === PartnerStatus::Pending ? 'Approve' : 'Reactivate' }}</button></form>
+                <form method="POST" action="{{ route('admin.partners.approve', $partner) }}">@csrf<button type="submit" class="btn-primary">{{ $partner->status === PartnerStatus::Suspended ? 'Reactivate' : 'Approve' }}</button></form>
             @endif
             <button type="submit" form="partner-commission-form" class="btn-cta">Save changes</button>
         </x-slot:actions>
@@ -22,7 +22,26 @@
             <button type="button" role="tab" id="tab-commissions-tab" aria-controls="tab-commissions" aria-selected="false" class="tab-link">Commissions</button>
         </div>
 
-        <div role="tabpanel" id="tab-overview" aria-labelledby="tab-overview-tab">
+        <div role="tabpanel" id="tab-overview" aria-labelledby="tab-overview-tab" class="space-y-4">
+            @if ($partner->status === PartnerStatus::Rejected)
+                <div class="card border-error/30 bg-error/5 p-5" role="status">
+                    <p class="text-sm font-semibold text-error">Application rejected{{ $partner->rejected_at ? ' on '.$partner->rejected_at->format('j M Y') : '' }}</p>
+                    <p class="mt-1 text-sm whitespace-pre-line text-ink-900">{{ $partner->rejection_reason }}</p>
+                    <p class="mt-2 text-xs text-ink-500">The applicant keeps a customer account and cannot open the partner panel. Approve to activate the partner anyway.</p>
+                </div>
+            @endif
+            @if ($partner->status === PartnerStatus::Pending)
+                <x-admin.card title="Reject the application" subtitle="The reason is stored on the partner and is ready to be emailed to the applicant.">
+                    <form method="POST" action="{{ route('admin.partners.reject', $partner) }}" class="space-y-3" data-confirm="Reject the application of {{ $partner->company }}?" data-confirm-ok="Reject" novalidate>
+                        @csrf
+                        <x-admin.textarea name="rejection_reason" label="Reason" :rows="3" span="" maxlength="1000" placeholder="e.g. We could not verify your travel agency licence." />
+                        <button type="submit" class="btn-danger">Reject application</button>
+                    </form>
+                </x-admin.card>
+            @endif
+            @if ($partner->message)
+                <x-admin.card title="Application message"><p class="text-sm whitespace-pre-line text-ink-700">{{ $partner->message }}</p></x-admin.card>
+            @endif
             <x-admin.card title="Company">
                 <dl class="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
                     <div><dt class="text-ink-500">Contact</dt><dd class="font-medium">{{ $partner->contact_name ?? $partner->user?->name }}</dd></div>
@@ -32,6 +51,12 @@
                     <div><dt class="text-ink-500">Country</dt><dd class="font-medium">{{ $partner->country ?? '—' }}</dd></div>
                     <div><dt class="text-ink-500">Website</dt><dd class="font-medium">{{ $partner->website ?? '—' }}</dd></div>
                 </dl>
+            </x-admin.card>
+            <x-admin.card title="Bookings">
+                <div class="grid grid-cols-1 gap-5 md:grid-cols-6">
+                    <x-admin.switch name="coupons_allowed" label="Coupons allowed" description="Lets this partner apply coupon codes that are open to partners. Saved immediately."
+                                    :checked="$partner->coupons_allowed" data-ajax-toggle="{{ route('admin.partners.coupons', $partner) }}" data-field="coupons_allowed" span="md:col-span-6" />
+                </div>
             </x-admin.card>
         </div>
 

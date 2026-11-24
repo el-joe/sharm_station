@@ -52,4 +52,51 @@ enum UserRole: string
     {
         return $this === self::SuperAdmin;
     }
+
+    /**
+     * Pages, blog and FAQ: every staff role (editors manage content only).
+     */
+    public function canManageContent(): bool
+    {
+        return $this->isStaff();
+    }
+
+    /**
+     * Sales, finance and partner reports.
+     */
+    public function canViewReports(): bool
+    {
+        return $this->canManagePrices();
+    }
+
+    /**
+     * Staff accounts, roles and the activity log.
+     */
+    public function canManageUsers(): bool
+    {
+        return $this === self::SuperAdmin;
+    }
+
+    /**
+     * Read-only permissions matrix shown in Users and roles: module => [role value => allowed].
+     *
+     * @return array<string, array<string, bool>>
+     */
+    public static function permissionMatrix(): array
+    {
+        $modules = [
+            'Dashboard and catalogue (trips, packages, add-ons, destinations)' => fn (self $role): bool => $role->isStaff(),
+            'Accommodation (buildings, rooms, calendar)' => fn (self $role): bool => $role->isStaff(),
+            'Content (pages, blog, FAQ, Google reviews, AI suggestions)' => fn (self $role): bool => $role->canManageContent(),
+            'Prices and price lists' => fn (self $role): bool => $role->canManagePrices(),
+            'Bookings, payments and receipts' => fn (self $role): bool => $role->canManagePrices(),
+            'Customers, partners, coupons and transfers' => fn (self $role): bool => $role->canManagePrices(),
+            'Reports' => fn (self $role): bool => $role->canViewReports(),
+            'Settings and MCP access' => fn (self $role): bool => $role->canManageSettings(),
+            'Users and roles, activity log' => fn (self $role): bool => $role->canManageUsers(),
+        ];
+
+        return collect($modules)->map(fn (\Closure $check): array => collect(self::staff())
+            ->mapWithKeys(fn (self $role): array => [$role->value => $check($role)])->all())->all();
+    }
 }

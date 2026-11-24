@@ -15,6 +15,7 @@ import { CHILD_BANDS } from "./mock-data";
 import { addonImage, buildingImage, destinationImage, roomImage, tripImage } from "./images";
 import type {
   AuthResponse,
+  BookingCancellation,
   AuthUser,
   BookingDetail,
   BookingStatus,
@@ -232,7 +233,24 @@ export interface RawBooking {
     total_in_currency?: number;
   };
   payment_options?: { code: string; type: "online" | "manual"; name: string }[];
+  coupon_code?: string | null;
+  cancellation?: Partial<BookingCancellation> | null;
   created_at: string;
+}
+
+/** BookingResource `cancellation` -> BookingCancellation (null when the API does not send it). */
+export function mapCancellation(raw: Partial<BookingCancellation> | null | undefined): BookingCancellation | null {
+  if (!raw || typeof raw !== "object") return null;
+  const status = raw.status === "pending" || raw.status === "approved" || raw.status === "declined" ? raw.status : null;
+  return {
+    can_request: Boolean(raw.can_request),
+    requested_at: raw.requested_at ?? null,
+    reason: raw.reason ?? null,
+    status,
+    decided_at: raw.decided_at ?? null,
+    decision_note: raw.decision_note ?? null,
+    refund_amount: raw.refund_amount != null ? Number(raw.refund_amount) : null,
+  };
 }
 
 /* ------------------------------------------------------------------ labels */
@@ -357,7 +375,9 @@ export function mapMeta(raw: {
   destinations: { name: string; slug: string }[];
   settings?: Record<string, unknown>;
   google?: { rating: number; total: number } | null;
+  contact?: { address?: string | null; lat?: number | null; lng?: number | null; phone?: string | null; email?: string | null; whatsapp?: string | null } | null;
 }): Meta {
+  const c = raw.contact;
   const s = raw.settings ?? {};
   return {
     currencies: raw.currencies.map((c): Currency => ({ code: c.code, symbol: c.symbol, rate_to_eur: c.rate, is_enabled: true })),
@@ -371,6 +391,16 @@ export function mapMeta(raw: {
       google_rating: raw.google?.rating ?? 0,
       google_reviews_total: raw.google?.total ?? 0,
     },
+    contact: c
+      ? {
+          address: c.address ?? "",
+          lat: typeof c.lat === "number" ? c.lat : null,
+          lng: typeof c.lng === "number" ? c.lng : null,
+          phone: c.phone ?? "",
+          email: c.email ?? "",
+          whatsapp: c.whatsapp ?? "",
+        }
+      : null,
   };
 }
 
@@ -625,7 +655,16 @@ export function mapPaginated<R, T>(raw: { data: R[]; meta: { current_page: numbe
 }
 
 function mapBuildingCard(b: RawBuildingCard): RoomSummary["building"] & { destination_slug: string } {
-  return { slug: b.slug, name: b.name, stars: b.stars, location: b.destination?.name ?? b.address ?? "", taxes_included: b.tax_included, destination_slug: b.destination?.slug ?? "" };
+  return {
+    slug: b.slug,
+    name: b.name,
+    stars: b.stars,
+    location: b.destination?.name ?? b.address ?? "",
+    taxes_included: b.tax_included,
+    lat: b.location?.lat ?? null,
+    lng: b.location?.lng ?? null,
+    destination_slug: b.destination?.slug ?? "",
+  };
 }
 
 export function mapRoomCard(raw: RawRoomCard, locale: Locale, priceFrom: "from" | "base" = "from"): RoomSummary {
@@ -842,6 +881,8 @@ export function mapBooking(raw: RawBooking): BookingDetail {
     lines: mapQuote({ ...(raw as unknown as RawQuote), total, deposit_amount: deposit, balance_amount: 0, deposit_percent: 0, season_name: raw.season_name }).lines,
     travellers: raw.travelers?.map((t) => ({ first_name: t.first_name, last_name: t.last_name, type: t.type, age: t.age })),
     payment_due_at: raw.payment_due_at ?? null,
+    coupon_code: raw.coupon_code ?? null,
+    cancellation: mapCancellation(raw.cancellation),
     created_at: raw.created_at,
   };
 }

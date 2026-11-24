@@ -1,4 +1,6 @@
 import { RoomCard } from "@/components/accommodation/RoomCard";
+import { MapView } from "@/components/map/MapView";
+import { DESTINATION_CENTERS, hasCoords, type MapPlace } from "@/components/map/types";
 import { Faq } from "@/components/trips/Faq";
 import { TripCard } from "@/components/trips/TripCard";
 import { AppImage } from "@/components/ui/AppImage";
@@ -9,7 +11,7 @@ import { Link } from "@/i18n/navigation";
 import type { Building, Destination, DestinationSummary, RoomSummary, TripSummary } from "@/lib/api/types";
 import type { DestinationGuide } from "@/lib/content/destinations";
 import { whatsappHref } from "@/lib/site";
-import { CalendarDays, Compass, Hotel, MapPin, Star } from "lucide-react";
+import { CalendarDays, Compass, ExternalLink, Hotel, Star } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
@@ -19,6 +21,8 @@ interface Props {
   rooms: RoomSummary[];
   related: DestinationSummary[];
   guide: DestinationGuide;
+  /** Trips of this destination that have a meeting-point location. */
+  tripPlaces: { slug: string; title: string; type: string; lat: number; lng: number; price_from: number }[];
 }
 
 function Section({ id, children, tinted }: { id: string; children: ReactNode; tinted?: boolean }) {
@@ -32,7 +36,7 @@ function Section({ id, children, tinted }: { id: string; children: ReactNode; ti
 const grid = "grid gap-6 sm:grid-cols-2 lg:grid-cols-3";
 
 /** Figma Destination / Desktop (104:20562) and Mobile (105:10118). */
-export function DestinationView({ destination: d, packages, rooms, related, guide }: Props) {
+export function DestinationView({ destination: d, packages, rooms, related, guide, tripPlaces }: Props) {
   const t = useTranslations("destinations");
   const tc = useTranslations("common");
   const trips = d.trips.filter((x) => x.type === "single_day" || x.type === "multi_day");
@@ -47,6 +51,32 @@ export function DestinationView({ destination: d, packages, rooms, related, guid
     { Icon: Hotel, label: t("facts.rooms"), value: String(rooms.length) },
     ...(rating ? [{ Icon: Star, label: t("facts.rating"), value: `${rating.toFixed(1)}${reviews ? ` (${reviews.toLocaleString()})` : ""}` }] : []),
   ];
+
+  const tripPath = (type: string) => (type === "nile" ? "/nile" : type === "package" ? "/packages" : "/trips");
+  const places: MapPlace[] = [
+    ...d.buildings
+      .filter((b) => hasCoords(b.lat, b.lng))
+      .map((b): MapPlace => ({
+        id: `building-${b.slug}`,
+        kind: "building",
+        lat: b.lat,
+        lng: b.lng,
+        title: b.name,
+        subtitle: [b.type, b.address].filter(Boolean).join(" · "),
+        links: [{ label: t("mapViewStay"), href: `/buildings/${b.slug}` }],
+      })),
+    ...tripPlaces.map((x): MapPlace => ({
+      id: `trip-${x.slug}`,
+      kind: "trip",
+      lat: x.lat,
+      lng: x.lng,
+      title: x.title,
+      subtitle: t("mapMeetingPoint"),
+      links: [{ label: t("mapViewTrip"), href: `${tripPath(x.type)}/${x.slug}`, priceEur: x.price_from }],
+    })),
+  ];
+  const center = DESTINATION_CENTERS[d.slug] ?? null;
+  const showMap = places.length > 0 || center !== null;
 
   const tabs = [
     trips.length || !nile.length ? { id: "trips", key: "trips" } : null,
@@ -158,21 +188,22 @@ export function DestinationView({ destination: d, packages, rooms, related, guid
       </Section>
 
       <Section id="map" tinted>
-        <h2 id="map-title" className="text-h2 mb-6 text-ink-900">{t("mapTitle", { name: d.name })}</h2>
-        <div className="relative grid min-h-[280px] place-items-center overflow-hidden rounded-card border border-ink-100 bg-[linear-gradient(90deg,var(--color-ink-100)_1px,transparent_1px),linear-gradient(var(--color-ink-100)_1px,transparent_1px)] bg-[size:48px_48px] bg-white md:min-h-[380px]">
-          <div className="flex flex-col items-center gap-3 p-6 text-center">
-            <span className="grid size-14 place-items-center rounded-full bg-cta-600 text-white shadow-cta"><MapPin className="size-7" aria-hidden /></span>
-            <p className="text-ink-700">{t("mapPlaceholder")}</p>
-            <a
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${d.name}, Egypt`)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={buttonClasses("outline", "sm")}
-            >
-              {t("openMaps", { name: d.name })}
-            </a>
-          </div>
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <h2 id="map-title" className="text-h2 text-ink-900">{t("mapTitle", { name: d.name })}</h2>
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${d.name}, Egypt`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonClasses("outline", "sm")}
+          >
+            {t("openMaps", { name: d.name })} <ExternalLink className="size-4" aria-hidden />
+          </a>
         </div>
+        {showMap ? (
+          <MapView places={places} center={center} zoom={11} label={t("mapLabel", { name: d.name })} />
+        ) : (
+          <p className="rounded-card bg-white p-6 text-ink-700">{t("mapNoPlaces", { name: d.name })}</p>
+        )}
       </Section>
 
       <Section id="faq">

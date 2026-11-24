@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\VehicleType as VehicleCategory;
 use App\Models\Concerns\HasTranslations;
+use App\Models\Concerns\LogsActivity;
 use Database\Factories\VehicleTypeFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\Model;
 class VehicleType extends Model
 {
     /** @use HasFactory<VehicleTypeFactory> */
-    use HasFactory, HasTranslations;
+    use HasFactory, HasTranslations, LogsActivity;
 
     /**
      * @var list<string>

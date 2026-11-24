@@ -50,7 +50,7 @@ function fieldErrors<T extends Record<string, unknown>>(err: unknown, setError: 
   return mapped;
 }
 
-/** /account/profile: personal details + preferences (PATCH /me/profile), password (PUT /me/password), sign out. Both PENDING BACKEND. */
+/** /account/profile: personal details + preferences (PATCH /me/profile), password (PUT /me/password), sign out. */
 export function ProfileForm() {
   const t = useTranslations("account.profile");
   const tv = useTranslations("validation");
@@ -113,8 +113,8 @@ export function ProfileForm() {
       if (res.status === "ok") {
         setUser(res.data);
         setNotice({ tone: "success", text: t("saved") });
-      } else setNotice({ tone: "info", text: t("pending") });
-      applyLocal(v);
+        applyLocal(v);
+      } else setNotice({ tone: "error", text: t("error") });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return void signOut();
       if (!fieldErrors<ProfileValues>(err, profile.setError, ["name", "phone", "nationality_code"])) setNotice({ tone: "error", text: t("error") });
@@ -128,7 +128,7 @@ export function ProfileForm() {
       if (res.status === "ok") {
         pw.reset();
         setPwNotice({ tone: "success", text: t("passwordSaved") });
-      } else setPwNotice({ tone: "info", text: t("passwordPending") });
+      } else setPwNotice({ tone: "error", text: t("error") });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return void signOut();
       if (!fieldErrors<PwValues>(err, pw.setError, ["current_password", "password"])) setPwNotice({ tone: "error", text: t("error") });
@@ -141,11 +141,11 @@ export function ProfileForm() {
   const we = pw.formState.errors;
 
   return (
-    <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+    <div className="mt-8 grid gap-6 *:min-w-0 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="flex flex-col gap-6">
         <Card id="personal-title" title={t("personal")}>
           <form onSubmit={onProfile} noValidate className="flex flex-col gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 *:min-w-0 sm:grid-cols-2">
               <Field label={t("name")} htmlFor="p-name" error={pe.name?.message} required className="sm:col-span-2">
                 <Input id="p-name" autoComplete="name" invalid={Boolean(pe.name)} {...profile.register("name")} />
               </Field>
@@ -177,7 +177,7 @@ export function ProfileForm() {
               </div>
             </div>
             <h3 className="mt-2 font-semibold text-ink-900">{t("preferences")}</h3>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 *:min-w-0 sm:grid-cols-2">
               <Field label={t("language")} htmlFor="p-locale">
                 <Select id="p-locale" {...profile.register("locale")}>
                   <option value="en">English (EN)</option>

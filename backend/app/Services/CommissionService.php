@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\DTOs\Commission\CommissionPercentsData;
+use App\Enums\ActivityAction;
 use App\Enums\CommissionCategory;
 use App\Models\Partner;
 use App\Repositories\Contracts\CommissionSettingRepositoryInterface;
@@ -20,6 +21,7 @@ class CommissionService
         private readonly CommissionSettingRepositoryInterface $settings,
         private readonly PartnerRepositoryInterface $partners,
         private readonly CommissionResolver $resolver,
+        private readonly ActivityLogger $activity,
     ) {}
 
     /**
@@ -32,11 +34,15 @@ class CommissionService
 
     public function saveGlobal(CommissionPercentsData $data): void
     {
+        $before = $this->resolver->globalPercents();
+
         DB::transaction(function () use ($data): void {
             foreach (CommissionCategory::cases() as $category) {
                 $this->settings->save($category, (float) ($data->percents[$category->value] ?? 0));
             }
         });
+
+        $this->activity->log(ActivityAction::CommissionsChanged, null, 'Global commission percentages saved', ['changes' => ['old' => $before, 'new' => $data->percents]]);
 
         $this->resolver->flush();
     }
@@ -47,9 +53,13 @@ class CommissionService
     public function saveOverrides(Partner $partner, CommissionPercentsData $data): Partner
     {
         return DB::transaction(function () use ($partner, $data): Partner {
+            $before = $partner->categoryCommissions()->get()->mapWithKeys(fn ($row): array => [$row->category->value => (float) $row->commission_percent])->all();
+
             foreach (CommissionCategory::cases() as $category) {
                 $this->partners->setCategoryCommission($partner, $category, $data->percents[$category->value] ?? null);
             }
+
+            $this->activity->log(ActivityAction::CommissionsChanged, $partner, "Commission overrides of “{$partner->company}” saved", ['changes' => ['old' => $before, 'new' => array_filter($data->percents, fn ($value): bool => $value !== null)]]);
 
             return $partner->load('categoryCommissions');
         });

@@ -1,4 +1,8 @@
 /**
+ * OFFLINE FALLBACK ONLY: the website reads this content from the API (lib/api/content.ts).
+ * This copy is served only when the API is unreachable (see lib/content/fallback.ts).
+ */
+/**
  * Static pages (About + legal), EN and IT. Plain TS content, no MDX.
  * Legal texts describe how the platform works (SRS 10 payments, 12.4 cancellation);
  * have them reviewed by counsel before going live.

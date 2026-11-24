@@ -66,6 +66,21 @@ interface RoomRepositoryInterface extends BaseRepositoryInterface
     public function setManualStatus(Room $room, array $dates, RoomAvailabilityStatus $status): int;
 
     /**
+     * Rooms for the occupancy grid, ordered by building and room, with their building.
+     *
+     * @return Collection<int, Room>
+     */
+    public function forOccupancy(?int $buildingId = null): Collection;
+
+    /**
+     * Availability rows of many rooms in a date range, with the booking reference (one query).
+     *
+     * @param  list<int>  $roomIds
+     * @return \Illuminate\Support\Collection<int, RoomAvailability>
+     */
+    public function availabilityForRooms(array $roomIds, CarbonInterface $from, CarbonInterface $to): \Illuminate\Support\Collection;
+
+    /**
      * Bookable rooms for the partner catalogue.
      *
      * @param  list<string>  $tokens

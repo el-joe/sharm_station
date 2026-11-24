@@ -17,6 +17,11 @@ class HaversineDistanceProvider implements DistanceProvider
         private readonly float $averageSpeedKmh = 60.0,
     ) {}
 
+    public function name(): string
+    {
+        return 'haversine';
+    }
+
     public function route(float $fromLat, float $fromLng, float $toLat, float $toLng): RouteData
     {
         $distance = round(self::straightLineKm($fromLat, $fromLng, $toLat, $toLng) * $this->roadFactor, 2);

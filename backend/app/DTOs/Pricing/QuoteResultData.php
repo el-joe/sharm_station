@@ -66,6 +66,42 @@ final readonly class QuoteResultData
         );
     }
 
+    /**
+     * Same quote with a coupon discount line: the charged total (and partner total on partner quotes),
+     * deposit and balance are reduced; the retail total and the commission stay as quoted.
+     *
+     * @param  array<string, mixed>  $meta
+     */
+    public function withDiscount(float $discount, string $label, array $meta = []): self
+    {
+        $discount = round(min($discount, $this->total), 2);
+        $total = round($this->total - $discount, 2);
+        $deposit = round($total * $this->depositPercent / 100, 2);
+        $balance = round($total - $deposit, 2);
+        $convert = fn (float $amount): float => round($amount * $this->exchangeRate, 2);
+
+        return new self(
+            serviceType: $this->serviceType,
+            lines: [...$this->lines, new QuoteLineData(QuoteLineData::TYPE_DISCOUNT, $label, 1, -$discount, -$discount, $this->isPartnerQuote() ? -$discount : null, $this->isPartnerQuote() ? -$discount : null, null, $meta)],
+            seasonName: $this->seasonName,
+            retailTotal: $this->retailTotal,
+            partnerTotal: $this->partnerTotal !== null ? round($this->partnerTotal - $discount, 2) : null,
+            commissionAmount: $this->commissionAmount,
+            priceRule: $this->priceRule,
+            commissionPercent: $this->commissionPercent,
+            total: $total,
+            depositPercent: $this->depositPercent,
+            depositAmount: $deposit,
+            balanceAmount: $balance,
+            currency: $this->currency,
+            exchangeRate: $this->exchangeRate,
+            converted: ['total' => $convert($total), 'deposit' => $convert($deposit), 'balance' => $convert($balance)],
+            errors: $this->errors,
+            context: $this->context,
+            nationality: $this->nationality,
+        );
+    }
+
     public function isValid(): bool
     {
         return $this->errors === [];

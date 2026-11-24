@@ -8,6 +8,7 @@
     'suffix' => null,
     'id' => null,
     'span' => 'md:col-span-3',
+    'labelHidden' => false,
 ])
 @php
     $key = str_replace(['[', ']'], ['.', ''], $name);
@@ -16,7 +17,7 @@
     $error = $errors->first($key);
 @endphp
 <div data-field @class([$span])>
-    @if ($label)<label for="{{ $id }}" class="form-label">{{ $label }}@if ($attributes->has('required'))<span class="text-error"> *</span>@endif</label>@endif
+    @if ($label)<label for="{{ $id }}" @class(['form-label', 'sr-only' => $labelHidden])>{{ $label }}@if ($attributes->has('required'))<span class="text-error"> *</span>@endif</label>@endif
     <div class="relative">
         @if ($prefix)<span class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-500">{{ $prefix }}</span>@endif
         <input id="{{ $id }}" name="{{ $name }}" type="{{ $type }}" @if (! is_null($current)) value="{{ $current }}" @endif

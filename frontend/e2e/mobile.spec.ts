@@ -99,7 +99,9 @@ test.describe("admin at 390 px", () => {
       await expect.poll(right).toBeLessThanOrEqual(0); // off-canvas
       await page.getByRole("banner").getByRole("button", { name: "Open menu" }).click();
       await expect.poll(right).toBeGreaterThan(200);
-      await expect(nav.getByRole("link", { name: "Overview" })).toBeVisible();
+      // v2.3: "Overview" is a group (Dashboard + Reports), open on the dashboard.
+      await expect(nav.getByRole("button", { name: "Overview" })).toBeVisible();
+      await expect(nav.getByRole("link", { name: "Dashboard" })).toBeVisible();
       await page.keyboard.press("Escape");
       await expect.poll(right).toBeLessThanOrEqual(0);
       await expect(page.getByRole("banner").getByRole("button", { name: "Open menu" })).toBeFocused();

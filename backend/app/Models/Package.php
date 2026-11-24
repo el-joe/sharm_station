@@ -11,6 +11,7 @@ use App\Models\Concerns\HasChildPolicy;
 use App\Models\Concerns\HasProductPrices;
 use App\Models\Concerns\HasSeasonPrices;
 use App\Models\Concerns\HasTranslations;
+use App\Models\Concerns\LogsActivity;
 use App\Models\Contracts\Priceable;
 use Database\Factories\PackageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -31,7 +32,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Package extends Model implements Priceable
 {
     /** @use HasFactory<PackageFactory> */
-    use HasAddons, HasChildPolicy, HasFactory, HasProductPrices, HasSeasonPrices, HasTranslations;
+    use HasAddons, HasChildPolicy, HasFactory, HasProductPrices, HasSeasonPrices, HasTranslations, LogsActivity;
 
     /**
      * Relations the "from" price of a package priced from its trips needs (eager load them on listings).

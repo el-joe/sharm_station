@@ -50,6 +50,10 @@ class AuthService
             throw DomainValidationException::withErrors(['email' => ['These credentials do not match our records.']]);
         }
 
+        if (! $user->isActive()) {
+            throw DomainValidationException::withErrors(['email' => ['This account has been deactivated. Contact us for help.']]);
+        }
+
         return ['user' => $user, 'token' => $user->createToken($data->deviceName)->plainTextToken];
     }
 
@@ -77,6 +81,10 @@ class AuthService
 
         if (! $user->isStaff()) {
             throw DomainValidationException::withErrors(['email' => ['This account has no access to the back office.']]);
+        }
+
+        if (! $user->isActive()) {
+            throw DomainValidationException::withErrors(['email' => ['This account has been deactivated.']]);
         }
 
         Auth::guard('web')->login($user, $remember);

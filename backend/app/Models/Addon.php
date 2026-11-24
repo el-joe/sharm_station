@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\AddonPricingBasis;
 use App\Enums\BookingType;
 use App\Models\Concerns\HasTranslations;
+use App\Models\Concerns\LogsActivity;
 use Database\Factories\AddonFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
 class Addon extends Model
 {
     /** @use HasFactory<AddonFactory> */
-    use HasFactory, HasTranslations;
+    use HasFactory, HasTranslations, LogsActivity;
 
     /**
      * @var list<string>

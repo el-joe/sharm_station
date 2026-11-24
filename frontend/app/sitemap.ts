@@ -1,6 +1,6 @@
 import { routing } from "@/i18n/routing";
+import { getBlogPosts } from "@/lib/api/content";
 import { getCatalogueKeys, getDestinations } from "@/lib/api/server";
-import { POSTS } from "@/lib/content/blog";
 import { SITE_URL } from "@/lib/site";
 import type { MetadataRoute } from "next";
 
@@ -24,7 +24,7 @@ const STATIC_PATHS = [
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [keys, destinations] = await Promise.all([getCatalogueKeys(), getDestinations("en")]);
+  const [keys, destinations, posts] = await Promise.all([getCatalogueKeys(), getDestinations("en"), getBlogPosts("en")]);
   const paths = [
     ...STATIC_PATHS,
     ...keys.trips.map((s) => `/trips/${s}`),
@@ -32,7 +32,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...keys.packages.map((s) => `/packages/${s}`),
     ...keys.rooms.map((id) => `/rooms/${id}`),
     ...destinations.map((d) => `/destinations/${d.slug}`),
-    ...POSTS.map((p) => `/blog/${p.slug}`),
+    ...posts.map((p) => `/blog/${p.slug}`),
   ];
   // One entry per locale, each listing every language version (hreflang).
   return paths.flatMap((path) =>

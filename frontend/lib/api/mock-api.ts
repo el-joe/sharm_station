@@ -240,6 +240,7 @@ export const mockApi = {
         google_rating: MOCK_GOOGLE.rating,
         google_reviews_total: MOCK_GOOGLE.total,
       },
+      contact: { address: "Naama Bay, Sharm El Sheikh, Egypt", lat: 27.9158, lng: 34.33, phone: "+20 12 3456 7890", email: "hello@sharmstation.example", whatsapp: "+20 12 3456 7890" },
     };
   },
 

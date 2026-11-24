@@ -8,6 +8,7 @@ use App\Http\Requests\Api\PartnerBookingRequest;
 use App\Http\Requests\Api\PartnerCatalogueRequest;
 use App\Http\Requests\Api\PartnerProfileRequest;
 use App\Http\Requests\Api\PartnerQuoteRequest;
+use App\Http\Requests\Api\PartnerStatementExportRequest;
 use App\Http\Resources\V1\BookingResource;
 use App\Http\Resources\V1\PartnerProfileResource;
 use App\Models\Partner;
@@ -15,9 +16,11 @@ use App\Services\CurrencyService;
 use App\Services\NationalityService;
 use App\Services\PartnerBookingService;
 use App\Services\PartnerPortalService;
+use App\Services\PartnerStatementExporter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Partner panel API (approved partners only, see EnsureActivePartner).
@@ -50,6 +53,14 @@ class PartnerPanelController extends ApiController
     public function statements(Request $request): JsonResponse
     {
         return response()->json(['data' => $this->portal->statements($this->activePartner($request))]);
+    }
+
+    /**
+     * Statement of one month as a PDF or Excel file (?format=pdf|xlsx), own bookings only.
+     */
+    public function exportStatement(PartnerStatementExportRequest $request, PartnerStatementExporter $exporter, string $period): Response
+    {
+        return $exporter->download($this->activePartner($request), $period, $request->exportFormat());
     }
 
     public function priceList(PartnerCatalogueRequest $request): JsonResponse

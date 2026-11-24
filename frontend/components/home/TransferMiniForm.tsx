@@ -2,19 +2,22 @@
 
 import { Button } from "@/components/ui/Button";
 import { useNationalityCode } from "@/lib/nationality";
-import { Combobox } from "@/components/ui/Combobox";
+import { RoutePreview } from "@/components/map/RoutePreview";
+import { Combobox, type ComboboxGroup, type ComboboxOption } from "@/components/ui/Combobox";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { useLocationGroups } from "@/components/ui/locationGroups";
 import { api, ApiError } from "@/lib/api/client";
 import type { Locale, TransferCatalog, TransferQuoteRequest } from "@/lib/api/types";
 import { Price } from "@/lib/currency";
+import { useGoogleMapsConsent } from "@/lib/consent";
 import { useToday } from "@/lib/hooks";
+import { useGooglePlaces } from "@/lib/maps/places";
 import { whatsappHref } from "@/lib/site";
 import { addDays, cn, parseISODate, toISODate } from "@/lib/utils";
 import { useMutation } from "@tanstack/react-query";
-import { Car, CheckCircle2, MapPin, MessageCircle, Plane } from "lucide-react";
+import { Car, CheckCircle2, Globe, MapPin, MessageCircle, Plane } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 
 /** Figma TransferMiniForm (62:14811): From, To, Date, Vehicle + Get price. */
 export function TransferMiniForm({
@@ -22,13 +25,17 @@ export function TransferMiniForm({
   initial,
   className,
   headingLevel = "h3",
+  showRoute = false,
 }: {
   catalog: TransferCatalog;
   initial?: Partial<Pick<TransferQuoteRequest, "hub" | "destination" | "date" | "vehicle" | "point">>;
   className?: string;
   headingLevel?: "h2" | "h3";
+  /** Route preview under the form (Google map with a key, a Google Maps link without). */
+  showRoute?: boolean;
 }) {
   const t = useTranslations("transfers");
+  const tm = useTranslations("map");
   const id = useId();
   const today = useToday();
   const locale = useLocale() as Locale;
@@ -52,17 +59,59 @@ export function TransferMiniForm({
   const resetQuote = quote.reset;
   useEffect(() => resetQuote(), [nationality, resetQuote]);
 
-  const submit = (e: FormEvent) => {
+  const selectedHub = hubs.find((h) => h.code === hub);
+  const hubPoint = selectedHub && typeof selectedHub.lat === "number" && typeof selectedHub.lng === "number" ? { lat: selectedHub.lat, lng: selectedHub.lng } : null;
+
+  // Google Places Autocomplete for the drop-off (with a key and the visitor's consent), biased to the hub.
+  const mapsConsent = useGoogleMapsConsent();
+  const googlePlaces = useGooglePlaces({ enabled: mapsConsent === "allowed", locale, bias: hubPoint, radiusKm: selectedHub?.radius_km, groupLabel: tm("googlePlaces"), icon: <Globe aria-hidden /> });
+  const remotePlaces = live && selectedHub?.id ? groups.remote("transfer_to", selectedHub.id) : undefined;
+  const placesGroup = groups.places(selectedHub);
+  const loadDestinations = useCallback(
+    async (query: string, signal: AbortSignal): Promise<ComboboxGroup[]> => {
+      const [own, google] = await Promise.allSettled([remotePlaces ? remotePlaces(query, signal) : Promise.resolve([placesGroup]), googlePlaces.search(query, signal)]);
+      const result = own.status === "fulfilled" ? own.value : [placesGroup];
+      return google.status === "fulfilled" && google.value ? [...result, google.value] : result;
+    },
+    [remotePlaces, placesGroup, googlePlaces],
+  );
+  /** Pending Place Details lookup for a Google suggestion; `seq` drops stale answers. */
+  const resolving = useRef<Promise<{ lat: number; lng: number } | null> | null>(null);
+  const seq = useRef(0);
+  const pickDestination = (option: ComboboxOption | null) => {
+    seq.current += 1;
+    resolving.current = null;
+    if (option?.data?.type === "google") {
+      const mine = seq.current;
+      setPoint(null);
+      const job = googlePlaces
+        .resolve(option)
+        .then((place) => {
+          const p = place ? { lat: place.lat, lng: place.lng } : null;
+          if (seq.current === mine) setPoint(p);
+          return p;
+        })
+        .catch(() => null);
+      resolving.current = job;
+      return;
+    }
+    const lat = option?.data?.lat;
+    const lng = option?.data?.lng;
+    setPoint(typeof lat === "number" && typeof lng === "number" ? { lat, lng } : null);
+  };
+
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!destination.trim()) {
       setError(t("toRequired"));
       return;
     }
     setError(null);
-    quote.mutate({ hub, destination: destination.trim(), date, vehicle, point });
+    // A Google suggestion was just picked: wait for its coordinates so it can be priced.
+    const resolved = resolving.current ? await resolving.current : point;
+    quote.mutate({ hub, destination: destination.trim(), date, vehicle, point: resolved ?? point });
   };
 
-  const selectedHub = hubs.find((h) => h.code === hub);
   const hubName = selectedHub?.name ?? hub;
   const vehicleLabel = (code: string) => {
     const v = vehicles.find((x) => x.code === code);
@@ -109,15 +158,13 @@ export function TransferMiniForm({
               onInputChange={(text) => {
                 setDestination(text);
                 setPoint(null);
+                seq.current += 1;
+                resolving.current = null;
                 if (error) setError(null);
               }}
-              onSelect={(option) => {
-                const lat = option?.data?.lat;
-                const lng = option?.data?.lng;
-                setPoint(typeof lat === "number" && typeof lng === "number" ? { lat, lng } : null);
-              }}
-              groups={[groups.places(selectedHub)]}
-              loadGroups={live && selectedHub?.id ? groups.remote("transfer_to", selectedHub.id) : undefined}
+              onSelect={pickDestination}
+              groups={[placesGroup]}
+              loadGroups={remotePlaces || googlePlaces.active ? loadDestinations : undefined}
               allowFreeText
               freeTextLabel={groups.labels.useTyped}
               invalid={Boolean(error)}
@@ -146,6 +193,9 @@ export function TransferMiniForm({
         <Button type="submit" size="lg" className="w-full" loading={quote.isPending}>
           {t("getPrice")}
         </Button>
+        {showRoute && selectedHub && destination.trim() && (
+          <RoutePreview origin={hubPoint} originName={hubName} destination={point} destinationName={destination.trim()} />
+        )}
         <div aria-live="polite">
           {quote.data ? (
             <div className="flex flex-col gap-3 rounded-image bg-success-100 p-4 sm:flex-row sm:items-center sm:justify-between">

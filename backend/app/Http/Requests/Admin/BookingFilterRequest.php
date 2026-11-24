@@ -37,6 +37,7 @@ class BookingFilterRequest extends FormRequest
             'partner_id' => ['nullable', 'integer'],
             'date_from' => ['nullable', 'date_format:Y-m-d'],
             'date_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:date_from'],
+            'cancellation' => ['nullable', Rule::in(['pending', 'any'])],
         ];
     }
 }

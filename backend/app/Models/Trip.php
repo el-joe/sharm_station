@@ -11,6 +11,7 @@ use App\Models\Concerns\HasChildPolicy;
 use App\Models\Concerns\HasProductPrices;
 use App\Models\Concerns\HasSeasonPrices;
 use App\Models\Concerns\HasTranslations;
+use App\Models\Concerns\LogsActivity;
 use App\Models\Contracts\Priceable;
 use Database\Factories\TripFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -33,7 +34,7 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 class Trip extends Model implements Priceable
 {
     /** @use HasFactory<TripFactory> */
-    use HasAddons, HasChildPolicy, HasFactory, HasProductPrices, HasSeasonPrices, HasTranslations;
+    use HasAddons, HasChildPolicy, HasFactory, HasProductPrices, HasSeasonPrices, HasTranslations, LogsActivity;
 
     /**
      * @var list<string>

@@ -46,6 +46,7 @@ class StatusChip extends Component
         'being_arranged' => 'info',
         'succeeded' => 'success',
         'approved' => 'success',
+        'declined' => 'error',
         'rejected' => 'error',
         'enabled' => 'success',
         'disabled' => 'neutral',

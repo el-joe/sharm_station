@@ -46,9 +46,13 @@ class PartnerDataTable
             .'<button type="submit" class="text-sm font-semibold '.$class.' hover:underline">'.e($label).'</button></form>';
 
         return match ($partner->status) {
-            PartnerStatus::Pending => [$form('admin.partners.approve', 'Approve', 'text-success', "Approve {$partner->company}? The user becomes a partner and sees partner prices.")],
+            PartnerStatus::Pending => [
+                $form('admin.partners.approve', 'Approve', 'text-success', "Approve {$partner->company}? The user becomes a partner and sees partner prices."),
+                $this->editLink(route('admin.partners.show', $partner).'#tab-overview', 'Reject…'),
+            ],
             PartnerStatus::Active => [$form('admin.partners.suspend', 'Suspend', 'text-error', "Suspend {$partner->company}? They will see retail prices until reactivated.")],
             PartnerStatus::Suspended => [$form('admin.partners.approve', 'Reactivate', 'text-success', "Reactivate {$partner->company}?")],
+            PartnerStatus::Rejected => [$this->editLink(route('admin.partners.show', $partner), 'View reason')],
         };
     }
 }

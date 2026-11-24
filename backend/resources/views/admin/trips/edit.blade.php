@@ -90,6 +90,11 @@
                     <x-admin.input name="free_cancellation_hours" label="Free cancellation (h)" type="number" min="0" :value="$trip->free_cancellation_hours" span="md:col-span-1" />
                 </x-admin.form-section>
 
+                <x-admin.form-section title="Meeting point" description="Where customers meet the guide or are picked up. Shown on the trip page and in the booking confirmation.">
+                    <x-admin.translatable name="meeting_point" label="Meeting point" :value="$trip->getTranslations('meeting_point')" span="md:col-span-6" />
+                    <x-admin.location-picker :lat="$trip->lat" :lng="$trip->lng" lat-label="Meeting point latitude" lng-label="Meeting point longitude" search-label="Search the meeting point" />
+                </x-admin.form-section>
+
                 <x-admin.form-section title="Booking types and visibility">
                     <x-admin.switch name="private_enabled" label="Private bookings" description="Own date, private tiers per person" :checked="$trip->private_enabled" span="md:col-span-2" />
                     <x-admin.switch name="group_enabled" label="Group bookings" description="Scheduled departures, adult/child prices" :checked="$trip->group_enabled" span="md:col-span-2" />

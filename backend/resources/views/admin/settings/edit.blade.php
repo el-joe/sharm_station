@@ -9,7 +9,10 @@
             <x-admin.input name="site_email" label="Email" type="email" :value="$values['site_email']" span="md:col-span-3" />
             <x-admin.input name="site_phone" label="Phone" :value="$values['site_phone']" span="md:col-span-3" />
             <x-admin.input name="site_whatsapp" label="WhatsApp" :value="$values['site_whatsapp']" span="md:col-span-3" />
-            <x-admin.input name="site_address" label="Address" :value="$values['site_address']" span="md:col-span-6" />
+        </x-admin.form-section>
+        <x-admin.form-section title="Office location" description="Address and map pin of the office, shown on the website contact page.">
+            <x-admin.location-picker address-name="site_address" lat-name="site_lat" lng-name="site_lng" address-label="Office address"
+                                     :address="$values['site_address']" :lat="$values['site_lat']" :lng="$values['site_lng']" search-label="Search the office address" />
         </x-admin.form-section>
         <x-admin.form-section title="Bookings">
             <x-admin.input name="default_deposit_percent" label="Default deposit" type="number" step="0.01" min="0" max="100" suffix="%" :value="$values['default_deposit_percent']" hint="Pre-filled on new trips and buildings" span="md:col-span-2" />

@@ -10,6 +10,7 @@ use App\Http\Requests\Admin\BookingStatusRequest;
 use App\Models\Booking;
 use App\Repositories\Contracts\PartnerRepositoryInterface;
 use App\Services\BookingService;
+use App\Services\CancellationService;
 use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -28,7 +29,7 @@ class BookingController extends Controller
     {
         return view('admin.bookings.index', [
             'partners' => $this->partners->options(),
-            'initial' => $request->only(['status', 'payment_status', 'service_type', 'partner_id']) + ['search' => $request->query('q')],
+            'initial' => $request->only(['status', 'payment_status', 'service_type', 'partner_id', 'cancellation']) + ['search' => $request->query('q')],
         ]);
     }
 
@@ -55,11 +56,14 @@ class BookingController extends Controller
         }, 'bookings-'.now()->format('Y-m-d-His').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
-    public function show(Booking $booking, PaymentService $payments): View
+    public function show(Booking $booking, PaymentService $payments, CancellationService $cancellations): View
     {
+        $booking = $this->bookings->loadForAdmin($booking);
+
         return view('admin.bookings.show', [
-            'booking' => $this->bookings->loadForAdmin($booking),
+            'booking' => $booking,
             'paymentMethods' => $payments->methodOptions(),
+            'refund' => $booking->cancellation_requested_at !== null ? $cancellations->suggestRefund($booking) : null,
         ]);
     }
 

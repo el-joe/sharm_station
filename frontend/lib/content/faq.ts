@@ -1,3 +1,7 @@
+/**
+ * OFFLINE FALLBACK ONLY: the website reads this content from the API (lib/api/content.ts).
+ * This copy is served only when the API is unreachable (see lib/content/fallback.ts).
+ */
 import type { Locale } from "../api/types";
 
 export interface FaqCategory {

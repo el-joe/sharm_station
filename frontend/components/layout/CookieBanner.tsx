@@ -3,39 +3,16 @@
 import { Button } from "@/components/ui/Button";
 import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
-import { useSyncExternalStore } from "react";
-
-const KEY = "ssv_cookie_consent";
-const EVENT = "ssv:consent";
-
-function read(): string | null {
-  try {
-    return window.localStorage.getItem(KEY);
-  } catch {
-    return "unavailable";
-  }
-}
-
-function subscribe(cb: () => void) {
-  window.addEventListener(EVENT, cb);
-  return () => window.removeEventListener(EVENT, cb);
-}
+import { saveConsent, useConsent } from "@/lib/consent";
 
 export function CookieBanner() {
   const t = useTranslations("cookies");
   // Server snapshot "pending" keeps the banner out of the prerendered HTML.
-  const consent = useSyncExternalStore(subscribe, read, () => "pending");
+  const consent = useConsent();
 
   if (consent !== null) return null;
 
-  const save = (value: "all" | "essential") => {
-    try {
-      window.localStorage.setItem(KEY, value);
-    } catch {
-      /* storage blocked: hide for this page view only */
-    }
-    window.dispatchEvent(new Event(EVENT));
-  };
+  const save = saveConsent;
 
   return (
     <div role="region" aria-label={t("title")} className="fixed inset-x-3 bottom-3 z-50 rounded-card border border-ink-100 bg-white p-4 shadow-raised md:inset-x-auto md:end-6 md:bottom-6 md:max-w-md md:p-5">

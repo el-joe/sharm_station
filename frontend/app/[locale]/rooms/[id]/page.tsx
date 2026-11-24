@@ -2,6 +2,8 @@ import { BuildingCard } from "@/components/accommodation/BuildingCard";
 import { getNationality } from "@/lib/api/nationality-server";
 import { RoomBookingWidget } from "@/components/accommodation/RoomBookingWidget";
 import { RoomCard } from "@/components/accommodation/RoomCard";
+import { MapEmbed } from "@/components/map/MapEmbed";
+import { hasCoords } from "@/components/map/types";
 import { SeasonPriceTable } from "@/components/booking/SeasonPriceTable";
 import { DetailSection } from "@/components/trips/DetailSection";
 import { TripGallery } from "@/components/trips/TripGallery";
@@ -11,7 +13,7 @@ import { getCatalogueKeys, getRoom } from "@/lib/api/server";
 import type { Locale } from "@/lib/api/types";
 import { pageMetadata } from "@/lib/seo";
 import { SITE_URL } from "@/lib/site";
-import { BedDouble, Maximize, Users } from "lucide-react";
+import { BedDouble, MapPin, Maximize, Users } from "lucide-react";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -84,6 +86,11 @@ async function RoomContent({ params }: { params: PageProps<"/[locale]/rooms/[id]
             <SeasonPriceTable seasons={room.price_list} unit="night" priceKey="price_per_night" note={room.tax_included ? t("pricesNoteTax") : t("pricesNote")} />
             <DetailSection id="building" title={t("building")}>
               <BuildingCard building={room.building_detail} />
+              {hasCoords(room.building_detail.lat, room.building_detail.lng) && (
+                <MapEmbed lat={room.building_detail.lat} lng={room.building_detail.lng} name={room.building.name} className="mt-6">
+                  <p className="flex items-start gap-2 font-semibold text-ink-900"><MapPin className="mt-0.5 size-5 shrink-0 text-cta-600" aria-hidden />{room.building_detail.address}</p>
+                </MapEmbed>
+              )}
             </DetailSection>
             {room.other_rooms.length > 0 && (
               <DetailSection id="other" title={t("otherRooms")}>

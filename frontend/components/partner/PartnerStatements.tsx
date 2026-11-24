@@ -1,11 +1,14 @@
 "use client";
 
 import { Badge } from "@/components/ui/Badge";
-import { api } from "@/lib/api/client";
+import { api, ApiError } from "@/lib/api/client";
+import type { Locale, PartnerStatement } from "@/lib/api/types";
+import { useAuth } from "@/lib/auth";
 import { useCurrency } from "@/lib/currency";
 import { parseISODate } from "@/lib/utils";
-import { Download } from "lucide-react";
-import { useFormatter, useTranslations } from "next-intl";
+import { AlertCircle, Download, Loader2 } from "lucide-react";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useState } from "react";
 import { PartnerData } from "./PartnerStates";
 import { PartnerPageHeader } from "./shared";
 import { usePartnerQuery } from "./usePartnerQuery";
@@ -60,20 +63,7 @@ export function PartnerStatements() {
                     <Cell label={t("columns.total")} value={money(s.partner_total, { decimals: true })} strong />
                     <Cell label={t("columns.paid")} value={money(s.paid, { decimals: true })} />
                     <Cell label={t("columns.balance")} value={money(s.balance, { decimals: true })} strong />
-                    {(s.pdf_url || s.excel_url) && (
-                      <div className="col-span-2 flex gap-2 md:col-span-1" aria-label={t("columns.export")}>
-                        {s.pdf_url && (
-                          <a href={s.pdf_url} className="inline-flex h-9 items-center gap-1 rounded-control border border-ink-300 px-3 text-sm font-semibold text-partner-600 hover:bg-partner-100">
-                            <Download className="size-4" aria-hidden /> {t("pdf")}
-                          </a>
-                        )}
-                        {s.excel_url && (
-                          <a href={s.excel_url} className="inline-flex h-9 items-center gap-1 rounded-control border border-ink-300 px-3 text-sm font-semibold text-partner-600 hover:bg-partner-100">
-                            <Download className="size-4" aria-hidden /> {t("excel")}
-                          </a>
-                        )}
-                      </div>
-                    )}
+                    <StatementDownloads statement={s} label={period(s.period_start, s.period)} />
                   </li>
                 ))}
               </ul>
@@ -91,6 +81,76 @@ function Cell({ label, value, strong, muted, tone }: { label: string; value: str
     <div>
       <p className="text-xs text-ink-500">{label}</p>
       <p className={tone ?? (strong ? "font-semibold text-ink-900" : muted ? "text-ink-500" : "text-ink-900")}>{value}</p>
+    </div>
+  );
+}
+
+/** "YYYY-MM" of a statement row (the export route key). */
+function periodKey(s: PartnerStatement): string {
+  if (/^\d{4}-\d{2}$/.test(s.period)) return s.period;
+  return (s.period_start || s.period).slice(0, 7);
+}
+
+/** PDF / Excel buttons: fetch with the partner token -> Blob -> download, with loading and error states. */
+function StatementDownloads({ statement, label }: { statement: PartnerStatement; label: string }) {
+  const t = useTranslations("partnerPanel.statements");
+  const locale = useLocale() as Locale;
+  const { token, signOut } = useAuth();
+  const [busy, setBusy] = useState<"pdf" | "xlsx" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const key = periodKey(statement);
+
+  const download = async (format: "pdf" | "xlsx") => {
+    if (!token || busy) return;
+    setBusy(format);
+    setError(null);
+    try {
+      const { blob, filename } = await api.partnerStatementFile(key, format, { locale, token });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.append(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return void signOut();
+      setError(err instanceof ApiError && err.status === 404 ? t("downloadMissing") : t("downloadError"));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const button = (format: "pdf" | "xlsx", text: string) => (
+    <button
+      type="button"
+      onClick={() => void download(format)}
+      disabled={busy !== null}
+      aria-busy={busy === format || undefined}
+      aria-label={t("downloadLabel", { format: text, period: label })}
+      className="inline-flex h-9 items-center gap-1 rounded-control border border-ink-300 px-3 text-sm font-semibold text-partner-600 hover:bg-partner-100 disabled:cursor-wait disabled:opacity-60"
+    >
+      {busy === format ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Download className="size-4" aria-hidden />} {text}
+    </button>
+  );
+
+  return (
+    <div className="col-span-2 flex flex-col gap-1 md:col-span-1">
+      <div className="flex gap-2" role="group" aria-label={t("columns.export")}>
+        {button("pdf", t("pdf"))}
+        {button("xlsx", t("excel"))}
+      </div>
+      {busy && (
+        <span className="sr-only" role="status">
+          {t("downloading")}
+        </span>
+      )}
+      {error && (
+        <p className="flex items-center gap-1 text-xs text-error" role="alert">
+          <AlertCircle className="size-3.5 shrink-0" aria-hidden /> {error}
+        </p>
+      )}
     </div>
   );
 }

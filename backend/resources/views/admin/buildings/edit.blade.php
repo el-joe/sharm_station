@@ -30,9 +30,7 @@
             </x-admin.form-section>
 
             <x-admin.form-section title="Location">
-                <x-admin.input name="address" label="Address" :value="$building->address" span="md:col-span-6" />
-                <x-admin.input name="lat" label="Latitude" type="number" step="0.0000001" :value="$building->lat" span="md:col-span-3" />
-                <x-admin.input name="lng" label="Longitude" type="number" step="0.0000001" :value="$building->lng" span="md:col-span-3" />
+                <x-admin.location-picker address-name="address" :address="$building->address" :lat="$building->lat" :lng="$building->lng" />
             </x-admin.form-section>
 
             <x-admin.form-section title="Description and amenities">

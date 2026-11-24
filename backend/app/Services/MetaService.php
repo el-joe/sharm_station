@@ -17,7 +17,7 @@ class MetaService
     /**
      * Settings keys that are safe to expose publicly.
      */
-    public const PUBLIC_SETTINGS = ['site.name', 'site.email', 'site.phone', 'site.whatsapp', 'site.address', 'site.social'];
+    public const PUBLIC_SETTINGS = ['site.name', 'site.email', 'site.phone', 'site.whatsapp', 'site.address', 'site.social', 'site.lat', 'site.lng'];
 
     public function __construct(
         private readonly CurrencyService $currencies,
@@ -63,6 +63,14 @@ class MetaService
             'site' => $nested['site'] ?? (object) [],
             'whatsapp_digits' => isset($settings['site.whatsapp']) ? preg_replace('/\D+/', '', (string) $settings['site.whatsapp']) : null,
             'google' => $placeId ? $this->reviews->rating($placeId) : null,
+            'contact' => [
+                'address' => $settings['site.address'] ?? null,
+                'lat' => isset($settings['site.lat']) ? (float) $settings['site.lat'] : null,
+                'lng' => isset($settings['site.lng']) ? (float) $settings['site.lng'] : null,
+                'phone' => $settings['site.phone'] ?? null,
+                'email' => $settings['site.email'] ?? null,
+                'whatsapp' => $settings['site.whatsapp'] ?? null,
+            ],
         ];
     }
 }

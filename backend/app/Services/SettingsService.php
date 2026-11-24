@@ -25,7 +25,7 @@ class SettingsService
     public function form(): array
     {
         $values = $this->settings->many([
-            'site.name', 'site.email', 'site.phone', 'site.whatsapp', 'site.address',
+            'site.name', 'site.email', 'site.phone', 'site.whatsapp', 'site.address', 'site.lat', 'site.lng',
             'booking.default_deposit_percent', 'accommodation.hold_minutes', 'google_reviews.place_id', 'partners.preview_commission',
         ]);
 
@@ -35,6 +35,8 @@ class SettingsService
             'site_phone' => $values['site.phone'] ?? null,
             'site_whatsapp' => $values['site.whatsapp'] ?? null,
             'site_address' => $values['site.address'] ?? null,
+            'site_lat' => $values['site.lat'] ?? null,
+            'site_lng' => $values['site.lng'] ?? null,
             'default_deposit_percent' => $values['booking.default_deposit_percent'] ?? 30,
             'hold_minutes' => $values['accommodation.hold_minutes'] ?? BookingService::DEFAULT_HOLD_MINUTES,
             'google_place_id' => $values['google_reviews.place_id'] ?? null,

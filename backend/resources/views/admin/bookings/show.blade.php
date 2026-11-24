@@ -171,6 +171,38 @@
         </div>
 
         <aside class="space-y-4">
+            @if ($booking->cancellation_requested_at)
+                <x-admin.card title="Cancellation request" :subtitle="'Requested '.$booking->cancellation_requested_at->format('j M Y H:i').' by '.($booking->cancellationRequester?->name ?? 'the booking link holder')" :class="$booking->hasPendingCancellationRequest() ? 'border-warning/50' : ''" id="cancellation">
+                    <p class="rounded-control bg-sand-50 p-3 text-sm whitespace-pre-line text-ink-900">{{ $booking->cancellation_reason }}</p>
+                    @if ($refund)
+                        <dl class="mt-3 space-y-1.5 text-sm">
+                            <div class="flex justify-between gap-3"><dt class="text-ink-500">Service date</dt><dd>{{ ($booking->start_date ?? $booking->check_in)?->format('j M Y') ?? '—' }}{{ $refund->daysBefore !== null ? ' ('.$refund->daysBefore.' days before)' : '' }}</dd></div>
+                            <div class="flex justify-between gap-3"><dt class="text-ink-500">Policy</dt><dd class="text-right">{{ $refund->rule }}</dd></div>
+                            <div class="flex justify-between gap-3"><dt class="text-ink-500">Paid</dt><dd>{{ $eur($refund->paid) }}</dd></div>
+                            <div class="flex justify-between gap-3 border-t border-ink-100 pt-1.5"><dt class="font-medium">Suggested refund</dt><dd class="font-bold">{{ $eur($refund->refund) }}</dd></div>
+                        </dl>
+                    @endif
+                    @if ($booking->hasPendingCancellationRequest())
+                        <form method="POST" action="{{ route('admin.bookings.cancellation.approve', $booking) }}" class="mt-4 space-y-3 border-t border-ink-100 pt-4" data-confirm="Cancel booking {{ $booking->reference }} and record the refund?" data-confirm-ok="Approve" data-confirm-title="Approve cancellation" novalidate>
+                            @csrf
+                            <x-admin.money name="refund_amount" label="Refund to pay (EUR)" :value="$refund?->refund ?? 0" span="" />
+                            <x-admin.textarea name="note" label="Note" :rows="2" span="" maxlength="500" />
+                            <button type="submit" class="btn-cta w-full">Approve and cancel</button>
+                        </form>
+                        <form method="POST" action="{{ route('admin.bookings.cancellation.decline', $booking) }}" class="mt-4 space-y-3 border-t border-ink-100 pt-4" novalidate>
+                            @csrf
+                            <x-admin.textarea name="decline_reason" label="Decline reason" :rows="2" span="" maxlength="500" />
+                            <button type="submit" class="btn-ghost w-full">Decline request</button>
+                        </form>
+                    @else
+                        <p class="mt-3 text-sm"><x-admin.status-chip :status="$booking->cancellation_decision" />
+                            <span class="text-ink-500">{{ $booking->cancellation_decided_at?->format('j M Y H:i') }}</span></p>
+                        @if ($booking->refund_amount !== null)<p class="mt-2 text-sm">Refund to pay: <strong>{{ $eur($booking->refund_amount) }}</strong></p>@endif
+                        @if ($booking->cancellation_decision_note)<p class="mt-2 text-sm text-ink-700">{{ $booking->cancellation_decision_note }}</p>@endif
+                    @endif
+                </x-admin.card>
+            @endif
+
             <x-admin.card title="Payment">
                 <dl class="space-y-2 text-sm">
                     <div class="flex justify-between"><dt class="text-ink-500">Total</dt><dd class="font-semibold">{{ $eur($booking->total) }}</dd></div>

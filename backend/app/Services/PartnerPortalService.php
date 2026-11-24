@@ -27,6 +27,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection as SupportCollection;
 
 /**
  * Partner panel (SRS 9.3): KPIs, bookings, monthly statements, catalogue and price list at partner prices
@@ -87,49 +88,91 @@ class PartnerPortalService
     }
 
     /**
-     * Monthly statements computed from the partner's bookings (by creation month, voided bookings excluded).
+     * Monthly statements (by booking creation month), newest first, with their PDF and Excel export links.
      *
      * @return list<array<string, mixed>>
      */
     public function statements(Partner $partner): array
     {
-        $today = CarbonImmutable::today();
-
         return $this->bookings->partnerQuery($partner->id)
             ->whereNotIn('status', BookingStatus::voided())
             ->with('payments')
             ->get()
             ->groupBy(fn (Booking $booking): string => $booking->created_at->format('Y-m'))
-            ->map(function ($group, string $period) use ($today): array {
-                $start = CarbonImmutable::createFromFormat('Y-m-d', $period.'-01')->startOfDay();
-                $end = $start->endOfMonth()->startOfDay();
-                $total = round((float) $group->sum(fn (Booking $booking): float => (float) ($booking->partner_total ?? $booking->total)), 2);
-                $paid = round((float) $group->sum(fn (Booking $booking): float => $booking->paidAmount()), 2);
-                $balance = round(max(0, $total - $paid), 2);
-
-                return [
-                    'id' => (int) $start->format('Ym'),
-                    'period' => $period,
-                    'period_start' => $start->toDateString(),
-                    'period_end' => $end->toDateString(),
-                    'bookings_count' => $group->count(),
-                    'retail_total' => round((float) $group->sum(fn (Booking $booking): float => (float) $booking->retail_total), 2),
-                    'commission_amount' => round((float) $group->sum(fn (Booking $booking): float => (float) $booking->commission_amount), 2),
-                    'partner_total' => $total,
-                    'paid' => $paid,
-                    'balance' => $balance,
-                    'status' => match (true) {
-                        $balance <= 0 => 'paid',
-                        $end->addDays(self::STATEMENT_DUE_DAYS)->lt($today) => 'overdue',
-                        default => 'open',
-                    },
-                    'pdf_url' => null,
-                    'excel_url' => null,
-                ];
-            })
+            ->map(fn ($group, string $period): array => $this->statementSummary($period, $group))
             ->sortByDesc('period')
             ->values()
             ->all();
+    }
+
+    /**
+     * One month's statement with its bookings (for the PDF / Excel export). The month may be empty.
+     *
+     * @return array{summary: array<string, mixed>, bookings: list<array<string, mixed>>}
+     */
+    public function statement(Partner $partner, string $period): array
+    {
+        $start = CarbonImmutable::createFromFormat('Y-m-d', $period.'-01')->startOfDay();
+
+        $bookings = $this->bookings->partnerQuery($partner->id)
+            ->reorder()
+            ->whereNotIn('status', BookingStatus::voided())
+            ->whereBetween('created_at', [$start, $start->endOfMonth()])
+            ->with(['payments', 'bookable'])
+            ->orderBy('created_at')
+            ->get();
+
+        return [
+            'summary' => $this->statementSummary($period, $bookings),
+            'bookings' => $bookings->map(fn (Booking $booking): array => [
+                'reference' => $booking->reference,
+                'created_at' => $booking->created_at->toDateString(),
+                'service' => $booking->service_type->label(),
+                'product' => $booking->bookable ? (string) ($booking->bookable->title ?? $booking->bookable->name ?? '') : '',
+                'service_date' => ($booking->start_date ?? $booking->check_in)?->toDateString(),
+                'lead_name' => $booking->lead_name,
+                'retail_total' => (float) $booking->retail_total,
+                'commission_amount' => (float) $booking->commission_amount,
+                'partner_total' => (float) ($booking->partner_total ?? $booking->total),
+                'paid' => $booking->paidAmount(),
+                'balance' => round(max(0, (float) ($booking->partner_total ?? $booking->total) - $booking->paidAmount()), 2),
+                'status' => $booking->status->label(),
+            ])->values()->all(),
+        ];
+    }
+
+    /**
+     * @param  SupportCollection<int, Booking>  $group
+     * @return array<string, mixed>
+     */
+    private function statementSummary(string $period, SupportCollection $group): array
+    {
+        $today = CarbonImmutable::today();
+        $start = CarbonImmutable::createFromFormat('Y-m-d', $period.'-01')->startOfDay();
+        $end = $start->endOfMonth()->startOfDay();
+        $total = round((float) $group->sum(fn (Booking $booking): float => (float) ($booking->partner_total ?? $booking->total)), 2);
+        $paid = round((float) $group->sum(fn (Booking $booking): float => $booking->paidAmount()), 2);
+        $balance = round(max(0, $total - $paid), 2);
+
+        return [
+            'id' => (int) $start->format('Ym'),
+            'period' => $period,
+            'period_start' => $start->toDateString(),
+            'period_end' => $end->toDateString(),
+            'bookings_count' => $group->count(),
+            'retail_total' => round((float) $group->sum(fn (Booking $booking): float => (float) $booking->retail_total), 2),
+            'commission_amount' => round((float) $group->sum(fn (Booking $booking): float => (float) $booking->commission_amount), 2),
+            'partner_total' => $total,
+            'paid' => $paid,
+            'balance' => $balance,
+            'status' => match (true) {
+                $balance <= 0 => 'paid',
+                $end->addDays(self::STATEMENT_DUE_DAYS)->lt($today) => 'overdue',
+                default => 'open',
+            },
+            'pdf_url' => route('api.v1.partner.statements.export', ['period' => $period, 'format' => 'pdf']),
+            'excel_url' => route('api.v1.partner.statements.export', ['period' => $period, 'format' => 'xlsx']),
+        ];
     }
 
     /**

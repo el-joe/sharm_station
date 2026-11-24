@@ -1,6 +1,8 @@
+import { RichHtml } from "@/components/content/RichHtml";
 import { ChevronDown } from "lucide-react";
 
-export function Faq({ items }: { items: { question: string; answer: string }[] }) {
+/** Accordion of questions. `answer` is plain text (product FAQ); `answer_html` is editorial HTML from the API (FAQ page). */
+export function Faq({ items }: { items: { question: string; answer?: string; answer_html?: string }[] }) {
   return (
     <div className="divide-y divide-ink-100 rounded-card border border-ink-100 bg-white">
       {items.map((f) => (
@@ -9,7 +11,7 @@ export function Faq({ items }: { items: { question: string; answer: string }[] }
             {f.question}
             <ChevronDown className="size-5 shrink-0 transition-transform group-open:rotate-180" aria-hidden />
           </summary>
-          <p className="pb-4 text-ink-700">{f.answer}</p>
+          {f.answer_html ? <RichHtml html={f.answer_html} className="rich-text-compact pb-4" /> : <p className="pb-4 text-ink-700">{f.answer}</p>}
         </details>
       ))}
     </div>
