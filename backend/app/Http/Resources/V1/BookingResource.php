@@ -3,6 +3,7 @@
 namespace App\Http\Resources\V1;
 
 use App\Enums\BookingStatus;
+use App\Enums\CancellationDecision;
 use App\Enums\PaymentStatus;
 use App\Models\Booking;
 use App\Models\BookingAddon;
@@ -12,6 +13,7 @@ use App\Models\BookingTraveler;
 use App\Models\BookingUnit;
 use App\Models\Payment;
 use App\Models\PaymentProof;
+use App\Services\VoucherService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -46,6 +48,8 @@ class BookingResource extends JsonResource
             'status' => $this->status->value,
             'payment_status' => $this->payment_status->value,
             'payment_due_at' => $this->payment_due_at?->toIso8601String(),
+            'balance_due_on' => $this->balance_due_on?->toDateString(),
+            'voucher_available' => in_array($this->status, VoucherService::AVAILABLE_FOR, true),
             'service_type' => $this->service_type->value,
             'booking_type' => $this->booking_type?->value,
             'pricing_mode' => $this->pricing_mode?->value,
@@ -63,6 +67,7 @@ class BookingResource extends JsonResource
             'start_date' => $this->start_date?->toDateString(),
             'check_in' => $this->check_in?->toDateString(),
             'check_out' => $this->check_out?->toDateString(),
+            'end_date' => $this->end_date?->toDateString(),
             'lead' => ['name' => $this->lead_name, 'email' => $this->lead_email, 'phone' => $this->lead_phone],
             'adults' => $this->adults,
             'children' => $this->children,
@@ -88,10 +93,20 @@ class BookingResource extends JsonResource
             ])->values(),
             'rooms' => $this->rooms->map(fn (BookingRoom $room): array => [
                 'room_id' => $room->room_id,
+                'room_option_id' => $room->room_option_id,
+                'stage_position' => $room->stage_position,
                 'name' => $room->room_name,
+                'number' => $room->room_number,
+                'pricing_method' => $room->pricing_method,
+                'adults' => $room->adults,
+                'children_ages' => $room->child_ages ?? [],
+                'extra_beds' => $room->extra_beds,
+                'cots' => $room->cots,
                 'nights' => $room->nights,
                 'price' => (float) $room->price,
+                'extras_total' => (float) $room->extras_total,
                 'total' => (float) $room->total,
+                'traveler_ids' => $room->relationLoaded('guests') ? $room->guests->pluck('booking_traveler_id')->values() : [],
             ])->values(),
             'lines' => array_map(
                 fn (array $line): array => $showPartner ? $line : array_diff_key($line, array_flip(['partner_unit_price', 'partner_total', 'price_rule', 'commission_percent'])),
@@ -176,7 +191,8 @@ class BookingResource extends JsonResource
             ] : null,
             'coupon_code' => $this->coupon_code,
             'cancellation' => [
-                'can_request' => ! in_array($this->status, [...BookingStatus::voided(), BookingStatus::Completed], true) && $this->cancellation_requested_at === null,
+                'can_request' => ! in_array($this->status, [...BookingStatus::voided(), BookingStatus::Completed], true)
+                    && ($this->cancellation_requested_at === null || $this->cancellation_decision === CancellationDecision::Declined),
                 'requested_at' => $this->cancellation_requested_at?->toIso8601String(),
                 'reason' => $this->cancellation_reason,
                 'status' => $this->cancellation_requested_at === null ? null : ($this->cancellation_decision?->value ?? 'pending'),

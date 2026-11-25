@@ -61,9 +61,11 @@ export function AccommodationSearch({ query, destinations, buildings, total }: {
 
   const go = (q: AccommodationQuery) =>
     startTransition(() => {
-      // Keep the List / Map choice (?view=map, see AccommodationResults) when the filters change.
-      const view = new URLSearchParams(window.location.search).get("view");
-      router.push({ pathname, query: { ...toAccommodationQuery(q), ...(view === "map" ? { view } : {}) } }, { scroll: false });
+      // Keep the List / Map choice (?view=map) and the grouping (?group=building, see AccommodationResults) when the filters change.
+      const current = new URLSearchParams(window.location.search);
+      const view = current.get("view");
+      const group = current.get("group");
+      router.push({ pathname, query: { ...toAccommodationQuery(q), ...(view === "map" ? { view } : {}), ...(group === "building" ? { group } : {}) } }, { scroll: false });
     });
 
   const submit = (e: FormEvent) => {

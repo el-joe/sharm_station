@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RoomRequest;
 use App\Models\Room;
 use App\Services\BuildingService;
+use App\Services\IcalService;
 use App\Services\PriceMatrixService;
 use App\Services\RoomService;
 use App\Services\SeasonPriceService;
@@ -29,6 +30,7 @@ class RoomController extends Controller
         private readonly SeasonPriceService $seasons,
         private readonly PriceMatrixService $matrix,
         private readonly SettingsService $settings,
+        private readonly IcalService $ical,
     ) {}
 
     public function index(Request $request): View
@@ -98,6 +100,8 @@ class RoomController extends Controller
             'matrix' => $room->exists ? $this->matrix->editorData($room) : null,
             'canPrice' => Gate::allows('manage-prices'),
             'commission' => $this->settings->previewCommission(),
+            'icalUrl' => $room->exists ? $this->ical->exportUrl($room) : null,
+            'icalFeeds' => $room->exists ? $room->icalFeeds()->get() : collect(),
         ];
     }
 }

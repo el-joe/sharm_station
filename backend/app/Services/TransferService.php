@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\DTOs\Pricing\QuoteResultData;
 use App\DTOs\Transfer\TransferQuoteRequestData;
+use App\Enums\NotificationEvent;
 use App\Enums\TransferStatus;
 use App\Models\Booking;
 use App\Models\TransferFixedRoute;
@@ -14,6 +15,8 @@ use App\Repositories\Contracts\TransferFixedRouteRepositoryInterface;
 use App\Repositories\Contracts\TransferHubRepositoryInterface;
 use App\Repositories\Contracts\TransferRequestRepositoryInterface;
 use App\Repositories\Contracts\VehicleTypeRepositoryInterface;
+use App\Services\Notifications\NotificationContextFactory;
+use App\Services\Notifications\NotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -27,6 +30,8 @@ class TransferService
         private readonly VehicleTypeRepositoryInterface $vehicles,
         private readonly TransferFixedRouteRepositoryInterface $fixedRoutes,
         private readonly TransferRequestRepositoryInterface $requests,
+        private readonly NotificationService $notifications,
+        private readonly NotificationContextFactory $notificationContext,
     ) {}
 
     /**
@@ -81,7 +86,23 @@ class TransferService
      */
     public function updateRequest(TransferRequest $request, array $attributes): TransferRequest
     {
-        return $this->requests->update($request, $attributes);
+        $before = $request->status;
+        $request = $this->requests->update($request, $attributes);
+
+        if ($request->status !== $before && $request->booking !== null) {
+            $booking = $request->booking->setRelation('transferRequest', $request->loadMissing(['hub', 'vehicleType']));
+            $locale = $booking->locale === 'it' ? 'it' : 'en';
+
+            $this->notifications->booking(NotificationEvent::TransferStatusChanged, $booking, [
+                'transfer_status' => $request->status->label(),
+                'transfer_details' => $this->notificationContext->transferDetails($booking, $locale),
+                'driver_name' => (string) $request->driver_name,
+                'driver_phone' => (string) $request->driver_phone,
+                'car_plate' => (string) $request->car_plate,
+            ]);
+        }
+
+        return $request;
     }
 
     /**

@@ -51,6 +51,8 @@
             $finance ? ['label' => 'Payment methods', 'url' => route('admin.payment-methods.index'), 'active' => request()->routeIs('admin.payment-methods.*')] : null,
             $finance ? ['label' => 'Currencies', 'url' => route('admin.currencies.index'), 'active' => request()->routeIs('admin.currencies.*')] : null,
             $settings ? ['label' => 'MCP access', 'url' => route('admin.mcp.index'), 'active' => request()->routeIs('admin.mcp.*')] : null,
+            $settings ? ['label' => 'Notifications', 'url' => route('admin.notifications.index'), 'active' => request()->routeIs('admin.notifications.*')] : null,
+            ['label' => 'Security (2FA)', 'url' => route('admin.two-factor.show'), 'active' => request()->routeIs('admin.two-factor.*')],
             $manageUsers ? ['label' => 'Users and roles', 'url' => route('admin.users.index'), 'active' => request()->routeIs('admin.users.*')] : null,
             $manageUsers ? ['label' => 'Activity log', 'url' => route('admin.activity.index'), 'active' => request()->routeIs('admin.activity.*')] : null,
         ]))],

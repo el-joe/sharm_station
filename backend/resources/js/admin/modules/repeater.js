@@ -1,5 +1,3 @@
-import Sortable from 'sortablejs';
-
 /**
  * Generic repeatable rows (unit options, private tiers, seasons, itinerary days and items).
  *
@@ -79,12 +77,13 @@ function setup(repeater, boot) {
     });
 
     if (repeater.hasAttribute('data-sortable')) {
-        Sortable.create(list, {
+        // SortableJS is loaded only on pages with sortable rows.
+        import('sortablejs').then(({ default: Sortable }) => Sortable.create(list, {
             handle: '[data-drag-handle]',
             draggable: '[data-repeater-row]',
             animation: 150,
             onEnd: () => renumber(repeater),
-        });
+        }));
     }
 
     renumber(repeater);

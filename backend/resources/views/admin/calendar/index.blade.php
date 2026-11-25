@@ -29,12 +29,32 @@
         </div>
     </form>
 
+    @if ($canManageBookings && $grid['holds'] !== [])
+        <x-admin.card title="Rooms on hold" subtitle="Unpaid bookings holding rooms until their payment deadline. Releasing a hold cancels the booking and frees its nights now." class="mb-4">
+            <ul class="divide-y divide-ink-100 text-sm">
+                @foreach ($grid['holds'] as $hold)
+                    <li class="flex flex-wrap items-center gap-3 py-2">
+                        <a href="{{ route('admin.bookings.show', $hold['id']) }}" class="font-semibold text-primary-700 hover:underline">{{ $hold['reference'] }}</a>
+                        <span>{{ $hold['lead_name'] }}</span>
+                        <span class="text-ink-500">{{ implode(', ', $hold['rooms']) }}</span>
+                        @if ($hold['held_until'])<span class="text-ink-500">held until {{ $hold['held_until']->format('j M H:i') }}</span>@endif
+                        <form method="POST" action="{{ route('admin.bookings.release-hold', $hold['id']) }}" class="ml-auto" data-confirm="Release the hold of {{ $hold['reference'] }}? The booking is cancelled and its rooms become free." data-confirm-title="Release hold" data-confirm-ok="Release">
+                            @csrf
+                            <button type="submit" class="btn-ghost text-sm">Release hold</button>
+                        </form>
+                    </li>
+                @endforeach
+            </ul>
+        </x-admin.card>
+    @endif
+
     <x-admin.card :padding="false">
-        <div class="border-b border-ink-100 px-4 py-3 text-sm text-ink-700" data-occupancy-hint aria-live="polite">Click a free night, then another night of the same room to block the range.</div>
+        <div class="border-b border-ink-100 px-4 py-3 text-sm text-ink-700" data-occupancy-hint aria-live="polite">Click a free night, then another night of the same room to block the range.@if ($canManageBookings) Drag a booking to another room or date to move it.@endif</div>
         @if ($grid['buildings'] === [])
             <p class="p-8 text-center text-sm text-ink-500">No rooms yet. <a href="{{ route('admin.rooms.create') }}" class="btn-link">Add a room</a></p>
         @else
-            <div class="overflow-x-auto" data-occupancy data-url="{{ route('admin.calendar.block') }}" data-cell-classes='@json($cellClasses)'>
+            <div class="overflow-x-auto" data-occupancy data-url="{{ route('admin.calendar.block') }}" data-cell-classes='@json($cellClasses)'
+                 @if ($canManageBookings) data-occupancy-move="{{ route('admin.calendar.move') }}" @endif>
                 <table class="occupancy-grid w-max min-w-full text-xs">
                     <thead>
                         <tr>
@@ -58,11 +78,12 @@
                                     </th>
                                     @foreach ($room['cells'] as $index => $cell)
                                         @php($past = $grid['days'][$index]['past'])
-                                        <td class="day-cell">
+                                        <td class="day-cell" data-drop-room="{{ $room['id'] }}" data-drop-date="{{ $cell['date'] }}">
                                             @if ($cell['booking'])
                                                 @php($label = ucfirst($cell['status']).' · '.$cell['booking']['reference'].' · '.$cell['booking']['lead_name'])
                                                 @if ($canManageBookings)
-                                                    <a href="{{ route('admin.bookings.show', $cell['booking']['id']) }}" title="{{ $label }}" aria-label="{{ $room['name'] }} {{ $cell['date'] }}: {{ $label }}"
+                                                    <a href="{{ route('admin.bookings.show', $cell['booking']['id']) }}" title="{{ $label }} (drag to move)" aria-label="{{ $room['name'] }} {{ $cell['date'] }}: {{ $label }}"
+                                                       draggable="true" data-move-booking="{{ $cell['booking']['id'] }}" data-move-room="{{ $room['id'] }}" data-move-date="{{ $cell['date'] }}" data-move-check-in="{{ $cell['booking']['check_in'] }}"
                                                        class="flex h-9 items-center justify-center rounded-[6px] text-[10px] font-semibold {{ $cellClasses[$cell['status']] }}">{{ substr($cell['booking']['reference'], 3) }}</a>
                                                 @else
                                                     <span title="{{ $label }}" class="flex h-9 items-center justify-center rounded-[6px] text-[10px] font-semibold {{ $cellClasses[$cell['status']] }}">{{ substr($cell['booking']['reference'], 3) }}</span>
@@ -71,6 +92,7 @@
                                                 <button type="button" data-cell data-room="{{ $room['id'] }}" data-date="{{ $cell['date'] }}" data-status="{{ $cell['status'] }}"
                                                         @disabled($past || $cell['status'] === 'held' || $cell['status'] === 'booked')
                                                         aria-label="{{ $room['name'] }} {{ $cell['date'] }}: {{ $cell['status'] }}"
+                                                        @if ($cell['imported']) title="Closed by an imported calendar (iCal)" @endif
                                                         class="flex h-9 w-full items-center justify-center rounded-[6px] border border-ink-100 {{ $cellClasses[$cell['status']] }} {{ $past ? 'cursor-not-allowed opacity-40' : '' }}">
                                                     {!! $cell['status'] === 'blocked' ? '<span aria-hidden="true">✕</span>' : '' !!}
                                                 </button>

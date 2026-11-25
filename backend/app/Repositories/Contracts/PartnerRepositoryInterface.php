@@ -53,4 +53,11 @@ interface PartnerRepositoryInterface extends BaseRepositoryInterface
      * @return Collection<int, Partner>
      */
     public function findMany(array $ids): Collection;
+
+    /**
+     * Active partners that want the monthly statement email.
+     *
+     * @return Collection<int, Partner>
+     */
+    public function activeWithStatementEmails(): Collection;
 }

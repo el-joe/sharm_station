@@ -29,6 +29,8 @@ class RoomIndexRequest extends FormRequest
             'check_in' => ['nullable', 'required_with:check_out', 'date_format:Y-m-d', 'after_or_equal:today'],
             'check_out' => ['nullable', 'required_with:check_in', 'date_format:Y-m-d', 'after:check_in'],
             'free_cancellation' => ['nullable', 'boolean'],
+            'only_available' => ['nullable', 'boolean'],
+            'group_by' => ['nullable', Rule::in(['building'])],
             'sort' => ['nullable', Rule::in(['recommended', 'price_asc', 'price_desc'])],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:48'],
             'page' => ['nullable', 'integer', 'min:1'],

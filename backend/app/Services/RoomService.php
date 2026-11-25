@@ -6,6 +6,7 @@ use App\DTOs\Room\RoomData;
 use App\DTOs\Room\RoomFilterData;
 use App\Enums\ActivityAction;
 use App\Enums\RoomAvailabilityStatus;
+use App\Enums\RoomUnavailableReason;
 use App\Exceptions\DomainValidationException;
 use App\Models\Room;
 use App\Models\RoomAvailability;
@@ -31,12 +32,32 @@ class RoomService
             $filters->priceMax !== null ? $this->currencies->toEur($filters->priceMax) : null,
         );
 
-        return $this->rooms->paginateBookable($filters);
+        $page = $this->rooms->paginateBookable($filters);
+
+        if ($filters->checksAvailability()) {
+            foreach ($page->items() as $room) {
+                $room->setAttribute('unavailable_reasons', array_map(
+                    fn (RoomUnavailableReason $reason): string => $reason->value,
+                    $room->unavailableReasons($filters->nights(), $filters->guests),
+                ));
+            }
+        }
+
+        return $page;
     }
 
     public function findBookable(int $id): ?Room
     {
         return $this->rooms->findBookable($id);
+    }
+
+    /**
+     * @param  list<int>  $ids
+     * @return Collection<int, Room>
+     */
+    public function findBookableMany(array $ids): Collection
+    {
+        return $this->rooms->findBookableMany($ids);
     }
 
     /**
@@ -120,7 +141,7 @@ class RoomService
      * Occupancy grid of every room for one month (A1): rows grouped by building, one cell per night with
      * free / held / booked / blocked and the booking reference. Two queries, whatever the number of rooms.
      *
-     * @return array{days: list<array{date: string, day: int, weekday: string, weekend: bool, today: bool, past: bool}>, buildings: list<array{id: int, name: string, rooms: list<array<string, mixed>>}>, totals: array<string, int>}
+     * @return array{days: list<array{date: string, day: int, weekday: string, weekend: bool, today: bool, past: bool}>, buildings: list<array{id: int, name: string, rooms: list<array<string, mixed>>}>, totals: array<string, int>, holds: list<array<string, mixed>>}
      */
     public function occupancy(CarbonImmutable $month, ?int $buildingId = null): array
     {
@@ -147,6 +168,7 @@ class RoomService
 
         $totals = ['free' => 0, 'held' => 0, 'booked' => 0, 'blocked' => 0];
         $buildings = [];
+        $holds = [];
 
         foreach ($rooms as $room) {
             $cells = [];
@@ -161,13 +183,20 @@ class RoomService
                     default => 'blocked',
                 };
                 $totals[$status]++;
+                $booking = in_array($status, ['booked', 'held'], true) ? $row?->booking : null;
                 $cells[] = [
                     'date' => $day['date'],
                     'status' => $status,
-                    'booking' => in_array($status, ['booked', 'held'], true) && $row?->booking !== null
-                        ? ['id' => $row->booking->id, 'reference' => $row->booking->reference, 'lead_name' => $row->booking->lead_name]
+                    'imported' => $row?->room_ical_feed_id !== null,
+                    'booking' => $booking !== null
+                        ? ['id' => $booking->id, 'reference' => $booking->reference, 'lead_name' => $booking->lead_name, 'check_in' => $booking->check_in?->toDateString()]
                         : null,
                 ];
+
+                if ($status === 'held' && $booking !== null) {
+                    $holds[$booking->id] ??= ['id' => $booking->id, 'reference' => $booking->reference, 'lead_name' => $booking->lead_name, 'held_until' => $row->held_until, 'rooms' => []];
+                    $holds[$booking->id]['rooms'][$room->id] = (string) $room->name;
+                }
             }
 
             $buildings[$room->building_id] ??= ['id' => $room->building_id, 'name' => (string) $room->building?->name, 'rooms' => []];
@@ -180,7 +209,7 @@ class RoomService
             ];
         }
 
-        return ['days' => $days, 'buildings' => array_values($buildings), 'totals' => $totals];
+        return ['days' => $days, 'buildings' => array_values($buildings), 'totals' => $totals, 'holds' => array_values($holds)];
     }
 
     public function findOrFail(int $id): Room

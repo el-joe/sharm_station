@@ -13,6 +13,7 @@ final readonly class QuoteRequestData
      * @param  list<int>  $childAges
      * @param  list<UnitSelectionData>  $units
      * @param  list<AddonSelectionData>  $addons
+     * @param  list<RoomOptionSelectionData>  $roomOptions  optional rooms of multi-day trips and packages (SRS 7.1)
      */
     public function __construct(
         public BookingType $bookingType,
@@ -26,6 +27,7 @@ final readonly class QuoteRequestData
         public string $currency = 'EUR',
         public ?string $nationalityCode = null,
         public ?int $nationalityGroupId = null,
+        public array $roomOptions = [],
     ) {}
 
     /**
@@ -47,6 +49,7 @@ final readonly class QuoteRequestData
             currency: $currency,
             nationalityCode: $nationalityCode,
             nationalityGroupId: $nationalityGroupId,
+            roomOptions: array_values(array_map(RoomOptionSelectionData::fromArray(...), $data['room_options'] ?? [])),
         );
     }
 

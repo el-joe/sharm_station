@@ -38,7 +38,8 @@ async function fillCheckout(page: Page, email?: string) {
 }
 
 async function submitCheckout(page: Page): Promise<{ reference: string; accessToken?: string; body: Record<string, unknown> }> {
-  const created = page.waitForResponse((r) => /\/api\/v1\/bookings(\?|$)/.test(r.url()) && r.request().method() === "POST");
+  // Guests post to the API directly, signed-in visitors through the session proxy (/api/proxy/bookings).
+  const created = page.waitForResponse((r) => /\/api\/(v1|proxy)\/bookings(\?|$)/.test(r.url()) && r.request().method() === "POST");
   await page.getByRole("button", { name: "Continue to payment" }).click();
   const res = await created;
   expect(res.status(), await res.text()).toBe(201);

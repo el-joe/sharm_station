@@ -8,13 +8,13 @@ import { useLocale } from "next-intl";
 import { useEffect } from "react";
 
 /** Authenticated partner-panel query; 401 signs the user out, 403 (not an active partner / disabled) is shown by PartnerData. */
-export function usePartnerQuery<T>(key: unknown[], fn: (o: RequestOptions & { token: string }) => Promise<T>, enabled = true) {
+export function usePartnerQuery<T>(key: unknown[], fn: (o: RequestOptions) => Promise<T>, enabled = true) {
   const locale = useLocale() as Locale;
-  const { token, signOut } = useAuth();
+  const { hasSession, signOut } = useAuth();
   const query = useQuery({
-    queryKey: ["partner", ...key, token, locale],
-    queryFn: ({ signal }) => fn({ locale, token: token!, signal }),
-    enabled: Boolean(token) && enabled,
+    queryKey: ["partner", ...key, locale],
+    queryFn: ({ signal }) => fn({ locale, signal }),
+    enabled: hasSession && enabled,
     retry: (count, error) => !(error instanceof ApiError && [401, 403, 404, 422].includes(error.status)) && count < 1,
   });
   useEffect(() => {

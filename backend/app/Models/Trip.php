@@ -12,6 +12,7 @@ use App\Models\Concerns\HasProductPrices;
 use App\Models\Concerns\HasSeasonPrices;
 use App\Models\Concerns\HasTranslations;
 use App\Models\Concerns\LogsActivity;
+use App\Models\Concerns\RecordsSlugRedirects;
 use App\Models\Contracts\Priceable;
 use Database\Factories\TripFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -22,6 +23,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 #[Fillable([
     'type', 'destination_id', 'category', 'title', 'slug', 'summary', 'description', 'duration_hours', 'days', 'nights',
@@ -34,7 +36,7 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 class Trip extends Model implements Priceable
 {
     /** @use HasFactory<TripFactory> */
-    use HasAddons, HasChildPolicy, HasFactory, HasProductPrices, HasSeasonPrices, HasTranslations, LogsActivity;
+    use HasAddons, HasChildPolicy, HasFactory, HasProductPrices, HasSeasonPrices, HasTranslations, LogsActivity, RecordsSlugRedirects;
 
     /**
      * @var list<string>
@@ -185,5 +187,15 @@ class Trip extends Model implements Priceable
         }
 
         return $fields;
+    }
+
+    /**
+     * Optional rooms the customer can add (SRS 7.1), in display order.
+     *
+     * @return MorphMany<RoomOption, $this>
+     */
+    public function roomOptions(): MorphMany
+    {
+        return $this->morphMany(RoomOption::class, 'owner')->orderBy('stage_position')->orderBy('sort')->orderBy('id');
     }
 }

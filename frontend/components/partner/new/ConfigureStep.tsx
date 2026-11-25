@@ -1,5 +1,8 @@
 "use client";
 
+import { MultiRoomPlanner } from "@/components/accommodation/MultiRoomPlanner";
+import { splitRoomErrors, useMultiRoomStay, useRoomCombinations } from "@/components/accommodation/useMultiRoomStay";
+import { RoomOptionsPicker, roomOptionsPayload, type PickedRoomOption } from "@/components/booking/RoomOptionsPicker";
 import { UnitOptionCard } from "@/components/booking/UnitOptionCard";
 import { NationalityCombobox } from "@/components/nationality/NationalityCombobox";
 import { AppImage } from "@/components/ui/AppImage";
@@ -13,7 +16,7 @@ import { useCurrency } from "@/lib/currency";
 import { useDebounced, useToday } from "@/lib/hooks";
 import { useNationality } from "@/lib/nationality";
 import { firstAvailableDate, seasonForDate } from "@/lib/pricing";
-import { addDays, cn, parseISODate, round2, toISODate } from "@/lib/utils";
+import { addDays, cn, nightsBetween, parseISODate, round2, toISODate } from "@/lib/utils";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Check, Loader2 } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
@@ -27,6 +30,10 @@ export interface Configured {
   children: number;
   childAges: number[];
   subtitle: string;
+  /** Summary / client-step title when it differs from the catalogue item (multi-room stays: the building). */
+  title?: string;
+  /** Accommodation: slug of the building the rooms belong to (restores the configure step). */
+  building?: string;
 }
 
 function Card({ title, text, children }: { title: string; text?: string; children: ReactNode }) {
@@ -137,19 +144,19 @@ export function ConfigureStep({
 
 function useLiveQuote(request: Omit<PartnerQuoteRequest, "nationality_code"> | null, nationality: string) {
   const locale = useLocale() as Locale;
-  const { token } = useAuth();
+  const { hasSession } = useAuth();
   const { currency } = useCurrency();
   const debounced = useDebounced(request, 350);
   const query = useQuery({
-    queryKey: ["partner", "quote", debounced, nationality, token, locale, currency],
-    queryFn: ({ signal }) => api.partnerQuote({ ...debounced!, nationality_code: nationality }, { locale, currency, token: token!, signal }),
-    enabled: Boolean(debounced && token && nationality),
+    queryKey: ["partner", "quote", debounced, nationality, locale, currency],
+    queryFn: ({ signal }) => api.partnerQuote({ ...debounced!, nationality_code: nationality }, { locale, currency, signal }),
+    enabled: Boolean(debounced && hasSession && nationality),
     placeholderData: keepPreviousData,
     retry: false,
   });
   const errors = query.error instanceof ApiError ? (query.error.isValidation ? [...new Set(Object.values(query.error.errors).flat())] : [query.error.message]) : [];
   const stale = JSON.stringify(debounced) !== JSON.stringify(request);
-  return { quote: query.isError ? null : query.data, loading: query.isFetching || stale, errors };
+  return { quote: query.isError ? null : query.data, loading: query.isFetching || stale, errors, error: query.error };
 }
 
 function Layout({
@@ -160,17 +167,20 @@ function Layout({
   live,
   serviceLabel,
   onContinue,
+  blocked,
 }: {
   head: ReactNode;
   children: ReactNode;
   summaryTitle: string;
   summarySubtitle: string;
-  live: ReturnType<typeof useLiveQuote>;
+  live: Pick<ReturnType<typeof useLiveQuote>, "quote" | "loading" | "errors">;
   serviceLabel: string;
   onContinue: () => void;
+  /** The form itself is not complete (e.g. the room allocation is invalid). */
+  blocked?: boolean;
 }) {
   const t = useTranslations("partnerPanel.newBooking.configure");
-  const ready = Boolean(live.quote?.valid) && !live.loading && live.errors.length === 0;
+  const ready = !blocked && Boolean(live.quote?.valid) && !live.loading && live.errors.length === 0;
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="flex min-w-0 flex-col gap-5">
@@ -254,6 +264,7 @@ function TripConfig({
 }) {
   const t = useTranslations("partnerPanel.newBooking.configure");
   const tb = useTranslations("booking");
+  const tr = useTranslations("roomOptions");
   const format = useFormatter();
   const { format: money } = useCurrency();
   const today = useToday();
@@ -264,6 +275,19 @@ function TripConfig({
   const [childAges, setChildAges] = useState<(number | null)[]>(initial?.childAges ?? []);
   const [units, setUnits] = useState<Record<number, number>>(() => Object.fromEntries((init?.units ?? []).map((u) => [u.unit_option_id, u.quantity])));
   const [addons, setAddons] = useState<number[]>(() => init?.addons?.map((a) => a.addon_id) ?? trip.addons.filter((a) => a.required).map((a) => a.id));
+  // Optional rooms (B2.3): back from the client step, rebuild who sleeps where (children matched by age).
+  const [roomPicks, setRoomPicks] = useState<PickedRoomOption[]>(() =>
+    (init?.room_options ?? []).map((r, i) => {
+      const ages = initial?.childAges ?? [];
+      const free = ages.map((_, j) => j);
+      const children = r.children_ages.flatMap((age) => {
+        const k = free.findIndex((j) => ages[j] === age);
+        return k >= 0 ? free.splice(k, 1) : [];
+      });
+      return { key: `init-${i}`, option_id: r.room_option_id, adults: r.adults, children };
+    }),
+  );
+  const roomOptions = roomOptionsPayload(roomPicks, trip.room_options, adults, childAges);
   const perUnit = trip.pricing_mode === "per_unit";
 
   const travelDate = dateState ?? (today ? firstAvailableDate(trip, bookingType, parseISODate(today)) : "");
@@ -284,6 +308,7 @@ function TripConfig({
           child_ages: childAges as number[],
           ...(perUnit && item.product_type === "trip" ? { units: unitList } : {}),
           addons: addons.filter((id) => visibleAddons.some((a) => a.id === id)).map((id) => ({ addon_id: id, quantity: 1 })),
+          ...(roomOptions.length ? { room_options: roomOptions } : {}),
         }
       : null;
   const live = useLiveQuote(request, nationality);
@@ -373,6 +398,12 @@ function TripConfig({
         </Card>
       )}
 
+      {trip.room_options.length > 0 && (
+        <Card title={tr("title")} text={pct > 0 ? t("roomsCommission", { percent: pct }) : undefined}>
+          <RoomOptionsPicker options={trip.room_options} adults={adults} childAges={childAges} value={roomPicks} onChange={setRoomPicks} tone="partner" idPrefix="cfg-ro" />
+        </Card>
+      )}
+
       {visibleAddons.length > 0 && (
         <Card title={t("addons")} text={pct > 0 ? t("addonsText", { percent: pct }) : undefined}>
           <ul className="flex flex-col gap-2">
@@ -418,6 +449,11 @@ function TripConfig({
 
 /* ----------------------------------------------------------------- accommodation */
 
+/**
+ * Accommodation (B2.1 in the partner panel): building, stay and party, the website's best combinations and
+ * RoomAllocationBoard (useMultiRoomStay + MultiRoomPlanner), extra beds / cots, and a live POST /partner/quotes with
+ * rooms[] priced for the client's nationality. Accommodation has no commission: the quote says so.
+ */
 function RoomConfig({
   item,
   nationality,
@@ -435,6 +471,8 @@ function RoomConfig({
 }) {
   const t = useTranslations("partnerPanel.newBooking.configure");
   const tb = useTranslations("booking");
+  const tm = useTranslations("multiRoom");
+  const locale = useLocale() as Locale;
   const format = useFormatter();
   const today = useToday();
   const init = initial?.request;
@@ -442,44 +480,151 @@ function RoomConfig({
   const [checkOut, setCheckOut] = useState<string | null>(init?.check_out ?? null);
   const [adults, setAdults] = useState(initial?.adults ?? 2);
   const [childAges, setChildAges] = useState<(number | null)[]>(initial?.childAges ?? []);
+  const [buildingState, setBuilding] = useState<string | null>(initial?.building ?? null);
+
+  // Buildings to choose from, and the one of the room picked in the catalogue.
+  const groups = useQuery({
+    queryKey: ["partner", "buildings", locale],
+    queryFn: ({ signal }) => api.rooms({ group_by: "building" }, { locale, signal }),
+    staleTime: 10 * 60_000,
+  });
+  const buildings = (groups.data?.groups ?? []).map((g) => g.building);
+  const fromGroups = groups.data?.groups?.find((g) => g.rooms.some((r) => r.id === item.id))?.building.slug;
+  const roomDetail = useQuery({
+    queryKey: ["partner", "room", item.id, locale],
+    queryFn: ({ signal }) => api.room(item.id, { locale, signal }),
+    enabled: !buildingState && groups.isFetched && !fromGroups,
+    staleTime: 10 * 60_000,
+  });
+  const slug = buildingState ?? fromGroups ?? roomDetail.data?.building.slug ?? "";
+  // Room cards (capacity, extra beds / cots and prices) for the client's nationality.
+  const building = useQuery({
+    queryKey: ["partner", "building", slug, locale, nationality],
+    queryFn: ({ signal }) => api.building(slug, { locale, nationality, signal }),
+    enabled: Boolean(slug),
+    staleTime: 5 * 60_000,
+    placeholderData: keepPreviousData,
+  });
+  const rooms = building.data?.slug === slug ? building.data.rooms : [];
+  const buildingName = building.data?.slug === slug ? building.data.name : (buildings.find((b) => b.slug === slug)?.name ?? "");
+
   const base = today ? parseISODate(today) : null;
   const inDate = checkIn ?? (base ? toISODate(addDays(base, 7)) : "");
   const outDate = checkOut ?? (inDate ? toISODate(addDays(parseISODate(inDate), 2)) : "");
+  const nights = inDate && outDate && outDate > inDate ? nightsBetween(inDate, outDate) : 0;
+  const datesOk = Boolean(inDate && outDate && outDate > inDate && (!today || inDate >= today));
   const allAges = childAges.every((a) => a != null);
+  const knownAges = childAges.filter((a): a is number => a != null);
+
+  // Start from the room chosen in the catalogue with the whole party in it (or the saved allocation).
+  const stay = useMultiRoomStay({
+    rooms,
+    adults,
+    childAges,
+    initial: init?.rooms ?? [{ room_id: item.id, adults, children_ages: knownAges, extra_beds: 0, cots: 0 }],
+  });
+  const combos = useRoomCombinations({ building: slug, checkIn: inDate, checkOut: outDate, adults, childAges: knownAges, nationality, enabled: datesOk && allAges });
+
   const request: Omit<PartnerQuoteRequest, "nationality_code"> | null =
-    inDate && outDate && outDate > inDate && allAges
-      ? { product_type: "room", id: item.id, check_in: inDate, check_out: outDate, adults, children: childAges.length, child_ages: childAges as number[] }
+    datesOk && allAges && stay.allocation.length > 0
+      ? { product_type: "room", check_in: inDate, check_out: outDate, adults, children: childAges.length, child_ages: knownAges, rooms: stay.allocation }
       : null;
   const live = useLiveQuote(request, nationality);
+  const { roomErrors, errors: stayErrors } = splitRoomErrors(live.error);
   const d = (iso: string) => (iso ? format.dateTime(parseISODate(iso), { day: "numeric", month: "short" }) : "");
-  const subtitle = [inDate && outDate ? `${d(inDate)} – ${d(outDate)}` : "", t("party", { adults, children: childAges.length })].filter(Boolean).join(" · ");
+  const subtitle = [
+    inDate && outDate ? `${d(inDate)} – ${d(outDate)}` : "",
+    stay.boardRooms.length ? tm("roomsCount", { count: stay.boardRooms.length }) : "",
+    t("party", { adults, children: childAges.length }),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const title = buildingName || item.title;
+
+  const setParty = (nextAdults: number, nextAges: (number | null)[]) => {
+    setAdults(nextAdults);
+    setChildAges(nextAges);
+    stay.clearApplied();
+  };
 
   return (
     <Layout
       head={head}
-      summaryTitle={item.title}
+      summaryTitle={title}
       summarySubtitle={subtitle}
       live={live}
       serviceLabel={serviceLabel}
-      onContinue={() => live.quote && request && onContinue({ request, quote: live.quote, adults, children: childAges.length, childAges: childAges as number[], subtitle })}
+      blocked={!request || stay.clientErrors.length > 0}
+      onContinue={() =>
+        live.quote && request && onContinue({ request, quote: live.quote, adults, children: childAges.length, childAges: knownAges, subtitle, title, building: slug || undefined })
+      }
     >
       <Card title={t("stay")} text={t("noCommissionText")}>
         <div className="flex flex-col gap-4">
+          <Field label={t("building")} htmlFor="cfg-building" required>
+            <Select
+              id="cfg-building"
+              value={slug}
+              onChange={(e) => {
+                if (e.target.value === slug) return;
+                setBuilding(e.target.value);
+                stay.reset();
+              }}
+              disabled={!buildings.length}
+            >
+              {!slug && <option value="">{t("chooseBuilding")}</option>}
+              {buildings.map((b) => (
+                <option key={b.slug} value={b.slug}>
+                  {[b.name, b.location].filter(Boolean).join(" · ")}
+                </option>
+              ))}
+            </Select>
+          </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={t("checkIn")} htmlFor="cfg-in" required>
-              <Input id="cfg-in" type="date" value={inDate} onChange={(e) => setCheckIn(e.target.value || null)} required />
+              <Input
+                id="cfg-in"
+                type="date"
+                value={inDate}
+                min={today ?? undefined}
+                onChange={(e) => {
+                  const v = e.target.value || null;
+                  setCheckIn(v);
+                  if (v && outDate <= v) setCheckOut(toISODate(addDays(parseISODate(v), 1)));
+                }}
+                required
+              />
             </Field>
             <Field label={t("checkOut")} htmlFor="cfg-out" required error={outDate && inDate && outDate <= inDate ? t("checkOutAfter") : undefined}>
               <Input id="cfg-out" type="date" value={outDate} min={inDate || undefined} onChange={(e) => setCheckOut(e.target.value || null)} required />
             </Field>
           </div>
           <div className="divide-y divide-ink-100">
-            <Counter label={tb("adults")} value={adults} min={1} max={20} onChange={setAdults} />
-            <Counter label={tb("children")} value={childAges.length} min={0} max={10} onChange={(n) => setChildAges((prev) => Array.from({ length: n }, (_, i) => prev[i] ?? null))} />
+            <Counter label={tb("adults")} value={adults} min={1} max={20} onChange={(n) => setParty(n, childAges)} />
+            <Counter label={tb("children")} value={childAges.length} min={0} max={10} onChange={(n) => setParty(adults, Array.from({ length: n }, (_, i) => childAges[i] ?? null))} />
           </div>
-          <ChildAges ages={childAges} onChange={setChildAges} idPrefix="room" />
+          <ChildAges ages={childAges} onChange={(ages) => setParty(adults, ages)} idPrefix="room" />
+          {!allAges && <p className="text-sm text-warning">{t("agesRequired")}</p>}
         </div>
       </Card>
+
+      <section className="flex flex-col gap-5 rounded-card border border-ink-100 bg-white p-5 shadow-card" aria-labelledby="cfg-rooms-title">
+        <div>
+          <h2 id="cfg-rooms-title" className="text-h4 text-ink-900">
+            {t("roomsTitle")}
+          </h2>
+          <p className="mt-1 text-sm text-ink-500">{t("roomsText", { building: buildingName || "…" })}</p>
+        </div>
+        {building.isError ? (
+          <p className="rounded-card bg-warning-100 p-4 text-ink-900" role="alert">
+            {t("loadError")}
+          </p>
+        ) : !rooms.length ? (
+          <div className="h-40 animate-pulse rounded-card bg-ink-100" aria-busy="true" />
+        ) : (
+          <MultiRoomPlanner stay={stay} combos={combos} agesOk={allAges} nights={nights} serverRoomErrors={roomErrors} serverErrors={stayErrors} tone="partner" idPrefix="cfg-mr" />
+        )}
+      </section>
     </Layout>
   );
 }

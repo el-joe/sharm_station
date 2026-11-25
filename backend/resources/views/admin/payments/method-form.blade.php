@@ -9,7 +9,7 @@
     <form id="method-form" method="POST" action="{{ $method->exists ? route('admin.payment-methods.update', $method) : route('admin.payment-methods.store') }}" novalidate class="space-y-4">
         @csrf
         @if ($method->exists) @method('PUT') @endif
-        <x-admin.form-section title="Method" description="Gateway keys are read from the server environment (.env), never entered here.">
+        <x-admin.form-section title="Method" description="Gateway keys are read from the server environment (.env), never entered here: stripe = STRIPE_SECRET + STRIPE_WEBHOOK_SECRET, paypal = PAYPAL_CLIENT_ID + PAYPAL_CLIENT_SECRET + PAYPAL_WEBHOOK_ID. Online methods stay hidden from customers until their keys are set.">
             <x-admin.translatable name="name" label="Name" :value="$method->getTranslations('name')" required-locale="en" span="md:col-span-4" />
             <x-admin.input name="code" label="Code" :value="$method->code" hint="Leave empty to generate." span="md:col-span-2" />
             <x-admin.select name="type" label="Type" :options="\App\Enums\PaymentMethodType::options()" :selected="$method->type" :select2="false" span="md:col-span-2" />

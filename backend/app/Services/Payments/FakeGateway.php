@@ -3,6 +3,7 @@
 namespace App\Services\Payments;
 
 use App\DTOs\Payment\CheckoutSessionData;
+use App\DTOs\Payment\RefundResultData;
 use App\DTOs\Payment\WebhookEventData;
 use App\Models\Booking;
 use App\Models\Payment;
@@ -11,29 +12,38 @@ use Illuminate\Support\Str;
 
 /**
  * Local gateway for development and tests. The "checkout" sends the customer straight back to the booking page;
- * a webhook signed with HMAC-SHA256 (header X-Fake-Signature) confirms or fails the payment.
+ * a webhook signed with HMAC-SHA256 (header X-Fake-Signature) confirms or fails the payment. Refunds always succeed.
  *
  * Webhook body: {"type": "payment.succeeded"|"payment.failed", "reference": "<checkout reference>", "transaction_id": "..."}
  */
 class FakeGateway implements PaymentGateway
 {
-    public function __construct(private readonly string $webhookSecret) {}
+    public function __construct(
+        private readonly string $webhookSecret,
+        private readonly bool $enabled = true,
+    ) {}
+
+    public function isConfigured(): bool
+    {
+        return $this->enabled;
+    }
 
     public function createCheckout(Booking $booking, Payment $payment, PaymentMethod $method): CheckoutSessionData
     {
         $reference = 'fake_cs_'.Str::lower(Str::random(24));
-        $returnUrl = str_replace('{reference}', $booking->reference, (string) config('payments.return_url'));
 
         return new CheckoutSessionData(
             reference: $reference,
-            url: $returnUrl.(str_contains($returnUrl, '?') ? '&' : '?').http_build_query(['payment' => 'fake', 'session' => $reference]),
+            url: ReturnUrls::page($booking, ['payment' => 'fake', 'session' => $reference]),
             expiresAt: now()->addHour()->toIso8601String(),
         );
     }
 
-    public function verifyWebhook(string $payload, ?string $signature): bool
+    public function verifyWebhook(string $payload, array $headers): bool
     {
-        return $signature !== null && $signature !== '' && hash_equals($this->sign($payload), $signature);
+        $signature = $headers['x-fake-signature'] ?? '';
+
+        return $signature !== '' && hash_equals($this->sign($payload), $signature);
     }
 
     public function parseWebhook(string $payload): WebhookEventData
@@ -51,6 +61,16 @@ class FakeGateway implements PaymentGateway
             },
             transactionId: $event['transaction_id'] ?? null,
         );
+    }
+
+    public function supportsRefunds(): bool
+    {
+        return true;
+    }
+
+    public function refund(Payment $payment, float $amountInCurrency): RefundResultData
+    {
+        return new RefundResultData('fake_re_'.Str::lower(Str::random(20)));
     }
 
     public function sign(string $payload): string

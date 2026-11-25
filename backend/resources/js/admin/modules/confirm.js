@@ -13,7 +13,7 @@ function build() {
     modal.innerHTML = `
         <div class="card w-full max-w-md p-6">
             <h2 class="text-xl text-ink-900" data-title>Are you sure?</h2>
-            <p class="mt-2 text-sm text-ink-700" data-message></p>
+            <p class="mt-2 whitespace-pre-line text-sm text-ink-700" data-message></p>
             <div class="mt-6 flex justify-end gap-3">
                 <button type="button" class="btn-ghost" data-cancel>Cancel</button>
                 <button type="button" class="btn-danger" data-ok>Delete</button>

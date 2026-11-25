@@ -7,6 +7,7 @@ use App\Enums\PricingMode;
 use App\Models\Contracts\Priceable;
 use App\Models\Package;
 use App\Models\Room;
+use App\Models\RoomOption;
 use App\Models\SeasonPrice;
 use App\Models\Trip;
 use App\Services\CurrencyService;
@@ -53,6 +54,42 @@ trait PresentsPrices
     protected function groupBasePrice(Priceable $priceable, string $field): ?array
     {
         return $this->money(app(PriceResolver::class)->base($priceable, $this->nationalityGroupId())->price($field));
+    }
+
+    /**
+     * Optional rooms of a multi-day trip or package (SRS 7.1) with the group's base price (the quote applies the
+     * season of the travel date). $nights maps the stage position (0 for trips) to its nights.
+     *
+     * @param  iterable<RoomOption>  $options
+     * @param  array<int, int>  $nights
+     * @return list<array<string, mixed>>
+     */
+    protected function roomOptionsPayload(iterable $options, array $nights): array
+    {
+        $payload = [];
+
+        foreach ($options as $option) {
+            if (! $option->is_active) {
+                continue;
+            }
+
+            $payload[] = [
+                'id' => $option->id,
+                'stage_position' => $option->stage_position,
+                'unit_type' => $option->unit_type->value,
+                'unit_type_label' => $option->unit_type->label(),
+                'name' => $option->name,
+                'stars' => $option->stars,
+                'pricing_mode' => $option->pricing_mode->value,
+                'price_period' => $option->price_period->value,
+                'price' => $this->groupBasePrice($option, 'price'),
+                'nights' => $nights[(int) ($option->stage_position ?? 0)] ?? null,
+                'capacity' => ['max_adults' => $option->max_adults, 'max_children' => $option->max_children, 'max_total' => $option->max_total],
+                'max_quantity' => $option->max_quantity,
+            ];
+        }
+
+        return $payload;
     }
 
     /**

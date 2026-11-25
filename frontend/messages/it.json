@@ -249,7 +249,17 @@
     "stars": "{count} stelle",
     "taxExtraPrefix": "+",
     "taxExtraSuffix": "di tasse e oneri a notte",
-    "taxNotIncluded": "Tasse non incluse"
+    "taxNotIncluded": "Tasse non incluse",
+    "unavailable": {
+      "booked": "Occupata in queste date",
+      "closed": "Chiusa in queste date",
+      "min_stay": "Soggiorno troppo breve o troppo lungo",
+      "capacity": "Troppo piccola per il gruppo"
+    },
+    "unavailableBadge": "Non disponibile",
+    "unavailableAria": "Non disponibile: {reason}",
+    "viewRoom": "Vedi camera",
+    "extraBeds": "{count, plural, one {# letto aggiuntivo disponibile} other {# letti aggiuntivi disponibili}}"
   },
   "reviews": {
     "title": "Cosa dicono i viaggiatori",
@@ -513,7 +523,11 @@
     "totalPending": "Totale (età bambino mancante)",
     "payToday": "Paghi oggi ({percent}%)",
     "balanceLater": "Saldo dopo",
-    "discount": "Codice promo {code}"
+    "discount": "Codice promo {code}",
+    "extraBed": "Letto aggiuntivo · {count} × {price}",
+    "cot": "Culla · {count} × {price}",
+    "roomHeading": "Camera {n} · {name}",
+    "roomSubtotal": "Totale camera {n}"
   },
   "accommodation": {
     "crumb": "Alloggi",
@@ -538,7 +552,13 @@
     "viewMap": "Mappa",
     "mapLabel": "Mappa delle strutture trovate",
     "mapListTitle": "Camere sulla mappa",
-    "mapUnmapped": "{count, plural, one {# camera non ha} other {# camere non hanno}} ancora una posizione sulla mappa e compaiono solo nell'elenco."
+    "mapUnmapped": "{count, plural, one {# camera non ha} other {# camere non hanno}} ancora una posizione sulla mappa e compaiono solo nell'elenco.",
+    "groupByBuilding": "Raggruppa per struttura",
+    "groupAvailable": "{available} di {total} {total, plural, one {camera disponibile} other {camere disponibili}}",
+    "groupNoneAvailable": "Nessuna camera disponibile per questa ricerca",
+    "bookSeveral": "Prenota più camere",
+    "unavailableTitle": "Non disponibili per la tua ricerca",
+    "unavailableText": "Queste camere non sono prenotabili per le date o il gruppo scelti. Cambia la ricerca per vederle di nuovo."
   },
   "roomPage": {
     "taxIncluded": "Tasse incluse",
@@ -563,7 +583,14 @@
     "maxGuests": "Questa camera ospita fino a {count} persone.",
     "taxIncluded": "Tasse incluse",
     "checkDates": "Verifica date",
-    "taxNotIncluded": "Tasse e oneri locali sono aggiunti al totale."
+    "taxNotIncluded": "Tasse e oneri locali sono aggiunti al totale.",
+    "extraBeds": "Letti aggiuntivi",
+    "extraBedsHint": "{price} a notte ciascuno · aggiunge un posto",
+    "cots": "Culle",
+    "cotsHint": "{price} a notte ciascuna",
+    "cotsFree": "Gratis",
+    "severalRooms": "Viaggiate in tanti? Prenota più camere in questa struttura.",
+    "severalRoomsLink": "Prenota più camere"
   },
   "building": {
     "stars": "{count} stelle",
@@ -683,7 +710,11 @@
     "lookupText": "Non riusciamo a caricare la prenotazione {reference} su questo dispositivo. Controlla l'email di conferma o contattaci.",
     "home": "Torna alla home",
     "titleConfirmed": "Prenotazione confermata",
-    "textConfirmed": "Abbiamo ricevuto l'acconto e la tua prenotazione è confermata. Il voucher ti arriverà via email."
+    "textConfirmed": "Abbiamo ricevuto l'acconto e la tua prenotazione è confermata. Il voucher ti arriverà via email.",
+    "metaTitleReceived": "Prenotazione ricevuta {reference}",
+    "metaTitleConfirmed": "Prenotazione confermata {reference}",
+    "metaTitleCancelled": "Prenotazione annullata {reference}",
+    "metaTitleNeutral": "La tua prenotazione {reference}"
   },
   "auth": {
     "signInTitle": "Accedi",
@@ -702,7 +733,9 @@
     "signInLink": "Accedi",
     "invalid": "Email o password non corretti.",
     "error": "Impossibile contattare il server. Riprova.",
-    "continueNote": "Accedi per continuare."
+    "continueNote": "Accedi per continuare.",
+    "forgotPassword": "Password dimenticata?",
+    "resetDone": "La nuova password è stata salvata. Accedi con la nuova password."
   },
   "partner": {
     "crumb": "Diventa partner",
@@ -794,7 +827,8 @@
     "completed": "Completata",
     "cancelled": "Cancellata",
     "refunded": "Rimborsata",
-    "failed": "Pagamento non riuscito"
+    "failed": "Pagamento non riuscito",
+    "partially_refunded": "Parzialmente rimborsata"
   },
   "service": {
     "trip": "Escursione",
@@ -1168,7 +1202,12 @@
         "vehicleCapacity": "{name} (fino a {count})",
         "flight": "Numero di volo (facoltativo)",
         "passengersLabel": "Passeggeri",
-        "passengers": "{count, plural, one {# passeggero} other {# passeggeri}}"
+        "passengers": "{count, plural, one {# passeggero} other {# passeggeri}}",
+        "roomsCommission": "La commissione del viaggio ({percent}%) si applica anche alle camere.",
+        "building": "Struttura",
+        "chooseBuilding": "Scegli una struttura",
+        "roomsTitle": "Camere e sistemazione",
+        "roomsText": "Scegli una delle migliori combinazioni di {building} o aggiungi camere, poi decidi chi dorme dove. Letti aggiuntivi e culle sono per camera."
       },
       "client": {
         "title": "Cliente e pagamento",
@@ -1251,7 +1290,8 @@
       "voucher": "Voucher per il cliente",
       "voucherText": "Invia al cliente il voucher con o senza prezzi.",
       "voucherWith": "Voucher con prezzi",
-      "voucherWithout": "Voucher senza prezzi"
+      "voucherWithout": "Voucher senza prezzi",
+      "printable": "Versione stampabile"
     },
     "voucher": {
       "metaTitle": "Voucher {reference}",
@@ -1485,7 +1525,8 @@
     "apply": "Applica",
     "privacy": "Salviamo la tua scelta in un cookie e nel tuo account e la usiamo solo per mostrare i prezzi. Leggi la <link>Privacy policy</link>.",
     "chipLabel": "Nazionalità: {country}. Cambia nazionalità",
-    "chipEmpty": "Nazionalità"
+    "chipEmpty": "Nazionalità",
+    "popoverSubtitle": "I prezzi sono mostrati per viaggiatori da {country} (gruppo {group})."
   },
   "map": {
     "from": "da",
@@ -1559,6 +1600,201 @@
       "forbidden": "Non puoi richiedere la cancellazione di questa prenotazione da qui. Accedi con l'account che l'ha effettuata o usa il link nell'email di conferma.",
       "tooMany": "Troppe richieste. Attendi un minuto e riprova.",
       "network": "Non siamo riusciti a inviare la richiesta. Controlla la connessione e riprova."
+    },
+    "requestAgain": "Richiedi di nuovo la cancellazione",
+    "declinedAgainText": "Se la tua situazione è cambiata puoi inviare una nuova richiesta con più dettagli.",
+    "refundSent": "Rimborso di {amount} inviato il {date}.",
+    "refundPending": "Rimborso di {amount} in corso.",
+    "refundFailed": "Il rimborso di {amount} non è andato a buon fine: il nostro team ti contatterà.",
+    "refundsLabel": "Rimborsi"
+  },
+  "paymentHistory": {
+    "title": "Pagamenti",
+    "empty": "Nessun pagamento ancora.",
+    "paid": "Pagato",
+    "due": "Da pagare",
+    "balanceDueOn": "Saldo da pagare entro il {date}",
+    "refundOf": "Rimborso",
+    "types": {
+      "deposit": "Acconto",
+      "balance": "Saldo",
+      "refund": "Rimborso",
+      "other": "Pagamento"
+    },
+    "statuses": {
+      "pending": "In elaborazione",
+      "succeeded": "Pagato",
+      "failed": "Non riuscito",
+      "refunded": "Rimborsato"
+    },
+    "refundStatuses": {
+      "pending": "Rimborso in corso",
+      "succeeded": "Rimborsato",
+      "failed": "Rimborso non riuscito",
+      "refunded": "Rimborsato"
     }
+  },
+  "paymentReturn": {
+    "successTitle": "Pagamento ricevuto",
+    "successText": "Grazie, il pagamento è andato a buon fine. La prenotazione è aggiornata qui sotto e ti abbiamo inviato la conferma via email.",
+    "confirmingTitle": "Stiamo confermando il pagamento…",
+    "confirmingText": "Il gestore del pagamento ci sta inviando la conferma. La pagina si aggiorna da sola in pochi secondi.",
+    "pendingTitle": "Pagamento in elaborazione",
+    "pendingText": "Non abbiamo ancora ricevuto la conferma dal gestore del pagamento. Non pagare di nuovo: ti scriveremo appena arriva.",
+    "cancelTitle": "Pagamento annullato",
+    "cancelText": "Hai lasciato la pagina di pagamento e non è stato addebitato nulla. La prenotazione resta riservata: puoi pagare qui sotto quando vuoi.",
+    "failedTitle": "Pagamento non completato",
+    "failedText": "Il gestore del pagamento ha rifiutato o non ha completato il pagamento. Non è stato addebitato nulla. Riprova o scegli un altro metodo.",
+    "checkAgain": "Controlla di nuovo",
+    "dismiss": "Chiudi"
+  },
+  "voucherDownload": {
+    "title": "Voucher",
+    "text": "Mostra il voucher (stampato o sul telefono) all'inizio del servizio.",
+    "download": "Scarica il voucher (PDF)",
+    "withPrices": "Voucher con prezzi (PDF)",
+    "clientCopy": "Copia cliente senza prezzi (PDF)",
+    "clientCopyHint": "La copia cliente nasconde tutti i prezzi: inviala al tuo cliente.",
+    "notYet": "Il voucher PDF è disponibile dopo il pagamento dell'acconto.",
+    "printable": "Versione stampabile"
+  },
+  "multiRoom": {
+    "title": "Prenota più camere",
+    "subtitle": "Dicci chi viaggia: ti proponiamo le migliori combinazioni di camere di {building}, poi decidi tu chi dorme dove.",
+    "stay": "Il tuo soggiorno",
+    "party": "Chi viaggia",
+    "adults": "Adulti",
+    "adultsHint": "Dai 18 anni in su",
+    "children": "Bambini",
+    "childrenHint": "Da 0 a 17 anni",
+    "childAge": "Età del bambino {n}",
+    "selectAge": "Età",
+    "agesRequired": "Inserisci l'età di ogni bambino per vedere le combinazioni.",
+    "suggestionsTitle": "Migliori combinazioni",
+    "suggestionsText": "Le combinazioni di camere libere più economiche per il tuo gruppo.",
+    "suggestionsLoading": "Cerchiamo le camere libere…",
+    "suggestionsError": "Non siamo riusciti a caricare i suggerimenti. Scegli tu le camere qui sotto.",
+    "suggestionsNone": "Nessuna combinazione di camere libere ospita il tuo gruppo in queste date.",
+    "roomsCount": "{count, plural, one {# camera} other {# camere}}",
+    "sleeps": "{count} posti",
+    "guestsIn": "{adults, plural, one {# adulto} other {# adulti}}{children, plural, =0 {} one { + # bambino} other { + # bambini}}",
+    "apply": "Scegli queste camere",
+    "applyAria": "Scegli la combinazione {n}: {rooms} per {total}",
+    "applied": "Selezionata",
+    "totalFor": "Totale per {nights, plural, one {# notte} other {# notti}}",
+    "addRoom": "Aggiungi una camera",
+    "addRoomPlaceholder": "Scegli una camera da aggiungere",
+    "addRoomOption": "{name} · {count} posti · da {price} a notte",
+    "removeRoom": "Rimuovi {room}",
+    "noRooms": "Scegli una combinazione qui sopra o aggiungi delle camere per iniziare.",
+    "reserve": "Prenota {count, plural, one {# camera} other {# camere}}",
+    "fixErrors": "Correggi la sistemazione per continuare.",
+    "announceApplied": "{count, plural, one {# camera selezionata} other {# camere selezionate}} e ospiti assegnati.",
+    "draftTitle": "{building} · {count, plural, one {# camera} other {# camere}}",
+    "extraBeds": "{count, plural, one {# letto aggiuntivo} other {# letti aggiuntivi}}",
+    "cots": "{count, plural, one {# culla} other {# culle}}"
+  },
+  "allocation": {
+    "title": "Chi dorme dove?",
+    "subtitle": "Ogni ospite ha bisogno di un letto. Nessuna camera condivisa: ogni camera è riservata alla tua prenotazione.",
+    "autoAssign": "Assegna automaticamente",
+    "unassigned": "Viaggiatori da sistemare",
+    "everyoneAssigned": "Tutti hanno una camera",
+    "dragHint": "Trascina un viaggiatore su una camera, oppure tocca il viaggiatore e poi la camera.",
+    "room": "Camera {n}",
+    "sleeps": "{count} posti",
+    "sleepsAria": "{used} posti occupati su {count}",
+    "adult": "Adulto {n}",
+    "child": "Bambino {age} a",
+    "childUnknown": "Bambino {n}",
+    "chipAria": "{name}, {place}. Premi per spostare.",
+    "chipSelectedAria": "{name} selezionato. Scegli una camera.",
+    "inRoom": "in {room}",
+    "notAssigned": "senza camera",
+    "moveHere": "Sposta qui {name}",
+    "moveHereAria": "Sposta {name} in {room}",
+    "unassignHere": "Togli {name} dalla camera",
+    "cancelSelection": "Annulla",
+    "announceMoved": "{name} spostato in {room}.",
+    "announceUnassigned": "{name} non ha una camera.",
+    "announceSelected": "{name} selezionato. Scegli una camera.",
+    "allValid": "Tutti i {count} ospiti hanno una camera e ogni camera è valida",
+    "extraBeds": "Letti aggiuntivi",
+    "cots": "Culle",
+    "perNight": "{price} a notte",
+    "errors": {
+      "unassigned": "Ogni ospite deve essere assegnato a una camera.",
+      "cannotFit": "Queste camere non possono ospitare {count} persone, aggiungi una camera.",
+      "empty": "Camera {n} è vuota: ogni camera prenotata deve avere almeno un ospite.",
+      "childAlone": "Un bambino non può stare in una camera senza un adulto.",
+      "maxAdults": "Camera {n} ospita al massimo {max} adulti.",
+      "noChildren": "Camera {n} non accetta bambini.",
+      "maxChildren": "Camera {n} accetta al massimo {max} bambini.",
+      "capacity": "Camera {n} supera la sua capacità di {max}."
+    },
+    "removeRoomAria": "Rimuovi {room}"
+  },
+  "roomOptions": {
+    "title": "Camere (facoltative)",
+    "text": "Aggiungi camere o cabine al viaggio. Ogni viaggiatore deve poi essere in una sola camera.",
+    "stage": "Tappa {n}",
+    "stageNights": "Tappa {n} · {nights, plural, one {# notte} other {# notti}}",
+    "capacity": "Fino a {total} ospiti ({adults, plural, one {# adulto} other {# adulti}}{children, plural, =0 {} one {, # bambino} other {, # bambini}})",
+    "pricePerNight": "{price} a notte",
+    "pricePerStay": "{price} a soggiorno",
+    "perPerson": "a persona",
+    "perRoom": "a camera",
+    "add": "Aggiungi",
+    "addAria": "Aggiungi {name}",
+    "maxReached": "Massimo raggiunto",
+    "roomN": "Camera {n} · {name}",
+    "remove": "Rimuovi",
+    "removeAria": "Rimuovi la camera {n}",
+    "adults": "Adulti nella camera {n}",
+    "childToggle": "Bambino {n} ({age} a)",
+    "childToggleUnknown": "Bambino {n}",
+    "agesFirst": "Inserisci l'età dei bambini per sistemarli nelle camere.",
+    "unassigned": "{count, plural, one {# viaggiatore non ha} other {# viaggiatori non hanno}} ancora una camera.",
+    "allAssigned": "Ogni viaggiatore ha una camera.",
+    "noRooms": "Nessuna camera aggiunta: è inclusa la sistemazione standard."
+  },
+  "bookingRooms": {
+    "title": "Camere",
+    "room": "Camera {n} · {name}",
+    "number": "N. {number}",
+    "guests": "{adults, plural, one {# adulto} other {# adulti}}{children, plural, =0 {} one { + # bambino} other { + # bambini}}",
+    "extras": "{beds, plural, =0 {} one {# letto aggiuntivo} other {# letti aggiuntivi}}{cots, plural, =0 {} one { · # culla} other { · # culle}}",
+    "stage": "Tappa {n}"
+  },
+  "balance": {
+    "title": "Paga il saldo",
+    "subtitle": "Il tuo acconto è stato pagato. Restano da pagare {amount}.",
+    "subtitleDue": "Il tuo acconto è stato pagato. Restano da pagare {amount} entro il {date}.",
+    "noOnline": "Il pagamento online non è disponibile per questa prenotazione. Contattaci per pagare il saldo.",
+    "loading": "Caricamento dei metodi di pagamento…"
+  },
+  "passwordReset": {
+    "forgotTitle": "Hai dimenticato la password?",
+    "forgotText": "Inserisci l'e-mail del tuo account: ti invieremo un link per scegliere una nuova password.",
+    "email": "E-mail",
+    "send": "Invia il link",
+    "sent": "Se esiste un account con questa e-mail, ti abbiamo inviato un link per scegliere una nuova password.",
+    "sentHint": "Il link è valido per 60 minuti. Controlla anche la cartella spam.",
+    "backToSignIn": "Torna all'accesso",
+    "tooMany": "Troppi tentativi. Attendi un minuto e riprova.",
+    "error": "Non riusciamo a contattare il server. Riprova.",
+    "resetTitle": "Scegli una nuova password",
+    "resetText": "Imposta la password che userai per accedere.",
+    "forAccount": "Account: {email}",
+    "newPassword": "Nuova password",
+    "confirmPassword": "Conferma la nuova password",
+    "rulesTitle": "Requisiti della password",
+    "ruleLength": "Almeno {count} caratteri",
+    "ruleMatch": "Le due password coincidono",
+    "ruleMet": "fatto",
+    "save": "Salva la nuova password",
+    "expired": "Questo link per la password non è valido o è scaduto. Richiedine uno nuovo con “Password dimenticata”.",
+    "incomplete": "Questo link per la password è incompleto. Aprilo di nuovo dall'e-mail o richiedine uno nuovo.",
+    "askNewLink": "Richiedi un nuovo link"
   }
 }

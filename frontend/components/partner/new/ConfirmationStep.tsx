@@ -1,17 +1,17 @@
 "use client";
 
+import { BookingRooms } from "@/components/booking/BookingRooms";
 import { PaymentSection } from "@/components/booking/PaymentSection";
 import { buttonClasses } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Link } from "@/i18n/navigation";
 import type { PartnerBookingDetail } from "@/lib/api/types";
-import { useAuth } from "@/lib/auth";
 import { useCurrency } from "@/lib/currency";
 import { CheckCircle2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CountryLabel, useCommissionSource } from "../shared";
 
-/** Step 4 (Figma 257:36435): reference, status, totals, voucher buttons, payment. */
+/** Step 4 (Figma 257:36435): reference, status, totals, voucher buttons, one line per room (multi-room stays), payment. */
 export function ConfirmationStep({
   booking,
   subtitle,
@@ -27,7 +27,6 @@ export function ConfirmationStep({
 }) {
   const t = useTranslations("partnerPanel.newBooking.confirmation");
   const ts = useTranslations("partnerPanel.summary");
-  const { token } = useAuth();
   const { format } = useCurrency();
   const source = useCommissionSource();
   const tot = booking.totals;
@@ -103,11 +102,13 @@ export function ConfirmationStep({
         </div>
       </section>
 
+      {booking.rooms.length > 0 && <BookingRooms rooms={booking.rooms} />}
+
       {booking.status === "awaiting_payment" && (
         <PaymentSection
           reference={booking.reference}
           accessToken={booking.access_token ?? null}
-          authToken={token}
+          auth
           status={booking.status}
           deposit={tot.deposit_amount}
           total={tot.total}

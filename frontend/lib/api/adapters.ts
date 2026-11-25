@@ -14,8 +14,11 @@
 import { CHILD_BANDS } from "./mock-data";
 import { addonImage, buildingImage, destinationImage, roomImage, tripImage } from "./images";
 import type {
-  AuthResponse,
   BookingCancellation,
+  BookingRoom,
+  RoomOption,
+  UnavailableReason,
+  BookingPayment,
   AuthUser,
   BookingDetail,
   BookingStatus,
@@ -125,6 +128,39 @@ export interface RawTripDetail extends RawTripCard {
   addons: { id: number; name: string; description: string | null; image: string | null; price: RawMoney; pricing_basis: "per_person" | "per_booking" | "per_unit"; required: boolean; max_quantity: number; booking_types: ("private" | "group")[] }[];
   nile?: { vessel_name: string | null; itinerary_from: string | null; itinerary_to: string | null; vessel_facilities: string[] | null; meal_type: string | null } | null;
   seo: { title?: string; description?: string } | null;
+  room_options?: RawRoomOption[] | null;
+}
+
+export interface RawRoomOption {
+  id: number;
+  stage_position: number | null;
+  unit_type: string;
+  unit_type_label: string | null;
+  name: string;
+  stars: number | null;
+  pricing_mode: "per_room" | "per_person";
+  price_period: "per_night" | "per_stay";
+  price: RawMoney | null;
+  nights: number | null;
+  capacity: { max_adults: number; max_children: number; max_total: number };
+  max_quantity: number | null;
+}
+
+export function mapRoomOption(r: RawRoomOption): RoomOption {
+  return {
+    id: r.id,
+    stage_position: r.stage_position ?? null,
+    unit_type: r.unit_type,
+    unit_type_label: r.unit_type_label ?? humanize(r.unit_type),
+    name: r.name,
+    stars: r.stars ?? 0,
+    pricing_mode: r.pricing_mode === "per_person" ? "per_person" : "per_room",
+    price_period: r.price_period === "per_stay" ? "per_stay" : "per_night",
+    price: eur(r.price),
+    nights: r.nights ?? 0,
+    capacity: r.capacity,
+    max_quantity: Math.max(1, r.max_quantity ?? 10),
+  };
 }
 
 export interface RawBuildingCard {
@@ -157,6 +193,16 @@ export interface RawRoomCard {
   min_nights: number | null;
   max_nights: number | null;
   building: RawBuildingCard;
+  number?: string | null;
+  pricing_mode?: "per_room" | "per_person";
+  extra_beds?: { max: number; price: RawMoney | null } | null;
+  cots?: { max: number; price: RawMoney | null } | null;
+  available?: boolean;
+  unavailable_reason?: string | null;
+  unavailable_reasons?: string[] | null;
+  free_cancellation?: boolean;
+  few_left?: boolean;
+  breakfast_included?: boolean;
 }
 
 export interface RawRoomDetail extends RawRoomCard {
@@ -189,6 +235,7 @@ export interface RawQuote {
   tax_included?: boolean;
   tax_per_night?: number | null;
   season_name: string | null;
+  rooms?: { index: number; room_id: number; name: string; number: string | null; adults: number; children_ages: number[]; extra_beds: number; cots: number; nights: number; room_total: number; extras_total: number; total: number }[] | null;
   lines: { type: string; label: string; quantity: number; unit_price: number; total: number; meta?: Record<string, unknown> }[];
   total: number;
   deposit_percent: number;
@@ -231,11 +278,74 @@ export interface RawBooking {
     currency?: string;
     exchange_rate?: number;
     total_in_currency?: number;
+    prices_hidden?: boolean;
   };
   payment_options?: { code: string; type: "online" | "manual"; name: string }[];
+  payment_summary?: { paid?: number; due?: number } | null;
+  payments?: RawPayment[];
+  balance_due_on?: string | null;
+  voucher_available?: boolean;
   coupon_code?: string | null;
   cancellation?: Partial<BookingCancellation> | null;
+  rooms?: RawBookingRoom[] | null;
   created_at: string;
+}
+
+export interface RawBookingRoom {
+  room_id: number | null;
+  room_option_id: number | null;
+  stage_position: number | null;
+  name: string | null;
+  number: string | null;
+  adults: number;
+  children_ages: number[] | null;
+  extra_beds: number | null;
+  cots: number | null;
+  nights: number | null;
+  total: number | string | null;
+}
+
+export function mapBookingRooms(raw: RawBookingRoom[] | null | undefined): BookingRoom[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((r) => ({
+    room_id: r.room_id ?? null,
+    room_option_id: r.room_option_id ?? null,
+    stage_position: r.stage_position ?? null,
+    name: r.name ?? "",
+    number: r.number ?? null,
+    adults: Number(r.adults ?? 0),
+    children_ages: r.children_ages ?? [],
+    extra_beds: Number(r.extra_beds ?? 0),
+    cots: Number(r.cots ?? 0),
+    nights: Number(r.nights ?? 0),
+    total: Number(r.total ?? 0),
+  }));
+}
+
+export interface RawPayment {
+  type?: string;
+  status?: string;
+  amount?: number | string;
+  currency?: string | null;
+  amount_in_currency?: number | string | null;
+  method?: string | null;
+  paid_at?: string | null;
+  parent_payment_id?: number | null;
+}
+
+/** BookingResource `payments[]` -> BookingPayment (refund rows included). */
+export function mapPayments(raw: RawPayment[] | null | undefined): BookingPayment[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((p) => ({
+    type: String(p.type ?? ""),
+    status: String(p.status ?? "pending"),
+    amount: Number(p.amount ?? 0),
+    currency: p.currency ?? null,
+    amount_in_currency: p.amount_in_currency != null ? Number(p.amount_in_currency) : null,
+    method: p.method ?? null,
+    paid_at: p.paid_at ?? null,
+    parent_payment_id: p.parent_payment_id ?? null,
+  }));
 }
 
 /** BookingResource `cancellation` -> BookingCancellation (null when the API does not send it). */
@@ -490,7 +600,8 @@ export interface RawPackageDetail extends Omit<RawPackageCard, "stages"> {
   excluded: string[] | null;
   deposit_percent: number | null;
   group_prices: { adult: RawMoney; child: RawMoney } | null;
-  stages: { position: number; destination: { name: string; slug: string } | null; days: number; nights: number; accommodation: string | null; trips: { day_number: number; trip: { title: string } | null }[] }[];
+  stages: { position: number; destination: { name: string; slug: string } | null; days: number; nights: number; accommodation: string | null; trips: { day_number: number; trip: { title: string } | null }[]; room_options?: RawRoomOption[] | null }[];
+  room_options?: RawRoomOption[] | null;
   itinerary: { day_number: number; destination: string | null; accommodation: string | null; items: { type: string; time: string | null; title: string; transfer_included?: boolean }[] }[];
   price_list: RawTripDetail["price_list"];
   child_policy: RawTripDetail["child_policy"];
@@ -554,7 +665,18 @@ export function mapPackageDetail(raw: RawPackageDetail, locale: Locale): TripDet
     what_to_bring: raw.what_to_bring ?? [],
     guide_languages: raw.guide_languages ?? [],
     policies: raw.cancellation_policy ? { ...detail.policies, cancellation: raw.cancellation_policy } : detail.policies,
+    room_options: packageRoomOptions(raw),
   };
+}
+
+/** Package rooms come top-level with `stage_position` (or per stage): one list, deduplicated by id. */
+function packageRoomOptions(raw: RawPackageDetail): RoomOption[] {
+  const all = [
+    ...(raw.room_options ?? []),
+    ...raw.stages.flatMap((s) => (s.room_options ?? []).map((r) => ({ ...r, stage_position: r.stage_position ?? s.position }))),
+  ];
+  const seen = new Set<number>();
+  return all.filter((r) => (seen.has(r.id) ? false : (seen.add(r.id), true))).map(mapRoomOption);
 }
 
 /** "Single buggy", "Double buggy" -> "buggy" (the API has no unit label yet). */
@@ -621,7 +743,7 @@ export function mapTripDetail(raw: RawTripDetail, locale: Locale): TripDetail {
     availability: {
       private: privateRule?.enabled ? { lead_time_hours: privateRule.lead_time_hours ?? 24, blackout_dates: privateRule.blackout_dates ?? [] } : null,
       group: groupRule?.enabled
-        ? { weekdays: (groupRule.weekdays ?? [1, 2, 3, 4, 5, 6, 7]).map(isoToJsDay), dates: groupRule.dates ?? [], blackout_dates: groupRule.blackout_dates ?? [] }
+        ? { weekdays: (groupRule.weekdays ?? [1, 2, 3, 4, 5, 6, 7]).map(isoToJsDay), dates: groupRule.dates ?? [], blackout_dates: groupRule.blackout_dates ?? [], lead_time_hours: groupRule.lead_time_hours ?? null }
         : null,
     },
     child_age_bands: childBands(raw.child_policy),
@@ -644,6 +766,7 @@ export function mapTripDetail(raw: RawTripDetail, locale: Locale): TripDetail {
     stages: null,
     transfers_included: false,
     seo: raw.seo,
+    room_options: (raw.room_options ?? []).map(mapRoomOption),
   };
 }
 
@@ -689,13 +812,30 @@ export function mapRoomCard(raw: RawRoomCard, locale: Locale, priceFrom: "from" 
     price_per_night: priceFrom === "from" ? eur(raw.from_price, eur(raw.base_price)) : eur(raw.base_price, eur(raw.from_price)),
     tax_included: raw.tax_included,
     tax_per_night: raw.tax_included ? null : eur(raw.building.tax_per_night) || null,
-    // Not in the API card yet (see contract gaps): no free-cancellation or few-left flags.
-    free_cancellation: false,
-    breakfast_included: amenities.includes("breakfast"),
-    few_left: false,
+    free_cancellation: Boolean(raw.free_cancellation),
+    breakfast_included: raw.breakfast_included ?? amenities.includes("breakfast"),
+    few_left: Boolean(raw.few_left),
     min_nights: raw.min_nights ?? 1,
     max_nights: raw.max_nights ?? 30,
+    number: raw.number ?? null,
+    pricing_mode: raw.pricing_mode === "per_person" ? "per_person" : "per_room",
+    available: raw.available !== false,
+    unavailable_reason: raw.available === false ? (unavailableReason(raw.unavailable_reason ?? raw.unavailable_reasons?.[0]) ?? "booked") : null,
+    unavailable_reasons: (raw.unavailable_reasons ?? []).map(unavailableReason).filter((r): r is UnavailableReason => r !== null),
+    extra_beds: { max: raw.extra_beds?.max ?? 0, price: raw.extra_beds?.price ? eur(raw.extra_beds.price) : null },
+    cots: { max: raw.cots?.max ?? 0, price: raw.cots?.price ? eur(raw.cots.price) : null },
   };
+}
+
+const REASONS: UnavailableReason[] = ["booked", "closed", "min_stay", "capacity"];
+function unavailableReason(v: string | null | undefined): UnavailableReason | null {
+  if (v == null) return null;
+  return (REASONS as string[]).includes(v) ? (v as UnavailableReason) : "booked";
+}
+
+/** Bookable rooms first (stable): the API already orders them so, this keeps it true for any source. */
+export function bookableFirst<T extends { available?: boolean }>(rooms: T[]): T[] {
+  return [...rooms].sort((a, b) => Number(a.available === false) - Number(b.available === false));
 }
 
 function mapBuilding(b: RawBuildingCard, details: Partial<RawBuildingDetail>, locale: Locale): Building {
@@ -797,7 +937,21 @@ export function mapQuote(raw: RawQuote): QuoteResult & { nights?: number; tax_in
   const lines: QuoteLine[] = [];
   const addonLines: QuoteLine[] = [];
   const nights = new Map<number, number>();
+  // Multi-room stays: night lines are grouped per room (meta.room_index) and by price.
+  const roomNights = new Map<string, QuoteLine>();
+  const roomIndex = (l: RawQuote["lines"][number]) => (typeof l.meta?.room_index === "number" ? (l.meta.room_index as number) : null);
+  const multiRoom = (raw.rooms?.length ?? 0) > 1;
   for (const l of raw.lines ?? []) {
+    const ri = roomIndex(l);
+    if (l.type === "night" && multiRoom && ri != null) {
+      const key = `${ri}:${l.unit_price}`;
+      const prev = roomNights.get(key);
+      if (prev) {
+        prev.quantity += l.quantity;
+        prev.total = Math.round((prev.total + l.total) * 100) / 100;
+      } else roomNights.set(key, { kind: "night", quantity: l.quantity, unit_price: l.unit_price, total: l.total, room_index: ri });
+      continue;
+    }
     switch (l.type) {
       case "adult":
         lines.push({ kind: "adult", quantity: l.quantity, unit_price: l.unit_price, total: l.total });
@@ -813,14 +967,23 @@ export function mapQuote(raw: RawQuote): QuoteResult & { nights?: number; tax_in
         addonLines.push({ kind: "addon", name: l.label, quantity: l.quantity, unit_price: l.unit_price, total: l.total });
         break;
       case "tax":
-        lines.push({ kind: "tax", label: l.label, quantity: l.quantity, unit_price: l.unit_price, total: l.total });
+        lines.push({ kind: "tax", label: l.label, quantity: l.quantity, unit_price: l.unit_price, total: l.total, room_index: ri });
+        break;
+      case "extra_bed":
+      case "cot":
+        // Localised by the UI ("Extra bed · 2 × €25"); per bed/cot and per night.
+        lines.push({ kind: l.type, quantity: l.quantity, unit_price: l.unit_price, total: l.total, room_index: multiRoom ? ri : null });
+        break;
+      case "room":
+        lines.push({ kind: "room", label: l.label, quantity: l.quantity, unit_price: l.unit_price, total: l.total });
         break;
       default:
         lines.push({ kind: "unit", name: l.label, quantity: l.quantity, unit_price: l.unit_price, total: l.total });
     }
   }
   const nightLines: QuoteLine[] = [...nights.entries()].map(([price, count]) => ({ kind: "night", quantity: count, unit_price: price, total: Math.round(price * count * 100) / 100 }));
-  const all = [...nightLines, ...lines];
+  const all = [...nightLines, ...roomNights.values(), ...lines];
+  if (multiRoom) all.sort((a, b) => (a.room_index ?? 99) - (b.room_index ?? 99));
   const addonsTotal = addonLines.reduce((s, l) => s + l.total, 0);
   const adult = all.find((l) => l.kind === "adult");
   return {
@@ -839,6 +1002,22 @@ export function mapQuote(raw: RawQuote): QuoteResult & { nights?: number; tax_in
     persons: raw.persons ?? (raw.adults ?? 0) + (raw.children ?? 0),
     nights: raw.nights,
     tax_included: raw.tax_included,
+    rooms: multiRoom
+      ? raw.rooms!.map((r) => ({
+          index: r.index,
+          room_id: r.room_id,
+          name: r.name,
+          number: r.number ?? null,
+          adults: r.adults,
+          children_ages: r.children_ages ?? [],
+          extra_beds: r.extra_beds ?? 0,
+          cots: r.cots ?? 0,
+          nights: r.nights,
+          room_total: r.room_total,
+          extras_total: r.extras_total,
+          total: r.total,
+        }))
+      : undefined,
   };
 }
 
@@ -878,11 +1057,28 @@ export function mapBooking(raw: RawBooking): BookingDetail {
     children: raw.children,
     lead: { name: raw.lead.name, email: raw.lead.email, phone: raw.lead.phone ?? "" },
     season_name: raw.season_name,
-    lines: mapQuote({ ...(raw as unknown as RawQuote), total, deposit_amount: deposit, balance_amount: 0, deposit_percent: 0, season_name: raw.season_name }).lines,
+    lines: mapQuote({
+      ...(raw as unknown as RawQuote),
+      rooms: (raw.rooms ?? [])
+        .filter((r) => r.room_id != null)
+        .map((r, index) => ({ index, room_id: r.room_id!, name: r.name ?? "", number: r.number, adults: r.adults, children_ages: r.children_ages ?? [], extra_beds: r.extra_beds ?? 0, cots: r.cots ?? 0, nights: r.nights ?? 0, room_total: 0, extras_total: 0, total: Number(r.total ?? 0) })),
+      total,
+      deposit_amount: deposit,
+      balance_amount: 0,
+      deposit_percent: 0,
+      season_name: raw.season_name,
+    }).lines,
     travellers: raw.travelers?.map((t) => ({ first_name: t.first_name, last_name: t.last_name, type: t.type, age: t.age })),
     payment_due_at: raw.payment_due_at ?? null,
     coupon_code: raw.coupon_code ?? null,
     cancellation: mapCancellation(raw.cancellation),
+    balance_due_on: raw.balance_due_on ?? null,
+    voucher_available: Boolean(raw.voucher_available),
+    prices_hidden: Boolean(raw.totals.prices_hidden),
+    payments: mapPayments(raw.payments),
+    paid: raw.payment_summary?.paid != null ? Number(raw.payment_summary.paid) : null,
+    due: raw.payment_summary?.due != null ? Number(raw.payment_summary.due) : null,
+    rooms: mapBookingRooms(raw.rooms),
     created_at: raw.created_at,
   };
 }
@@ -943,6 +1139,3 @@ export function mapDestinationDetail(raw: RawDestinationDetail): Destination & {
   };
 }
 
-export function mapAuth(raw: { data: RawUser; token: string }): AuthResponse {
-  return { token: raw.token, user: mapUser(raw.data) };
-}

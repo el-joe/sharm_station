@@ -12,6 +12,7 @@ use App\Models\Concerns\HasProductPrices;
 use App\Models\Concerns\HasSeasonPrices;
 use App\Models\Concerns\HasTranslations;
 use App\Models\Concerns\LogsActivity;
+use App\Models\Concerns\RecordsSlugRedirects;
 use App\Models\Contracts\Priceable;
 use Database\Factories\PackageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -21,6 +22,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 #[Fillable([
     'destination_id', 'title', 'slug', 'summary', 'description', 'days', 'nights', 'private_enabled', 'group_enabled',
@@ -32,7 +34,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Package extends Model implements Priceable
 {
     /** @use HasFactory<PackageFactory> */
-    use HasAddons, HasChildPolicy, HasFactory, HasProductPrices, HasSeasonPrices, HasTranslations, LogsActivity;
+    use HasAddons, HasChildPolicy, HasFactory, HasProductPrices, HasSeasonPrices, HasTranslations, LogsActivity, RecordsSlugRedirects;
 
     /**
      * Relations the "from" price of a package priced from its trips needs (eager load them on listings).
@@ -153,5 +155,15 @@ class Package extends Model implements Priceable
     public function priceFields(): array
     {
         return ['adult_price' => 'Adult', 'child_price' => 'Child'];
+    }
+
+    /**
+     * Optional rooms the customer can add (SRS 7.1), in display order.
+     *
+     * @return MorphMany<RoomOption, $this>
+     */
+    public function roomOptions(): MorphMany
+    {
+        return $this->morphMany(RoomOption::class, 'owner')->orderBy('stage_position')->orderBy('sort')->orderBy('id');
     }
 }

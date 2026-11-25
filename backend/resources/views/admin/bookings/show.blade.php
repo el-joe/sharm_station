@@ -10,6 +10,17 @@
     <x-admin.page-header :title="$booking->reference" :breadcrumbs="['Sales' => null, 'Bookings' => route('admin.bookings.index'), $booking->reference => null]"
                          :subtitle="$booking->service_type->label().($serviceName ? ' · '.$serviceName : '').' · created '.$booking->created_at->format('j M Y H:i')">
         <x-slot:actions>
+            @if (! in_array($booking->status, [BookingStatus::Cancelled, BookingStatus::Refunded, BookingStatus::Completed], true) && $booking->service_type !== \App\Enums\ServiceType::Transfer)
+                <a href="{{ route('admin.bookings.edit', $booking) }}" class="btn-ghost btn-sm">Change dates or rooms</a>
+            @endif
+            @if ($booking->status === BookingStatus::AwaitingPayment && $booking->service_type === \App\Enums\ServiceType::Accommodation)
+                <form method="POST" action="{{ route('admin.bookings.release-hold', $booking) }}" data-confirm="Release the hold? The booking is cancelled and its rooms become free." data-confirm-title="Release hold" data-confirm-ok="Release">
+                    @csrf
+                    <button type="submit" class="btn-ghost btn-sm">Release hold</button>
+                </form>
+            @endif
+            <a href="{{ route('admin.bookings.voucher', $booking) }}" target="_blank" rel="noopener" class="btn-ghost btn-sm">Voucher PDF</a>
+            <a href="{{ route('admin.bookings.voucher', [$booking, 'prices' => 0]) }}" target="_blank" rel="noopener" class="btn-ghost btn-sm">Voucher without prices</a>
             <x-admin.status-chip :status="$booking->status" class="text-sm" />
             <x-admin.status-chip :status="$booking->payment_status" class="text-sm" />
         </x-slot:actions>
@@ -81,9 +92,9 @@
             @if ($booking->rooms->isNotEmpty())
                 <x-admin.card title="Rooms" :padding="false">
                     <div class="overflow-x-auto"><table class="admin-table">
-                        <thead><tr><th scope="col">Room</th><th scope="col">Method</th><th scope="col" class="text-right">Nights</th><th scope="col" class="text-right">Price</th><th scope="col" class="text-right">Total</th><th scope="col" class="text-right">Guests</th></tr></thead>
+                        <thead><tr><th scope="col">Room</th><th scope="col">Method</th><th scope="col">Occupants</th><th scope="col" class="text-right">Nights</th><th scope="col" class="text-right">Price</th><th scope="col" class="text-right">Total</th><th scope="col" class="text-right">Guests</th></tr></thead>
                         <tbody>@foreach ($booking->rooms as $room)
-                            <tr><td>{{ $room->room_name }} @if ($room->room_number)<span class="text-ink-500">#{{ $room->room_number }}</span>@endif</td><td>{{ str($room->pricing_method)->headline() }}</td><td class="text-right">{{ $room->nights }}</td><td class="text-right">{{ $eur($room->price) }}</td><td class="text-right">{{ $eur($room->total) }}</td><td class="text-right">{{ $room->guests->count() }}</td></tr>
+                            <tr><td>{{ $room->room_name }} @if ($room->room_number)<span class="text-ink-500">#{{ $room->room_number }}</span>@endif</td><td>{{ str($room->pricing_method)->headline() }}</td><td>{{ $room->adults }} ad.@if (! empty($room->child_ages)) + {{ count($room->child_ages) }} ch. ({{ implode(', ', $room->child_ages) }} y)@endif @if ($room->extra_beds) · {{ $room->extra_beds }} extra bed @endif @if ($room->cots) · {{ $room->cots }} cot @endif</td><td class="text-right">{{ $room->nights }}</td><td class="text-right">{{ $eur($room->price) }}</td><td class="text-right">{{ $eur($room->total) }}</td><td class="text-right">{{ $room->guests->count() }}</td></tr>
                         @endforeach</tbody>
                     </table></div>
                 </x-admin.card>
@@ -140,12 +151,21 @@
 
             <x-admin.card title="Payments" :padding="false">
                 <div class="overflow-x-auto"><table class="admin-table">
-                    <thead><tr><th scope="col">Date</th><th scope="col">Type</th><th scope="col">Method</th><th scope="col" class="text-right">Amount</th><th scope="col">Status</th><th scope="col">Note</th></tr></thead>
+                    <thead><tr><th scope="col">Date</th><th scope="col">Type</th><th scope="col">Method</th><th scope="col" class="text-right">Amount</th><th scope="col">Status</th><th scope="col">Note</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
                     <tbody>@forelse ($booking->payments as $payment)
+                        @php($isRefund = $payment->type === \App\Enums\PaymentType::Refund)
                         <tr><td>{{ ($payment->paid_at ?? $payment->created_at)->format('j M Y') }}</td><td>{{ $payment->type->label() }}</td><td>{{ $payment->method?->name ?? 'Manual' }}</td>
-                            <td class="text-right tabular-nums">{{ $eur($payment->amount) }}</td><td><x-admin.status-chip :status="$payment->status" /></td><td class="text-xs text-ink-500">{{ $payment->note }} {{ $payment->recorder ? '· '.$payment->recorder->name : '' }}</td></tr>
+                            <td @class(['text-right tabular-nums', 'text-error' => $isRefund])>{{ $isRefund ? '−' : '' }}{{ $eur($payment->amount) }}</td><td><x-admin.status-chip :status="$payment->status" /></td><td class="text-xs text-ink-500">{{ $payment->note }} {{ $payment->transaction_id ? '· '.$payment->transaction_id : '' }} {{ $payment->recorder ? '· '.$payment->recorder->name : '' }}</td>
+                            <td class="text-right">
+                                @if ($isRefund && $payment->status === \App\Enums\PaymentRecordStatus::Pending)
+                                    <form method="POST" action="{{ route('admin.bookings.refunds.paid', [$booking, $payment]) }}" data-confirm="Mark the refund of {{ $eur($payment->amount) }} as paid to the customer?" data-confirm-ok="Mark as paid">
+                                        @csrf
+                                        <button type="submit" class="btn-link whitespace-nowrap">Mark as paid</button>
+                                    </form>
+                                @endif
+                            </td></tr>
                     @empty
-                        <tr><td colspan="6" class="py-6 text-center text-ink-500">No payments recorded.</td></tr>
+                        <tr><td colspan="7" class="py-6 text-center text-ink-500">No payments recorded.</td></tr>
                     @endforelse</tbody>
                 </table></div>
                 @if ($booking->proofs->isNotEmpty())
@@ -210,7 +230,30 @@
                     <div class="flex justify-between"><dt class="text-ink-500">Paid</dt><dd>{{ $eur($booking->paidAmount()) }}</dd></div>
                     <div class="flex justify-between border-t border-ink-100 pt-2"><dt class="font-medium">Balance due</dt><dd class="font-bold">{{ $eur($booking->dueAmount()) }}</dd></div>
                 </dl>
+                @unless (in_array($booking->status, BookingStatus::voided(), true))
+                    <form method="POST" action="{{ route('admin.bookings.balance-due', $booking) }}" class="mt-4 flex items-end gap-2 border-t border-ink-100 pt-4" novalidate>
+                        @csrf @method('PATCH')
+                        <x-admin.input name="balance_due_on" label="Balance due by" type="date" :value="$booking->balance_due_on?->toDateString()" :hint="$booking->balance_due_on ? null : 'Default: '.($balanceDueOn?->format('j M Y') ?? '—')" span="flex-1" />
+                        <button type="submit" class="btn-ghost btn-sm mb-0.5">Save</button>
+                    </form>
+                @endunless
             </x-admin.card>
+
+            @if ($refundable > 0)
+                <x-admin.card title="Record refund" :subtitle="'Up to '.$eur($refundable).' can be refunded'.($refundableOnline > 0 ? ' ('.$eur($refundableOnline).' through the online gateway).' : '.')">
+                    <form method="POST" action="{{ route('admin.bookings.refunds.store', $booking) }}" class="space-y-3" data-confirm="Record this refund on {{ $booking->reference }}?" data-confirm-ok="Record refund" novalidate>
+                        @csrf
+                        <x-admin.money name="amount" label="Amount (EUR)" :value="$refundable" span="" />
+                        @if ($refundableOnline > 0)
+                            <x-admin.switch name="through_gateway" label="Refund through the gateway" description="Sends the money back to the card or PayPal account used online." span="" />
+                        @endif
+                        <x-admin.input name="paid_at" label="Date" type="date" :value="now()->toDateString()" span="" />
+                        <x-admin.select name="payment_method_id" label="Method" :options="$paymentMethods" placeholder="Cash / other" :select2="false" span="" />
+                        <x-admin.textarea name="note" label="Note" :rows="2" span="" maxlength="1000" />
+                        <button type="submit" class="btn-ghost w-full">Record refund</button>
+                    </form>
+                </x-admin.card>
+            @endif
 
             @if ($booking->dueAmount() > 0 && ! in_array($booking->status, BookingStatus::voided(), true))
                 <x-admin.card title="Record balance payment" subtitle="Paid outside the site (cash, transfer...). The booking becomes fully paid at zero balance.">

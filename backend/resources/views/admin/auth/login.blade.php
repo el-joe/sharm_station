@@ -36,7 +36,7 @@
 
                     <button type="submit" class="btn-cta w-full">Sign in</button>
                 </form>
-                <p class="mt-4 text-[11px] text-ink-500">Two-factor authentication for Super Admin is planned (SRS 14.2).</p>
+                <p class="mt-4 text-[11px] text-ink-500">Accounts with two-factor authentication are asked for a code next.</p>
             </div>
         </main>
     </div>

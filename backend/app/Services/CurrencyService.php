@@ -5,8 +5,12 @@ namespace App\Services;
 use App\DTOs\Currency\CurrencyRateData;
 use App\Models\Currency;
 use App\Repositories\Contracts\CurrencyRepositoryInterface;
+use App\Repositories\Contracts\SettingRepositoryInterface;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
 
 /**
@@ -24,7 +28,12 @@ class CurrencyService
      */
     private ?Collection $enabledCurrencies = null;
 
-    public function __construct(private readonly CurrencyRepositoryInterface $currencies) {}
+    public const REFRESHED_AT_SETTING = 'currency.rates_refreshed_at';
+
+    public function __construct(
+        private readonly CurrencyRepositoryInterface $currencies,
+        private readonly SettingRepositoryInterface $settings,
+    ) {}
 
     /**
      * @return Collection<int, Currency>
@@ -134,5 +143,56 @@ class CurrencyService
                 $this->currencies->update($currency, $attributes);
             }
         });
+    }
+
+    /**
+     * Updates automatic rates from the exchange-rate API (services.exchange_rates.url) when the interval set in
+     * "currency.refresh_hours" has passed (0 = never, unless forced). Currencies with a manual rate are never
+     * touched; the margin per currency is kept and applied on top of the fetched rate.
+     *
+     * @return array{refreshed: bool, updated: list<string>, reason?: string}
+     */
+    public function refreshRates(bool $force = false): array
+    {
+        $hours = (int) $this->settings->get('currency.refresh_hours', SettingsService::DEFAULT_RATE_REFRESH_HOURS);
+        $last = $this->settings->get(self::REFRESHED_AT_SETTING);
+
+        if (! $force && ($hours <= 0 || ($last !== null && CarbonImmutable::parse($last)->addHours($hours)->isFuture()))) {
+            return ['refreshed' => false, 'updated' => [], 'reason' => $hours <= 0 ? 'Automatic refresh is off.' : 'Refreshed recently.'];
+        }
+
+        try {
+            $response = Http::timeout((int) config('services.exchange_rates.timeout', 10))->acceptJson()->get((string) config('services.exchange_rates.url'));
+        } catch (ConnectionException $exception) {
+            report($exception);
+
+            return ['refreshed' => false, 'updated' => [], 'reason' => 'The exchange-rate service is unreachable.'];
+        }
+
+        $rates = $response->json('rates');
+
+        if ($response->failed() || ! is_array($rates) || ($response->json('result') !== null && $response->json('result') !== 'success')) {
+            return ['refreshed' => false, 'updated' => [], 'reason' => 'The exchange-rate service returned an error.'];
+        }
+
+        $updated = DB::transaction(function () use ($rates): array {
+            $updated = [];
+
+            foreach ($this->currencies->query()->where('code', '!=', self::BASE)->where('is_manual_rate', false)->get() as $currency) {
+                $rate = $rates[$currency->code] ?? null;
+
+                if (is_numeric($rate) && (float) $rate > 0) {
+                    $this->currencies->update($currency, ['rate_to_eur' => round((float) $rate, 6)]);
+                    $updated[] = $currency->code;
+                }
+            }
+
+            return $updated;
+        });
+
+        $this->settings->set(self::REFRESHED_AT_SETTING, now()->toIso8601String());
+        $this->enabledCurrencies = null;
+
+        return ['refreshed' => true, 'updated' => $updated];
     }
 }

@@ -14,13 +14,19 @@ export function useToday(): string | null {
   return useSyncExternalStore(noopSubscribe, () => toISODate(new Date()), () => null);
 }
 
+/**
+ * Debounced copy of a plain-data value (JSON-serialisable). Keyed on its serialisation, so a new object with the
+ * same content does not restart the timer: several debounced values in one component never keep resetting each
+ * other through re-renders.
+ */
 export function useDebounced<T>(value: T, delay = 350): T {
-  const [debounced, setDebounced] = useState(value);
+  const key = JSON.stringify(value) ?? "null";
+  const [debounced, setDebounced] = useState<{ key: string; value: T }>(() => ({ key, value }));
   useEffect(() => {
-    const id = setTimeout(() => setDebounced(value), delay);
+    const id = setTimeout(() => setDebounced((prev) => (prev.key === key ? prev : { key, value: JSON.parse(key) as T })), delay);
     return () => clearTimeout(id);
-  }, [value, delay]);
-  return debounced;
+  }, [key, delay]);
+  return debounced.value;
 }
 
 /** Current URL query string in the browser ("" during prerender) without opting into useSearchParams' CSR bailout. */

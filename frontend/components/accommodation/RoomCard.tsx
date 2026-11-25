@@ -6,7 +6,7 @@ import { Link } from "@/i18n/navigation";
 import type { RoomSummary } from "@/lib/api/types";
 import { Price } from "@/lib/currency";
 import { cn } from "@/lib/utils";
-import { BedDouble, Building2, MapPin, Star, Users, Waves, Wifi, UtensilsCrossed } from "lucide-react";
+import { Ban, BedDouble, Building2, MapPin, Star, Users, Waves, Wifi, UtensilsCrossed } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 const amenityIcon = (name: string) => {
@@ -16,15 +16,25 @@ const amenityIcon = (name: string) => {
   return <Waves className="size-4" aria-hidden />;
 };
 
-/** Figma RoomCard (22:8729): building strip + "Tax included" badge (CR-2). */
+/**
+ * Figma RoomCard (22:8729): building strip + "Tax included" badge (CR-2).
+ * B2.4: a room that cannot be booked for the searched stay (`available: false`) is greyed out with the reason
+ * and has no booking call to action (the card still opens the room page, where the quote refuses the stay).
+ */
 export function RoomCard({ room, nights, className, query }: { room: RoomSummary; nights?: number; className?: string; query?: Record<string, string> }) {
   const t = useTranslations("room");
+  const unavailable = room.available === false;
+  const reason = unavailable ? t(`unavailable.${room.unavailable_reason ?? "booked"}`) : null;
   const guests = room.max_children > 0 ? t("adultsChildren", { adults: room.max_adults, children: room.max_children }) : t("adults", { count: room.max_adults });
   return (
-    <article className={cn("group relative flex flex-col gap-3 rounded-card border border-ink-100 bg-white p-2 shadow-card transition-shadow hover:shadow-raised", className)}>
-      <div className="relative aspect-[264/240] overflow-hidden rounded-image bg-ink-100">
-        <AppImage src={room.image.url} alt={room.image.alt} fill sizes="(min-width: 1024px) 282px, (min-width: 640px) 50vw, 100vw" className="object-cover transition-transform duration-500 group-hover:scale-105" />
-        <div className="absolute start-3 top-3 flex flex-col items-start gap-1">
+    <article
+      className={cn("group relative flex flex-col gap-3 rounded-card border border-ink-100 bg-white p-2 shadow-card transition-shadow hover:shadow-raised", unavailable && "border-dashed border-ink-300 bg-ink-100/60 shadow-none hover:shadow-none", className)}
+      data-available={unavailable ? "false" : "true"}
+      aria-label={unavailable ? `${room.name} · ${t("unavailableAria", { reason: reason ?? "" })}` : undefined}
+    >
+      <div className={cn("relative aspect-[264/240] overflow-hidden rounded-image bg-ink-100", unavailable && "opacity-60 grayscale")}>
+        <AppImage src={room.image.url} alt={room.image.alt} fill sizes="(min-width: 1024px) 282px, (min-width: 640px) 50vw, 100vw" className={cn("object-cover transition-transform duration-500", !unavailable && "group-hover:scale-105")} />
+        <div className={cn("absolute start-3 top-3 flex flex-col items-start gap-1", unavailable && "hidden")}>
           {room.free_cancellation && (
             <span className="rounded-pill bg-white"><Badge tone="success" icon={BadgeIcons.freeCancellation}>{t("freeCancellation")}</Badge></span>
           )}
@@ -37,7 +47,13 @@ export function RoomCard({ room, nights, className, query }: { room: RoomSummary
         </div>
         <FavouriteButton kind="room" item={room} />
       </div>
-      <div className="flex flex-1 flex-col gap-2 px-2 pb-2">
+      <div className={cn("flex flex-1 flex-col gap-2 px-2 pb-2", unavailable && "text-ink-500 [&_*]:text-inherit")}>
+        {unavailable && (
+          <p className="inline-flex items-center gap-1.5 self-start rounded-pill bg-ink-900 px-3 py-1 text-xs font-semibold !text-white">
+            <Ban className="size-3.5" aria-hidden />
+            <span className="!text-white">{t("unavailableBadge")}</span>
+          </p>
+        )}
         <div>
           <h3 className="text-base font-semibold text-ink-900">
             <Link href={{ pathname: `/rooms/${room.id}`, query }} className="after:absolute after:inset-0 after:rounded-card">
@@ -76,7 +92,7 @@ export function RoomCard({ room, nights, className, query }: { room: RoomSummary
               <Price amount={room.price_per_night} className="text-[22px] font-semibold leading-7 text-ink-900" />
               <span className="pb-0.5 text-xs font-medium text-ink-500">{t("perNight")}</span>
             </p>
-            {nights && nights > 0 ? (
+            {nights && nights > 0 && !unavailable ? (
               <p className="text-xs font-medium text-ink-700">
                 {t("totalFor", { nights })} <Price amount={room.price_per_night * nights} />
               </p>
@@ -91,9 +107,13 @@ export function RoomCard({ room, nights, className, query }: { room: RoomSummary
               <p className="text-xs font-medium text-ink-700">{t("taxNotIncluded")}</p>
             )}
           </div>
-          <span className={buttonClasses("primary", "sm", "pointer-events-none")} aria-hidden>
-            {t("bookNow")}
-          </span>
+          {unavailable ? (
+            <p className="max-w-[60%] text-end text-sm font-semibold" data-testid="unavailable-reason">{reason}</p>
+          ) : (
+            <span className={buttonClasses("primary", "sm", "pointer-events-none")} aria-hidden>
+              {t("bookNow")}
+            </span>
+          )}
         </div>
       </div>
     </article>

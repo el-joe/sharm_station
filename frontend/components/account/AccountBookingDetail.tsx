@@ -1,7 +1,11 @@
 "use client";
 
 import { CancellationRequest } from "@/components/booking/CancellationRequest";
-import { lineLabel } from "@/components/booking/PriceSummary";
+import { PaymentHistory } from "@/components/booking/PaymentHistory";
+import { VoucherDownload } from "@/components/booking/VoucherDownload";
+import { QuoteLineList } from "@/components/booking/PriceSummary";
+import { BookingRooms } from "@/components/booking/BookingRooms";
+import { BalancePayment, balanceDue } from "@/components/booking/PaymentSection";
 import { AppImage } from "@/components/ui/AppImage";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { buttonClasses } from "@/components/ui/Button";
@@ -21,26 +25,26 @@ import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { use } from "react";
 import { bookingDate, bookingImage } from "./bookingVisuals";
 
-/** /account/bookings/[reference]: GET /bookings/{reference} with the user's bearer token (+ access token if this device made the booking). */
+/** /account/bookings/[reference]: GET /bookings/{reference} with the user's session cookie via /api/proxy (+ access token if this device made the booking). */
 export function AccountBookingDetail({ params }: { params: Promise<{ reference: string }> }) {
   const { reference } = use(params);
   const t = useTranslations("account.detail");
-  const ts = useTranslations("summary");
   const tsv = useTranslations("service");
   const tc = useTranslations("common");
   const ta = useTranslations("account");
+  const tp = useTranslations("paymentHistory");
   const format = useFormatter();
   const locale = useLocale() as Locale;
-  const { token } = useAuth();
+  const { hasSession } = useAuth();
   const { format: money } = useCurrency();
 
   const query = useQuery({
-    queryKey: ["account", "booking", reference, token, locale],
+    queryKey: ["account", "booking", reference, locale],
     queryFn: ({ signal }) => {
       const stored = readBooking(reference);
-      return api.booking(reference, { locale, token, signal, accessToken: stored?.access_token ?? null });
+      return api.booking(reference, { locale, auth: true, signal, accessToken: stored?.access_token ?? null });
     },
-    enabled: Boolean(token),
+    enabled: hasSession,
   });
 
   const back = (
@@ -75,7 +79,6 @@ export function AccountBookingDetail({ params }: { params: Promise<{ reference: 
 
   const date = bookingDate(b);
   const fmt = (d: string) => format.dateTime(parseISODate(d), { weekday: "short", day: "numeric", month: "long", year: "numeric" });
-  const money2 = (n: number) => money(n);
 
   return (
     <div className="mt-2 flex flex-col gap-6">
@@ -87,7 +90,10 @@ export function AccountBookingDetail({ params }: { params: Promise<{ reference: 
             .join(" · ")}
         </p>
         <h1 className="text-h1 mt-1 text-ink-900">{b.product_title}</h1>
-        <StatusBadge status={b.status} className="mt-3" />
+        <div className="mt-3 flex flex-wrap gap-2">
+          <StatusBadge status={b.status} />
+          {b.payment_status && b.payment_status !== b.status && <StatusBadge status={b.payment_status} />}
+        </div>
       </div>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="flex flex-col gap-6">
@@ -118,10 +124,18 @@ export function AccountBookingDetail({ params }: { params: Promise<{ reference: 
               </ul>
             )}
           </section>
+          {b.rooms && b.rooms.length > 0 && <BookingRooms rooms={b.rooms} pricesHidden={b.prices_hidden} />}
+          {balanceDue(b) > 0 && (
+            <BalancePayment reference={b.reference} accessToken={readBooking(reference)?.access_token ?? null} auth due={balanceDue(b)} bookingCurrency={b.totals.currency} balanceDueOn={b.balance_due_on} />
+          )}
+          {!b.prices_hidden && (b.payments?.length || b.status !== "awaiting_payment") ? (
+            <PaymentHistory payments={b.payments ?? []} paid={b.paid} due={b.due} balanceDueOn={b.balance_due_on} />
+          ) : null}
           <CancellationRequest
             reference={b.reference}
             cancellation={b.cancellation}
-            token={token}
+            refunds={b.payments?.filter((p) => p.type === "refund")}
+            auth
             accessToken={readBooking(reference)?.access_token ?? null}
             onChange={() => void query.refetch()}
           />
@@ -130,21 +144,24 @@ export function AccountBookingDetail({ params }: { params: Promise<{ reference: 
           <section className="rounded-card border border-ink-100 bg-white p-5 shadow-card" aria-labelledby="price-title">
             <h3 id="price-title" className="text-h4 text-ink-900">{t("priceTitle")}</h3>
             {b.lines.length > 0 && (
-              <ul className="mt-3 flex flex-col gap-2 text-sm">
-                {b.lines.map((l, i) => (
-                  <li key={i} className="flex justify-between gap-3">
-                    <span className="text-ink-700">{lineLabel(l, ts as never, money2)}</span>
-                    <span className="text-ink-900">{money(l.total)}</span>
-                  </li>
-                ))}
-              </ul>
+              <QuoteLineList
+                className="mt-3"
+                lines={b.lines}
+                rooms={(b.rooms ?? []).filter((r) => r.room_id != null).map((r, index) => ({ index, name: r.name, number: r.number, total: r.total }))}
+              />
             )}
             <dl className="mt-4 flex flex-col gap-2 border-t border-ink-100 pt-4">
               <Row label={t("total")} value={money(b.totals.total)} strong />
               <Row label={t("deposit")} value={money(b.totals.deposit)} />
               <Row label={t("balance")} value={money(b.totals.balance)} />
             </dl>
+            {b.balance_due_on && (b.due == null || b.due > 0) && b.status !== "awaiting_payment" && (
+              <p className="mt-3 text-sm text-ink-700">{tp("balanceDueOn", { date: format.dateTime(parseISODate(b.balance_due_on), { day: "numeric", month: "long", year: "numeric" }) })}</p>
+            )}
           </section>
+          {b.voucher_available && (
+            <VoucherDownload reference={b.reference} auth accessToken={readBooking(reference)?.access_token ?? null} variants={[b.prices_hidden ? "client" : "prices"]} tone="cta" />
+          )}
           {b.status === "awaiting_payment" && (
             <section className="rounded-card bg-primary-100 p-5" aria-labelledby="pay-title">
               <h3 id="pay-title" className="font-semibold text-ink-900">{t("payTitle")}</h3>

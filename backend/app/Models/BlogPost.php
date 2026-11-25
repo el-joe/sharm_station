@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\PublishStatus;
 use App\Models\Concerns\HasTranslations;
 use App\Models\Concerns\LogsActivity;
+use App\Models\Concerns\RecordsSlugRedirects;
 use Database\Factories\BlogPostFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\Model;
 class BlogPost extends Model
 {
     /** @use HasFactory<BlogPostFactory> */
-    use HasFactory, HasTranslations, LogsActivity;
+    use HasFactory, HasTranslations, LogsActivity, RecordsSlugRedirects;
 
     /**
      * @var list<string>

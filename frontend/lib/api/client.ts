@@ -8,12 +8,23 @@
  *  - `settle(...)` calls (account, payments, contact) never crash the page: an unreachable API -> { status: "error" }
  *  - resilience: the API is unreachable, times out or answers 5xx -> mock answer + console warning.
  *    404 means "not found" (null), 401/403/422 are surfaced to the UI, never masked.
+ *
+ * Authentication (F6): the Sanctum token lives in the httpOnly `ssv_session` cookie and is never
+ * visible here. Calls made with `auth: true` from the browser go to the same-origin route handler
+ * /api/proxy/<path> (app/api/proxy/[...path]/route.ts), which adds the Bearer header server-side;
+ * sign in / up / out go through /api/auth/*. Everything else calls the API directly.
  */
+import { CSRF_HEADER } from "../session-shared";
 import { API_URL, USE_MOCKS } from "../site";
 import {
-  mapAuth,
+  bookableFirst,
+  type RawMoney,
   mapBooking,
+  mapBookingRooms,
+  type RawBookingRoom,
   mapCancellation,
+  mapPayments,
+  type RawPayment,
   mapDestinationDetail,
   mapPackageCard,
   mapPackageDetail,
@@ -48,12 +59,12 @@ import { roomImage, tripImage } from "./images";
 import { mockApi } from "./mock-api";
 import type {
   BookingCancellation,
+  QuoteRoom,
   CouponCheck,
   CouponServiceType,
   SuggestGroup,
   SuggestScope,
   ApiValidationError,
-  AuthResponse,
   AuthUser,
   ContactRequest,
   PartnerBooking,
@@ -94,6 +105,9 @@ import type {
   RoomQuoteRequest,
   RoomQuoteResult,
   RoomSummary,
+  RoomCombination,
+  RoomCombinations,
+  RoomGroup,
   TransferCatalog,
   TransferHub,
   TransferQuoteRequest,
@@ -121,7 +135,8 @@ export class ApiError extends Error {
 export interface RequestOptions {
   locale: Locale;
   currency?: CurrencyCode;
-  token?: string | null;
+  /** Send the request through /api/proxy so the session cookie authenticates it (browser only). */
+  auth?: boolean;
   signal?: AbortSignal;
   /** ISO-2 nationality of the visitor (or of the partner's client): prices depend on it (CR-10). */
   nationality?: string | null;
@@ -129,8 +144,15 @@ export interface RequestOptions {
 
 type Query = Record<string, string | number | boolean | undefined | null | (string | number)[]>;
 
+/** Same-origin prefix of the authenticated proxy (app/api/proxy/[...path]/route.ts). */
+export const PROXY_PREFIX = "/api/proxy";
+
+function viaProxy(opts: RequestOptions) {
+  return Boolean(opts.auth) && typeof window !== "undefined";
+}
+
 function buildUrl(path: string, query: Query, opts: RequestOptions) {
-  const url = new URL(`${API_URL}${path}`);
+  const url = viaProxy(opts) ? new URL(`${PROXY_PREFIX}${path}`, window.location.origin) : new URL(`${API_URL}${path}`);
   url.searchParams.set("locale", opts.locale);
   url.searchParams.set("currency", opts.currency ?? "EUR");
   if (opts.nationality) url.searchParams.set("nationality", opts.nationality);
@@ -154,8 +176,9 @@ async function request<T>(method: Method, path: string, opts: RequestOptions, qu
       Accept: "application/json",
       "Accept-Language": opts.locale,
       ...(body && !multipart ? { "Content-Type": "application/json" } : {}),
-      ...(opts.token ? { Authorization: `Bearer ${opts.token}` } : {}),
+      ...(viaProxy(opts) ? { [CSRF_HEADER]: "1" } : {}),
     },
+    credentials: "same-origin",
     body: body ? (multipart ? (body as FormData) : JSON.stringify(body)) : undefined,
     signal,
   });
@@ -172,7 +195,39 @@ async function request<T>(method: Method, path: string, opts: RequestOptions, qu
   return (await res.json()) as T;
 }
 
+/** Same-origin call to the /api/auth/* route handlers (app/api/auth). */
+async function authRequest<T>(method: "GET" | "POST", path: string, opts: RequestOptions, body?: unknown): Promise<T> {
+  const timeout = AbortSignal.timeout(15000);
+  const res = await fetch(`/api/auth${path}?locale=${opts.locale}`, {
+    method,
+    headers: {
+      Accept: "application/json",
+      "Accept-Language": opts.locale,
+      ...(method === "POST" ? { [CSRF_HEADER]: "1" } : {}),
+      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+    credentials: "same-origin",
+    cache: "no-store",
+    signal: opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout,
+  });
+  if (!res.ok) {
+    let payload: Partial<ApiValidationError> = {};
+    try {
+      payload = await res.json();
+    } catch {
+      /* non-JSON error */
+    }
+    throw new ApiError(res.status, payload.message ?? res.statusText, payload.errors ?? {});
+  }
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
 type Envelope<T> = { data: T };
+
+/** Account and partner endpoints always need the session (sent through /api/proxy). */
+const authed = (o: RequestOptions): RequestOptions => ({ ...o, auth: true });
 
 function data<T>(envelope: Envelope<T>, check?: (value: T) => boolean): T {
   if (!envelope || typeof envelope !== "object" || !("data" in envelope)) throw new ApiError(502, "Unexpected API response");
@@ -246,13 +301,21 @@ function tripQuery(f: TripFilters): Query {
   };
 }
 
-/** UI filters -> GET /rooms query (the API filters by total guests; dates are not filtered server-side yet). */
+/**
+ * UI filters -> GET /rooms query. With dates and/or guests the API also returns the rooms that cannot be
+ * booked (`available: false` + `unavailable_reason`, after the bookable ones, B2.4).
+ */
 function roomQuery(f: RoomFilters): Query {
   const guests = (f.adults ?? 0) + (f.children ?? 0);
+  const dates = f.check_in && f.check_out && f.check_out > f.check_in;
   return {
     destination: f.destination,
     building: f.building,
     guests: guests > 0 ? guests : undefined,
+    check_in: dates ? f.check_in : undefined,
+    check_out: dates ? f.check_out : undefined,
+    free_cancellation: f.free_cancellation,
+    group_by: f.group_by,
     sort: f.sort === "rating" ? "recommended" : f.sort,
     page: f.page,
     per_page: MAX_PER_PAGE,
@@ -272,9 +335,16 @@ function bookingBody(b: CreateBookingRequest) {
     nationality_code: b.nationality_code,
     coupon_code: b.coupon_code || undefined,
   };
-  if (b.service_type === "room") return { ...common, room_id: b.room_id, check_in: b.check_in, check_out: b.check_out };
-  if (b.product_type === "package") return { ...common, package_slug: b.product_slug, booking_type: b.booking_type, travel_date: b.travel_date, addons: b.addons };
-  return { ...common, trip_slug: b.product_slug, booking_type: b.booking_type, travel_date: b.travel_date, units: b.units, addons: b.addons };
+  const roomOptions = b.room_options?.length ? { room_options: b.room_options } : {};
+  if (b.service_type === "room" && b.rooms?.length) {
+    // Several rooms of one building (B2.1): the party is allocated in rooms[]; the top-level party lets the engine check coverage.
+    return { ...common, service: "accommodation", rooms: b.rooms, check_in: b.check_in, check_out: b.check_out };
+  }
+  if (b.service_type === "room") {
+    return { ...common, room_id: b.room_id, check_in: b.check_in, check_out: b.check_out, ...(b.extra_beds ? { extra_beds: b.extra_beds } : {}), ...(b.cots ? { cots: b.cots } : {}) };
+  }
+  if (b.product_type === "package") return { ...common, package_slug: b.product_slug, booking_type: b.booking_type, travel_date: b.travel_date, addons: b.addons, ...roomOptions };
+  return { ...common, trip_slug: b.product_slug, booking_type: b.booking_type, travel_date: b.travel_date, units: b.units, addons: b.addons, ...roomOptions };
 }
 
 export const api = {
@@ -356,15 +426,57 @@ export const api = {
     );
   },
 
+  /**
+   * GET /rooms. `data` is every room of the page, bookable first; with `group_by: "building"` the API groups the
+   * page by building and `groups` keeps that grouping (bookable rooms first in each group).
+   */
   rooms: (filters: RoomFilters, o: RequestOptions) =>
-    live<Paginated<RoomSummary>>(
+    live<Paginated<RoomSummary> & { groups?: RoomGroup[] }>(
       async () => {
+        if (filters.group_by === "building") {
+          const res = await request<Paged<{ building: RawRoomCard["building"]; available_count: number; rooms: RawRoomCard[] }>>("GET", "/rooms", o, roomQuery(filters));
+          if (!isArray(res.data) || !res.meta) throw new ApiError(502, "Unexpected API response");
+          const groups: RoomGroup[] = res.data
+            .filter((g) => isArray(g.rooms) && g.rooms.length > 0)
+            .map((g) => {
+              const rooms = bookableFirst(g.rooms.map((r) => mapRoomCard({ ...r, building: r.building ?? g.building }, o.locale)));
+              return { building: rooms[0].building, available_count: Number(g.available_count ?? rooms.filter((r) => r.available !== false).length), rooms };
+            });
+          return { data: groups.flatMap((g) => g.rooms), meta: mapPaginated({ data: [], meta: res.meta }, (x) => x).meta, groups };
+        }
         const res = await request<Paged<RawRoomCard>>("GET", "/rooms", o, roomQuery(filters));
         if (!isArray(res.data)) throw new ApiError(502, "Unexpected API response");
-        return mapPaginated(res, (r) => mapRoomCard(r, o.locale));
+        const page = mapPaginated(res, (r) => mapRoomCard(r, o.locale));
+        return { ...page, data: bookableFirst(page.data) };
       },
       () => mockApi.rooms(filters, o.locale),
     ),
+
+  /** GET /rooms/combinations: cheapest sets of free rooms of a building for the party (SRS 6.4, B2.2). */
+  roomCombinations: async (q: { building: string; check_in: string; check_out: string; adults: number; child_ages: number[]; limit?: number }, o: RequestOptions): Promise<RoomCombinations> => {
+    type RawCombination = Omit<RoomCombination, "total" | "rooms"> & { total_eur?: number; total?: RawMoney; rooms: (Omit<RoomCombination["rooms"][number], "total"> & { total?: RawMoney })[] };
+    const res = await request<{ data: RawCombination[]; meta?: { message?: string | null; nights?: number } }>("GET", "/rooms/combinations", o, {
+      building: q.building,
+      check_in: q.check_in,
+      check_out: q.check_out,
+      adults: q.adults,
+      child_ages: q.child_ages,
+      limit: q.limit ?? 6,
+    });
+    if (!isArray(res.data)) throw new ApiError(502, "Unexpected API response");
+    return {
+      combinations: res.data.map((c) => ({
+        rooms_count: c.rooms_count,
+        capacity: c.capacity,
+        total: c.total_eur ?? moneyEur(c.total),
+        tax_included: Boolean(c.tax_included),
+        rooms: c.rooms.map((r) => ({ ...r, number: r.number ?? null, children_ages: r.children_ages ?? [], total: moneyEur(r.total) })),
+        request: c.request,
+      })),
+      message: res.meta?.message ?? null,
+      nights: res.meta?.nights ?? 0,
+    };
+  },
 
   room: (id: number, o: RequestOptions) =>
     live<RoomDetail | null>(
@@ -406,23 +518,37 @@ export const api = {
     }
   },
 
-  login: (body: { email: string; password: string }, o: RequestOptions) =>
-    live<AuthResponse>(
-      async () => mapAuth(await request<Parameters<typeof mapAuth>[0]>("POST", "/auth/login", o, {}, body)),
-      () => ({ token: "demo-token", user: { id: 1, name: body.email.split("@")[0], email: body.email, role: "customer" } }),
-    ),
+  /** POST /api/auth/login -> the user; the route handler keeps the token in the httpOnly session cookie. */
+  login: async (body: { email: string; password: string }, o: RequestOptions): Promise<AuthUser> =>
+    mapUser(data(await authRequest<Envelope<RawUser>>("POST", "/login", o, body), (u) => typeof u?.id === "number")),
 
-  register: (body: { name: string; email: string; password: string; password_confirmation: string }, o: RequestOptions) =>
-    live<AuthResponse>(
-      async () => mapAuth(await request<Parameters<typeof mapAuth>[0]>("POST", "/auth/register", o, {}, { ...body, locale: o.locale })),
-      () => ({ token: "demo-token", user: { id: 1, name: body.name, email: body.email, role: "customer" } }),
-    ),
+  /** POST /api/auth/register -> the new user, signed in through the session cookie. */
+  register: async (body: { name: string; email: string; password: string; password_confirmation: string }, o: RequestOptions): Promise<AuthUser> =>
+    mapUser(data(await authRequest<Envelope<RawUser>>("POST", "/register", o, { ...body, locale: o.locale }), (u) => typeof u?.id === "number")),
 
-  /** POST /partners/apply (creates the partner user; country is ISO-2). */
+  /** POST /auth/forgot-password (public, always 200 with a neutral message so e-mails cannot be probed). */
+  forgotPassword: async (email: string, o: RequestOptions): Promise<string> =>
+    (await request<{ message?: string }>("POST", "/auth/forgot-password", o, {}, { email })).message ?? "",
+
+  /**
+   * POST /auth/reset-password (public): welcome (7 days) and reset (60 minutes) links. No token is returned and every
+   * API token of the account is revoked; 422 `errors.token` when the link is invalid or expired.
+   */
+  resetPassword: async (body: { token: string; email: string; password: string; password_confirmation: string }, o: RequestOptions): Promise<string> =>
+    (await request<{ message?: string }>("POST", "/auth/reset-password", o, {}, body)).message ?? "",
+
+  /** POST /api/auth/migrate {token}: exchanges a legacy localStorage token for the session cookie. */
+  migrateSession: async (token: string, o: RequestOptions): Promise<AuthUser> =>
+    mapUser(data(await authRequest<Envelope<RawUser>>("POST", "/migrate", o, { token }), (u) => typeof u?.id === "number")),
+
+  /**
+   * POST /partners/apply (creates the partner user; country is ISO-2). Sent through the proxy so the
+   * token the API issues for the new user never reaches the browser (the proxy strips and revokes it).
+   */
   applyPartner: (body: PartnerApplication, o: RequestOptions) =>
     live<{ status: string }>(
       async () => {
-        const res = await request<{ data: { status: string }; token?: string }>("POST", "/partners/apply", o, {}, {
+        const res = await request<{ data: { status: string } }>("POST", "/partners/apply", { ...o, auth: true }, {}, {
           company: body.company,
           name: body.contact_name,
           email: body.email,
@@ -520,38 +646,34 @@ export const api = {
       () => ({ subscribed: true }),
     ),
 
-  /* ---------------------------------------------------------------- account (Sanctum bearer token) */
+  /* ---------------------------------------------------------------- account (session cookie via /api/proxy) */
 
-  /** GET /auth/me -> UserResource (with `partner` when the user is a partner). */
-  me: async (o: RequestOptions & { token: string }): Promise<AuthUser> => {
-    if (USE_MOCKS || o.token === "demo-token") return { id: 1, name: "Demo traveller", email: "demo@example.com", role: "customer", partner: null };
-    return mapUser(data(await request<Envelope<RawUser>>("GET", "/auth/me", o), (u) => typeof u.id === "number"));
-  },
+  /** GET /api/auth/me -> UserResource (with `partner` when the user is a partner); 401 without a valid session. */
+  me: async (o: RequestOptions): Promise<AuthUser> => mapUser(data(await authRequest<Envelope<RawUser>>("GET", "/me", o), (u) => typeof u?.id === "number")),
 
-  /** POST /auth/logout (204). Errors are ignored: the local token is dropped anyway. */
-  logout: async (o: RequestOptions & { token: string }) => {
-    if (USE_MOCKS) return;
+  /** POST /api/auth/logout (204): revokes the token and clears the cookies. Errors are ignored. */
+  logout: async (o: RequestOptions) => {
     try {
-      await request<void>("POST", "/auth/logout", o);
+      await authRequest<void>("POST", "/logout", o);
     } catch {
-      /* token already invalid or API down */
+      /* API down: nothing else to do */
     }
   },
 
   /** GET /me/bookings?status=upcoming|past|cancelled -> paginated BookingResource. */
-  getMyBookings: (o: RequestOptions & { token: string }) =>
+  getMyBookings: (o: RequestOptions) =>
     settle<BookingDetail[]>(async () => {
-      const res = await request<Paged<RawBooking>>("GET", "/me/bookings", o, { per_page: 50 });
+      const res = await request<Paged<RawBooking>>("GET", "/me/bookings", authed(o), { per_page: 50 });
       if (!isArray(res.data)) throw new ApiError(502, "Unexpected API response");
       return res.data.map(mapBooking);
     }),
 
   /** PATCH /me/profile {name, phone, locale, currency, newsletter} -> UserResource. */
-  updateProfile: (body: Partial<ProfileUpdate>, o: RequestOptions & { token: string }) =>
-    settle<AuthUser>(async () => mapUser(data(await request<Envelope<RawUser>>("PATCH", "/me/profile", o, {}, body)))),
+  updateProfile: (body: Partial<ProfileUpdate>, o: RequestOptions) =>
+    settle<AuthUser>(async () => mapUser(data(await request<Envelope<RawUser>>("PATCH", "/me/profile", authed(o), {}, body)))),
 
   /** PUT /me/password {current_password, password, password_confirmation} -> 204. */
-  updatePassword: (body: PasswordUpdate, o: RequestOptions & { token: string }) => settle<void>(() => request<void>("PUT", "/me/password", o, {}, body)),
+  updatePassword: (body: PasswordUpdate, o: RequestOptions) => settle<void>(() => request<void>("PUT", "/me/password", authed(o), {}, body)),
 
   /* ---------------------------------------------------------------- nationality (CR-10) */
 
@@ -571,9 +693,9 @@ export const api = {
   /* ---------------------------------------------------------------- partner panel (active partner token, else 403) */
 
   /** GET /partner/dashboard -> { kpis, commissions[], recent_bookings[] }. */
-  partnerDashboard: async (o: RequestOptions & { token: string }): Promise<PartnerDashboard> => {
+  partnerDashboard: async (o: RequestOptions): Promise<PartnerDashboard> => {
     const raw = data(
-      await request<Envelope<{ kpis: Record<string, unknown>; commissions?: PartnerDashboard["commissions"]; recent_bookings?: RawPartnerBooking[] }>>("GET", "/partner/dashboard", o),
+      await request<Envelope<{ kpis: Record<string, unknown>; commissions?: PartnerDashboard["commissions"]; recent_bookings?: RawPartnerBooking[] }>>("GET", "/partner/dashboard", authed(o)),
       (d) => Boolean(d?.kpis),
     );
     return {
@@ -590,16 +712,16 @@ export const api = {
   },
 
   /** GET /partner/bookings?status=&service=&payment_status= -> paginated BookingResource. */
-  partnerBookings: async (filters: { status?: string; service?: string; payment_status?: string }, o: RequestOptions & { token: string }): Promise<PartnerBooking[]> => {
-    const res = await request<Paged<RawPartnerBooking>>("GET", "/partner/bookings", o, { ...filters, per_page: 100 });
+  partnerBookings: async (filters: { status?: string; service?: string; payment_status?: string }, o: RequestOptions): Promise<PartnerBooking[]> => {
+    const res = await request<Paged<RawPartnerBooking>>("GET", "/partner/bookings", authed(o), { ...filters, per_page: 100 });
     if (!isArray(res.data)) throw new ApiError(502, "Unexpected API response");
     return res.data.map(mapPartnerBooking);
   },
 
-  /** GET /bookings/{reference} with the partner's bearer token (partner totals included for the booker). Null when not found. */
-  partnerBooking: async (reference: string, o: RequestOptions & { token: string }): Promise<PartnerBookingDetail | null> => {
+  /** GET /bookings/{reference} through /api/proxy with the partner session (partner totals included for the booker). Null when not found. */
+  partnerBooking: async (reference: string, o: RequestOptions): Promise<PartnerBookingDetail | null> => {
     try {
-      return mapPartnerBookingDetail(data(await request<Envelope<RawBookingFull>>("GET", `/bookings/${encodeURIComponent(reference)}`, o)));
+      return mapPartnerBookingDetail(data(await request<Envelope<RawBookingFull>>("GET", `/bookings/${encodeURIComponent(reference)}`, authed(o))));
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) return null;
       throw error;
@@ -607,8 +729,8 @@ export const api = {
   },
 
   /** GET /partner/statements -> monthly statements (retail, commission, partner totals). */
-  partnerStatements: async (o: RequestOptions & { token: string }): Promise<PartnerStatement[]> =>
-    data(await request<Envelope<Record<string, unknown>[]>>("GET", "/partner/statements", o), isArray).map((s) => ({
+  partnerStatements: async (o: RequestOptions): Promise<PartnerStatement[]> =>
+    data(await request<Envelope<Record<string, unknown>[]>>("GET", "/partner/statements", authed(o)), isArray).map((s) => ({
       id: Number(s.id),
       period: String(s.period ?? ""),
       period_start: String(s.period_start ?? ""),
@@ -625,13 +747,14 @@ export const api = {
     })),
 
   /**
-   * GET /partner/statements/{YYYY-MM}/export?format=pdf|xlsx with the partner token -> the file as a Blob.
+   * GET /partner/statements/{YYYY-MM}/export?format=pdf|xlsx through /api/proxy (streamed) -> the file as a Blob.
    * The filename comes from Content-Disposition when the API exposes it, else statement-{period}.{ext}.
    */
-  partnerStatementFile: async (period: string, format: "pdf" | "xlsx", o: RequestOptions & { token: string }): Promise<{ blob: Blob; filename: string }> => {
-    const url = buildUrl(`/partner/statements/${encodeURIComponent(period)}/export`, { format }, o);
+  partnerStatementFile: async (period: string, format: "pdf" | "xlsx", o: RequestOptions): Promise<{ blob: Blob; filename: string }> => {
+    const url = buildUrl(`/partner/statements/${encodeURIComponent(period)}/export`, { format }, { ...o, auth: true });
     const res = await fetch(url, {
-      headers: { Accept: format === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Accept-Language": o.locale, Authorization: `Bearer ${o.token}` },
+      headers: { Accept: format === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Accept-Language": o.locale },
+      credentials: "same-origin",
       signal: o.signal ? AbortSignal.any([o.signal, AbortSignal.timeout(60000)]) : AbortSignal.timeout(60000),
     });
     if (!res.ok) {
@@ -649,8 +772,8 @@ export const api = {
   },
 
   /** GET /partner/price-list?nationality=&service= (403 when the admin has not enabled it). */
-  partnerPriceList: async (filters: { nationality: string; service?: string }, o: RequestOptions & { token: string }): Promise<PartnerPriceRow[]> =>
-    data(await request<Envelope<Record<string, unknown>[]>>("GET", "/partner/price-list", o, filters), isArray).map((r) => ({
+  partnerPriceList: async (filters: { nationality: string; service?: string }, o: RequestOptions): Promise<PartnerPriceRow[]> =>
+    data(await request<Envelope<Record<string, unknown>[]>>("GET", "/partner/price-list", authed(o), filters), isArray).map((r) => ({
       service: String(r.service ?? ""),
       service_type: String(r.service_type ?? ""),
       title: String(r.title ?? ""),
@@ -667,15 +790,15 @@ export const api = {
     })),
 
   /** GET /partner/profile -> company data + read-only commissions per type. */
-  partnerProfile: async (o: RequestOptions & { token: string }): Promise<PartnerProfile> => data(await request<Envelope<PartnerProfile>>("GET", "/partner/profile", o)),
+  partnerProfile: async (o: RequestOptions): Promise<PartnerProfile> => data(await request<Envelope<PartnerProfile>>("GET", "/partner/profile", authed(o))),
 
   /** PATCH /partner/profile (contact fields and notifications) -> PartnerProfile. */
-  updatePartnerProfile: async (body: Partial<Omit<PartnerProfile, "status" | "commissions">>, o: RequestOptions & { token: string }): Promise<PartnerProfile> =>
-    data(await request<Envelope<PartnerProfile>>("PATCH", "/partner/profile", o, {}, body)),
+  updatePartnerProfile: async (body: Partial<Omit<PartnerProfile, "status" | "commissions">>, o: RequestOptions): Promise<PartnerProfile> =>
+    data(await request<Envelope<PartnerProfile>>("PATCH", "/partner/profile", authed(o), {}, body)),
 
   /** GET /partner/catalogue: customer price for the client's nationality, partner price and commission per product. */
-  partnerCatalogue: async (f: PartnerCatalogueFilters, o: RequestOptions & { token: string }): Promise<PartnerCatalogueItem[]> =>
-    data(await request<Envelope<Record<string, unknown>[]>>("GET", "/partner/catalogue", o, { ...f }), isArray).map((r) => ({
+  partnerCatalogue: async (f: PartnerCatalogueFilters, o: RequestOptions): Promise<PartnerCatalogueItem[]> =>
+    data(await request<Envelope<Record<string, unknown>[]>>("GET", "/partner/catalogue", authed(o), { ...f }), isArray).map((r) => ({
       service: r.service as PartnerCatalogueItem["service"],
       service_type: String(r.service_type ?? ""),
       product_type: r.product_type as PartnerCatalogueItem["product_type"],
@@ -702,12 +825,12 @@ export const api = {
     })),
 
   /** POST /partner/quotes -> customer lines, commission and partner totals (422 carries the invalid quote's messages). */
-  partnerQuote: async (body: PartnerQuoteRequest, o: RequestOptions & { token: string }): Promise<PartnerQuote> =>
-    mapPartnerQuote(data(await request<Envelope<RawPartnerQuote>>("POST", "/partner/quotes", o, {}, body), (q) => typeof q.retail_total === "number")),
+  partnerQuote: async (body: PartnerQuoteRequest, o: RequestOptions): Promise<PartnerQuote> =>
+    mapPartnerQuote(data(await request<Envelope<RawPartnerQuote>>("POST", "/partner/quotes", authed(o), {}, body), (q) => typeof q.retail_total === "number")),
 
   /** POST /partner/bookings -> 201 BookingResource (partner is the booker; client nationality sets the price). */
-  partnerCreateBooking: async (body: PartnerBookingRequest, o: RequestOptions & { token: string }): Promise<PartnerBookingDetail> =>
-    mapPartnerBookingDetail(data(await request<Envelope<RawBookingFull>>("POST", "/partner/bookings", o, {}, body), (b) => typeof b.reference === "string")),
+  partnerCreateBooking: async (body: PartnerBookingRequest, o: RequestOptions): Promise<PartnerBookingDetail> =>
+    mapPartnerBookingDetail(data(await request<Envelope<RawBookingFull>>("POST", "/partner/bookings", authed(o), {}, body), (b) => typeof b.reference === "string")),
 
   /* ---------------------------------------------------------------- payments (SRS 10) */
 
@@ -755,7 +878,7 @@ export const api = {
 
   /* ---------------------------------------------------------------- coupons and cancellations */
 
-  /** POST /coupons/validate {code, service_type, total_eur, email?, for_partner?} (partner checks need the partner token). */
+  /** POST /coupons/validate {code, service_type, total_eur, email?, for_partner?} (partner checks need the partner session: pass `auth: true`). */
   validateCoupon: async (
     body: { code: string; service_type: CouponServiceType; total_eur: number; email?: string; for_partner?: boolean },
     o: RequestOptions,
@@ -774,7 +897,7 @@ export const api = {
 
   /**
    * POST /bookings/{reference}/cancellation-request {reason} with ?token= (booking link) or the
-   * owner's / partner's bearer token. 201 = recorded, 200 = already requested; both return the booking.
+   * owner / partner session (`auth: true`). 201 = recorded, 200 = already requested; both return the booking.
    */
   requestCancellation: async (reference: string, reason: string, o: RequestOptions & { accessToken?: string | null }): Promise<{ cancellation: BookingCancellation | null; message: string }> => {
     const res = await request<{ data: RawBooking; message?: string }>(
@@ -881,7 +1004,8 @@ interface RawPartnerQuote {
   valid?: boolean;
   season_name?: string | null;
   nationality?: { code: string; group: NationalityGroup | null };
-  lines?: { type: string; label: string; quantity: number; unit_price: number; total: number; partner_unit_price?: number; partner_total?: number; commission_percent?: number }[];
+  lines?: { type: string; label: string; quantity: number; unit_price: number; total: number; partner_unit_price?: number; partner_total?: number; commission_percent?: number; meta?: { room_index?: number | null } | null }[];
+  rooms?: QuoteRoom[];
   retail_total: number;
   total: number;
   partner_total?: number;
@@ -908,6 +1032,7 @@ function mapPartnerQuote(q: RawPartnerQuote): PartnerQuote {
       partner_unit_price: l.partner_unit_price ?? l.unit_price,
       partner_total: l.partner_total ?? l.total,
       commission_percent: l.commission_percent ?? 0,
+      room_index: l.meta?.room_index ?? null,
     })),
     retail_total: q.retail_total,
     partner_total: q.partner_total ?? q.total,
@@ -918,6 +1043,7 @@ function mapPartnerQuote(q: RawPartnerQuote): PartnerQuote {
     deposit_amount: q.deposit_amount,
     balance_amount: q.balance_amount,
     nights: q.nights,
+    ...(Array.isArray(q.rooms) && q.rooms.length ? { rooms: q.rooms } : {}),
   };
 }
 
@@ -942,8 +1068,11 @@ interface RawBookingFull {
   totals: Record<string, unknown>;
   payment_options?: PartnerBookingDetail["payment_options"];
   payment_summary?: { paid?: number; due?: number } | null;
-  payments?: { type: string; status: string; amount: number; method: string | null; paid_at: string | null }[];
+  payments?: RawPayment[];
+  balance_due_on?: string | null;
+  voucher_available?: boolean;
   transfer?: PartnerBookingDetail["transfer"];
+  rooms?: RawBookingRoom[] | null;
   coupon_code?: string | null;
   cancellation?: Partial<BookingCancellation> | null;
   created_at: string;
@@ -984,9 +1113,12 @@ function mapPartnerBookingDetail(raw: RawBookingFull): PartnerBookingDetail {
     },
     paid: Number(raw.payment_summary?.paid ?? 0),
     due: Number(raw.payment_summary?.due ?? partnerTotal),
-    payments: raw.payments ?? [],
+    balance_due_on: raw.balance_due_on ?? null,
+    voucher_available: Boolean(raw.voucher_available),
+    payments: mapPayments(raw.payments),
     payment_options: raw.payment_options ?? [],
     transfer: raw.transfer ?? null,
+    rooms: mapBookingRooms(raw.rooms),
     coupon_code: raw.coupon_code ?? null,
     cancellation: mapCancellation(raw.cancellation),
     created_at: raw.created_at,

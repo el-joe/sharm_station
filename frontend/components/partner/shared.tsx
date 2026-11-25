@@ -142,16 +142,7 @@ export function PartnerPriceSummary({
       )}
       {quote ? (
         <div aria-live="polite">
-          <ul className="mt-3 flex flex-col gap-2 border-b border-ink-100 pb-3 text-sm">
-            {quote.lines.map((l, i) => (
-              <li key={`${l.label}-${i}`} className="flex justify-between gap-3">
-                <span className="text-ink-700">
-                  {l.label} × {l.quantity} · {format(l.unit_price, { decimals: true })}
-                </span>
-                <span className="shrink-0 font-semibold text-ink-900">{format(l.total, { decimals: true })}</span>
-              </li>
-            ))}
-          </ul>
+          <QuoteLines quote={quote} />
           <dl className="mt-3 flex flex-col gap-2 border-b border-ink-100 pb-3 text-sm">
             <div className="flex justify-between gap-3">
               <dt className="text-ink-700">{t("customerPrice")}</dt>
@@ -204,5 +195,52 @@ export function PartnerPriceSummary({
       )}
       {footer && <div className="mt-4">{footer}</div>}
     </section>
+  );
+}
+
+/**
+ * Partner quote lines. Multi-room stays are grouped per room (line.room_index, never the label) with the room's
+ * guests, extras and partner total, so the partner sees one block per room.
+ */
+function QuoteLines({ quote }: { quote: PartnerQuote }) {
+  const t = useTranslations("partnerPanel.summary");
+  const tr = useTranslations("bookingRooms");
+  const { format } = useCurrency();
+  const line = (l: PartnerQuote["lines"][number], i: number) => (
+    <li key={`${l.label}-${i}`} className="flex justify-between gap-3">
+      <span className="text-ink-700">
+        {l.label} × {l.quantity} · {format(l.unit_price, { decimals: true })}
+      </span>
+      <span className="shrink-0 font-semibold text-ink-900">{format(l.total, { decimals: true })}</span>
+    </li>
+  );
+  const rooms = quote.rooms ?? [];
+  if (rooms.length < 2 || !quote.lines.some((l) => l.room_index != null)) {
+    return <ul className="mt-3 flex flex-col gap-2 border-b border-ink-100 pb-3 text-sm">{quote.lines.map(line)}</ul>;
+  }
+  const rest = quote.lines.filter((l) => l.room_index == null || !rooms.some((r) => r.index === l.room_index));
+  return (
+    <div className="mt-3 flex flex-col gap-3 border-b border-ink-100 pb-3 text-sm">
+      {rooms.map((r) => {
+        const own = quote.lines.filter((l) => l.room_index === r.index);
+        const partner = Math.round(own.reduce((sum, l) => sum + l.partner_total, 0) * 100) / 100;
+        const name = [r.name, r.number].filter(Boolean).join(" ");
+        const extras = r.extra_beds || r.cots ? tr("extras", { beds: r.extra_beds, cots: r.cots }).replace(/^ · /, "") : "";
+        return (
+          <section key={r.index} aria-label={tr("room", { n: r.index + 1, name })} className="rounded-image border border-ink-100 p-3" data-testid="partner-quote-room">
+            <h3 className="flex justify-between gap-3 font-semibold text-ink-900">
+              <span>{tr("room", { n: r.index + 1, name })}</span>
+              <span className="shrink-0 tabular-nums">{format(partner, { decimals: true })}</span>
+            </h3>
+            <p className="text-xs text-ink-500">{[tr("guests", { adults: r.adults, children: r.children_ages.length }), extras || null].filter(Boolean).join(" · ")}</p>
+            {partner !== Math.round(own.reduce((sum, l) => sum + l.total, 0) * 100) / 100 && (
+              <p className="text-xs text-ink-500">{t("customerPrice")} {format(own.reduce((sum, l) => sum + l.total, 0), { decimals: true })}</p>
+            )}
+            <ul className="mt-2 flex flex-col gap-1.5">{own.map(line)}</ul>
+          </section>
+        );
+      })}
+      {rest.length > 0 && <ul className="flex flex-col gap-2">{rest.map(line)}</ul>}
+    </div>
   );
 }

@@ -22,7 +22,7 @@ export function PartnerProfileForm() {
   const t = useTranslations("partnerPanel.profile");
   const tv = useTranslations("validation");
   const locale = useLocale() as Locale;
-  const { user, token, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const query = usePartnerQuery(["profile"], api.partnerProfile);
   const remote = query.data ?? null;
   const { data: nationalities } = useNationality();
@@ -76,7 +76,7 @@ export function PartnerProfileForm() {
           notify_bookings: v.notify_bookings,
           notify_statements: v.notify_statements,
         },
-        { locale, token: token! },
+        { locale },
       );
       void query.refetch();
       setNotice({ tone: "success", text: t("saved") });

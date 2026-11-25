@@ -6,6 +6,7 @@ use App\DataTables\Concerns\RendersRowActions;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\PaymentProof;
+use App\Services\Payments\PaymentGatewayManager;
 use App\Services\PaymentService;
 use App\View\Components\Admin\StatusChip;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,7 +20,10 @@ class PaymentDataTables
 {
     use RendersRowActions;
 
-    public function __construct(private readonly PaymentService $payments) {}
+    public function __construct(
+        private readonly PaymentService $payments,
+        private readonly PaymentGatewayManager $gateways,
+    ) {}
 
     public function proofs(?string $status): JsonResponse
     {
@@ -57,7 +61,8 @@ class PaymentDataTables
     {
         return (new EloquentDataTable($this->payments->methodsQuery()))
             ->editColumn('name', fn (PaymentMethod $method): string => $this->titleCell((string) $method->name, $method->code, route('admin.payment-methods.edit', $method)))
-            ->editColumn('type', fn (PaymentMethod $method): string => e($method->type->label().($method->driver ? ' · '.$method->driver : '')))
+            ->editColumn('type', fn (PaymentMethod $method): string => e($method->type->label().($method->driver ? ' · '.$method->driver : ''))
+                .($method->driver ? ' '.StatusChip::html($this->gateways->isAvailable($method->driver) ? 'enabled' : 'disabled', $this->gateways->isAvailable($method->driver) ? 'Keys set' : 'Keys missing: hidden') : ''))
             ->editColumn('currencies', fn (PaymentMethod $method): string => e(implode(', ', $method->currencies ?? []) ?: 'All'))
             ->editColumn('proof_required', fn (PaymentMethod $method): string => $method->proof_required ? 'Yes' : 'No')
             ->editColumn('is_enabled', fn (PaymentMethod $method): string => StatusChip::html($method->is_enabled ? 'enabled' : 'disabled'))

@@ -39,8 +39,8 @@ class StoreBookingRequest extends FormRequest
         $common = [
             'service' => ['nullable', Rule::enum(ServiceType::class)],
             'nationality_code' => ['required', 'string', 'size:2', Rule::exists('countries', 'code')],
-            'trip_slug' => ['required_without_all:room_id,package_slug,transfer', 'prohibits:room_id', 'string', 'max:255'],
-            'room_id' => ['required_without_all:trip_slug,package_slug,transfer', 'integer'],
+            'trip_slug' => [Rule::requiredIf($service === ServiceType::Trip), 'nullable', 'prohibits:room_id', 'string', 'max:255'],
+            'room_id' => [Rule::requiredIf($service === ServiceType::Accommodation && ! $this->has('rooms')), 'nullable', 'integer'],
             'package_slug' => ['nullable', 'string', 'max:255'],
             'lead' => ['required', 'array'],
             'lead.name' => ['required', 'string', 'max:255'],
@@ -65,5 +65,13 @@ class StoreBookingRequest extends FormRequest
         };
 
         return [...$common, ...$serviceRules];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return RoomQuoteRequest::stayMessages();
     }
 }

@@ -37,12 +37,13 @@ final readonly class CreateBookingData
         public ?string $nationalityCode = null,
         public ?int $nationalityGroupId = null,
         public ?string $couponCode = null,
+        public bool $sendNotifications = true,
     ) {}
 
     /**
      * @param  array<string, mixed>  $data
      */
-    public static function fromArray(array $data, ?int $userId = null, ?Partner $partner = null, string $locale = 'en', string $currency = 'EUR', ?int $nationalityGroupId = null): self
+    public static function fromArray(array $data, ?int $userId = null, ?Partner $partner = null, string $locale = 'en', string $currency = 'EUR', ?int $nationalityGroupId = null, bool $sendNotifications = true): self
     {
         $nationalityCode = isset($data['nationality_code']) ? strtoupper((string) $data['nationality_code']) : null;
 
@@ -58,7 +59,7 @@ final readonly class CreateBookingData
             travelers: array_values(array_map(TravelerData::fromArray(...), $data['travelers'] ?? [])),
             tripSlug: $isRoom || $isTransfer || $isPackage ? null : ($data['trip_slug'] ?? null),
             tripQuote: $isRoom || $isTransfer ? null : QuoteRequestData::fromArray($data, $partner, $currency, $nationalityCode, $nationalityGroupId),
-            roomId: $isRoom ? (int) $data['room_id'] : null,
+            roomId: $isRoom ? (int) ($data['room_id'] ?? $data['rooms'][0]['room_id'] ?? 0) : null,
             roomQuote: $isRoom ? RoomQuoteRequestData::fromArray($data, $partner, $currency, $nationalityCode, $nationalityGroupId) : null,
             notes: $data['notes'] ?? null,
             userId: $userId,
@@ -70,6 +71,7 @@ final readonly class CreateBookingData
             nationalityCode: $nationalityCode,
             nationalityGroupId: $nationalityGroupId,
             couponCode: filled($data['coupon_code'] ?? null) ? strtoupper(trim((string) $data['coupon_code'])) : null,
+            sendNotifications: $sendNotifications,
         );
     }
 
@@ -93,7 +95,7 @@ final readonly class CreateBookingData
     public static function serviceFor(array $data): ServiceType
     {
         return match (true) {
-            isset($data['room_id']) => ServiceType::Accommodation,
+            isset($data['room_id']), isset($data['rooms'][0]['room_id']), ($data['service'] ?? null) === ServiceType::Accommodation->value => ServiceType::Accommodation,
             isset($data['package_slug']) || ($data['service'] ?? null) === ServiceType::Package->value => ServiceType::Package,
             isset($data['transfer']) || ($data['service'] ?? null) === ServiceType::Transfer->value => ServiceType::Transfer,
             default => ServiceType::Trip,
@@ -102,7 +104,7 @@ final readonly class CreateBookingData
 
     public function isAccommodation(): bool
     {
-        return $this->roomId !== null;
+        return $this->roomQuote !== null;
     }
 
     public function isPackage(): bool

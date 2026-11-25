@@ -6,7 +6,7 @@ import { Badge, BadgeIcons } from "@/components/ui/Badge";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
 import { QuantityStepper } from "@/components/ui/QuantityStepper";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api/client";
 import type { Locale, RoomDetail, RoomQuoteRequest } from "@/lib/api/types";
 import { saveDraft } from "@/lib/checkout";
@@ -14,7 +14,7 @@ import { Price, useCurrency } from "@/lib/currency";
 import { useDebounced, useLocationSearch, useToday } from "@/lib/hooks";
 import { addDays, nightsBetween, parseISODate, toISODate } from "@/lib/utils";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { AlertCircle, Baby, Lock } from "lucide-react";
+import { AlertCircle, Baby, BedDouble, Lock } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -23,7 +23,7 @@ export function RoomBookingWidget({ room }: { room: RoomDetail }) {
   const t = useTranslations("roomBooking");
   const tb = useTranslations("booking");
   const locale = useLocale() as Locale;
-  const { currency } = useCurrency();
+  const { currency, format: money } = useCurrency();
   const nationality = useNationalityCode();
   const router = useRouter();
   const today = useToday();
@@ -34,6 +34,10 @@ export function RoomBookingWidget({ room }: { room: RoomDetail }) {
   const [outState, setOut] = useState<string | null>(null);
   const [adultsState, setAdults] = useState<number | null>(null);
   const [childrenState, setChildren] = useState<number | null>(null);
+  const [extraBeds, setExtraBeds] = useState(0);
+  const [cots, setCots] = useState(0);
+  const maxExtraBeds = room.extra_beds?.max ?? 0;
+  const maxCots = room.cots?.max ?? 0;
   const adults = adultsState ?? Math.min(Math.max(1, Number(search.get("adults")) || 2), room.max_adults);
   const children = childrenState ?? Math.min(Math.max(0, Number(search.get("children")) || 0), room.max_children);
   const [sheet, setSheet] = useState(false);
@@ -47,9 +51,19 @@ export function RoomBookingWidget({ room }: { room: RoomDetail }) {
     if (nights < room.min_nights) errors.push(t("minNights", { count: room.min_nights }));
     if (nights > room.max_nights) errors.push(t("maxNights", { count: room.max_nights }));
   }
-  if (adults + children > room.max_total) errors.push(t("maxGuests", { count: room.max_total }));
+  // Each extra bed adds one place to max_total (B2.1).
+  if (adults + children > room.max_total + extraBeds) errors.push(t("maxGuests", { count: room.max_total + extraBeds }));
 
-  const request: RoomQuoteRequest = { room_id: room.id, check_in: checkIn, check_out: checkOut, adults, children, child_ages: [] };
+  const request: RoomQuoteRequest = {
+    room_id: room.id,
+    check_in: checkIn,
+    check_out: checkOut,
+    adults,
+    children,
+    child_ages: [],
+    ...(extraBeds ? { extra_beds: extraBeds } : {}),
+    ...(cots ? { cots } : {}),
+  };
   const debounced = useDebounced(request, 300);
   const quote = useQuery({
     queryKey: ["room-quote", debounced, currency, locale, nationality],
@@ -57,10 +71,13 @@ export function RoomBookingWidget({ room }: { room: RoomDetail }) {
     enabled: Boolean(debounced.check_in && debounced.check_out) && errors.length === 0 && nights > 0,
     placeholderData: keepPreviousData,
   });
-  const serverErrors = quote.error instanceof ApiError && quote.error.isValidation ? Object.values(quote.error.errors).flat() : [];
+  const serverErrors = quote.error instanceof ApiError && quote.error.isValidation ? [...new Set(Object.values(quote.error.errors).flat())] : [];
+  // Never reserve on a previous quote (other dates / party) or on a refused one (room not available, min stay…).
+  const current = JSON.stringify(debounced) === JSON.stringify(request) && !quote.isPlaceholderData && !quote.isFetching;
+  const quoteOk = Boolean(quote.data) && !quote.isError && current;
 
   const reserve = () => {
-    if (!quote.data || errors.length) return;
+    if (!quote.data || !quoteOk || errors.length) return;
     saveDraft({
       service_type: "room",
       product: { room_id: room.id, title: `${room.name} · ${room.building.name}`, image: room.image.url, href: `/rooms/${room.id}`, subtitle: room.building.location },
@@ -71,6 +88,8 @@ export function RoomBookingWidget({ room }: { room: RoomDetail }) {
       child_ages: [],
       units: [],
       addons: [],
+      extra_beds: extraBeds,
+      cots,
       quote: quote.data,
       season_note: quote.data.season?.name ?? null,
       created_at: Date.now(),
@@ -102,20 +121,41 @@ export function RoomBookingWidget({ room }: { room: RoomDetail }) {
         <div><p className="font-medium text-ink-900">{tb("children")}</p><p className="text-sm text-ink-700">{t("maxChildren", { count: room.max_children })}</p></div>
         <QuantityStepper value={children} min={0} max={room.max_children} onChange={setChildren} label={tb("children")} decreaseLabel={tb("decrease", { item: tb("children") })} increaseLabel={tb("increase", { item: tb("children") })} />
       </div>
+      {maxExtraBeds > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-image border border-ink-300 px-4 py-3">
+          <div><p className="font-medium text-ink-900">{t("extraBeds")}</p><p className="text-sm text-ink-700">{t("extraBedsHint", { price: money(room.extra_beds?.price ?? 0) })}</p></div>
+          <QuantityStepper value={extraBeds} min={0} max={maxExtraBeds} onChange={setExtraBeds} label={t("extraBeds")} decreaseLabel={tb("decrease", { item: t("extraBeds") })} increaseLabel={tb("increase", { item: t("extraBeds") })} />
+        </div>
+      )}
+      {maxCots > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-image border border-ink-300 px-4 py-3">
+          <div><p className="font-medium text-ink-900">{t("cots")}</p><p className="text-sm text-ink-700">{room.cots?.price ? t("cotsHint", { price: money(room.cots.price) }) : t("cotsFree")}</p></div>
+          <QuantityStepper value={cots} min={0} max={maxCots} onChange={setCots} label={t("cots")} decreaseLabel={tb("decrease", { item: t("cots") })} increaseLabel={tb("increase", { item: t("cots") })} />
+        </div>
+      )}
       <p className="flex items-start gap-2 text-xs text-ink-700"><Baby className="size-4 shrink-0" aria-hidden />{room.child_policy}</p>
       {[...errors, ...serverErrors].length > 0 && (
         <ul className="rounded-image bg-error-100 p-3 text-sm text-error" role="alert">
           {[...errors, ...serverErrors].map((e) => (<li key={e} className="flex items-center gap-1"><AlertCircle className="size-4" aria-hidden />{e}</li>))}
         </ul>
       )}
-      <PriceSummary quote={quote.data} loading={quote.isFetching} />
+      <PriceSummary quote={quote.isError ? undefined : quote.data} loading={quote.isFetching} />
       {room.tax_included ? (
         <Badge tone="success" icon={BadgeIcons.taxIncluded} className="self-start">{t("taxIncluded")}</Badge>
       ) : (
         <p className="text-xs text-ink-700">{t("taxNotIncluded")}</p>
       )}
-      <Button size="lg" className="w-full" onClick={reserve} disabled={!quote.data || errors.length > 0}>{tb("reserve")}</Button>
+      <Button size="lg" className="w-full" onClick={reserve} disabled={!quoteOk || errors.length > 0 || serverErrors.length > 0}>{tb("reserve")}</Button>
       <p className="inline-flex items-center justify-center gap-1.5 text-xs text-ink-700"><Lock className="size-3.5" aria-hidden /> {tb("secure")}</p>
+      <p className="flex items-start gap-2 border-t border-ink-100 pt-4 text-sm text-ink-700">
+        <BedDouble className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <span>
+          {t("severalRooms")}{" "}
+          <Link href={{ pathname: `/buildings/${room.building.slug}`, query: { check_in: checkIn, check_out: checkOut, adults: String(adults), ...(children ? { children: String(children) } : {}) }, hash: "book-rooms" }} className="font-semibold text-primary-700 underline">
+            {t("severalRoomsLink")}
+          </Link>
+        </span>
+      </p>
     </div>
   );
 

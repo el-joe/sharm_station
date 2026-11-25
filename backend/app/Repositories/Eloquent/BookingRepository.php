@@ -5,6 +5,7 @@ namespace App\Repositories\Eloquent;
 use App\DTOs\Booking\BookingFilterData;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\ServiceType;
 use App\Models\Booking;
 use App\Repositories\Contracts\BookingRepositoryInterface;
 use Carbon\CarbonInterface;
@@ -150,5 +151,100 @@ class BookingRepository extends BaseRepository implements BookingRepositoryInter
             ->where('payment_status', $status)
             ->oldest('created_at')
             ->first();
+    }
+
+    public function withOpenBalance(CarbonInterface $today, int $pastDays = 60): Collection
+    {
+        $since = $today->copy()->subDays($pastDays)->toDateString();
+
+        return $this->query()
+            ->where('status', BookingStatus::Confirmed)
+            ->where('payment_status', PaymentStatus::DepositPaid)
+            ->where(fn (Builder $query) => $query->where('start_date', '>=', $since)->orWhere('check_in', '>=', $since))
+            ->with(['payments', 'partner.user', 'bookable'])
+            ->orderBy('id')
+            ->get();
+    }
+
+    public function unpaidPastDeadline(CarbonInterface $now, ?bool $accommodation = null): Collection
+    {
+        return $this->query()
+            ->where('status', BookingStatus::AwaitingPayment)
+            ->whereIn('payment_status', [PaymentStatus::AwaitingPayment, PaymentStatus::Failed, PaymentStatus::ProofRejected])
+            ->whereNotNull('payment_due_at')
+            ->where('payment_due_at', '<', $now)
+            ->when($accommodation !== null, fn (Builder $query) => $accommodation
+                ? $query->where('service_type', ServiceType::Accommodation)
+                : $query->where('service_type', '!=', ServiceType::Accommodation))
+            ->orderBy('id')
+            ->get();
+    }
+
+    public function holdsEndingBetween(CarbonInterface $now, CarbonInterface $until): Collection
+    {
+        return $this->query()
+            ->where('service_type', ServiceType::Accommodation)
+            ->where('status', BookingStatus::AwaitingPayment)
+            ->whereIn('payment_status', [PaymentStatus::AwaitingPayment, PaymentStatus::Failed, PaymentStatus::ProofRejected])
+            ->whereBetween('payment_due_at', [$now, $until])
+            ->orderBy('id')
+            ->get();
+    }
+
+    public function endedBefore(CarbonInterface $day): Collection
+    {
+        return $this->query()
+            ->whereIn('status', [BookingStatus::Confirmed, BookingStatus::FullyPaid])
+            ->where(fn (Builder $query) => $query
+                ->where('end_date', '<', $day->toDateString())
+                ->orWhere(fn (Builder $legacy) => $legacy->whereNull('end_date')->whereRaw('COALESCE(check_out, start_date) < ?', [$day->toDateString()])))
+            ->orderBy('id')
+            ->get();
+    }
+
+    public function servicesEndedBetween(CarbonInterface $from, CarbonInterface $to): Collection
+    {
+        $from = $from->toDateString();
+        $to = $to->toDateString();
+
+        return $this->query()
+            ->whereIn('status', [BookingStatus::Confirmed, BookingStatus::FullyPaid, BookingStatus::Completed])
+            ->where(fn (Builder $query) => $query
+                ->whereBetween('check_out', [$from, $to])
+                ->orWhere(fn (Builder $inner) => $inner->whereNull('check_out')->whereBetween('start_date', [$from, $to])))
+            ->with('bookable')
+            ->orderBy('id')
+            ->get();
+    }
+
+    public function partnerTotals(int $partnerId, ?CarbonInterface $from = null, ?CarbonInterface $to = null, bool $byMonth = false): array
+    {
+        $paid = "COALESCE((SELECT SUM(CASE WHEN p.type = 'refund' THEN -p.amount ELSE p.amount END) FROM payments p WHERE p.booking_id = bookings.id AND p.status = 'succeeded'),"
+            ." CASE bookings.payment_status WHEN 'fully_paid' THEN bookings.total WHEN 'deposit_paid' THEN bookings.deposit_amount ELSE 0 END)";
+
+        $rows = $this->query()
+            ->toBase()
+            ->where('partner_id', $partnerId)
+            ->whereNotIn('status', array_map(fn (BookingStatus $status): string => $status->value, BookingStatus::voided()))
+            ->when($from, fn ($query, CarbonInterface $from) => $query->where('created_at', '>=', $from))
+            ->when($to, fn ($query, CarbonInterface $to) => $query->where('created_at', '<=', $to))
+            ->when($byMonth, fn ($query) => $query->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as period")->groupByRaw("DATE_FORMAT(created_at, '%Y-%m')")->orderByDesc('period'))
+            ->selectRaw('COUNT(*) as bookings_count')
+            ->selectRaw('COALESCE(SUM(retail_total), 0) as retail_total')
+            ->selectRaw('COALESCE(SUM(commission_amount), 0) as commission_amount')
+            ->selectRaw('COALESCE(SUM(COALESCE(partner_total, total)), 0) as partner_total')
+            ->selectRaw('COALESCE(SUM(total), 0) as total')
+            ->selectRaw("COALESCE(SUM({$paid}), 0) as paid")
+            ->get();
+
+        return $rows->map(fn (object $row): array => [
+            'period' => $row->period ?? null,
+            'bookings_count' => (int) $row->bookings_count,
+            'retail_total' => round((float) $row->retail_total, 2),
+            'commission_amount' => round((float) $row->commission_amount, 2),
+            'partner_total' => round((float) $row->partner_total, 2),
+            'total' => round((float) $row->total, 2),
+            'paid' => round((float) $row->paid, 2),
+        ])->values()->all();
     }
 }

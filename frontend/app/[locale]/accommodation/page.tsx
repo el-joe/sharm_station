@@ -57,7 +57,8 @@ async function Results({ locale, searchParams }: { locale: Locale; searchParams:
     free_cancellation: one(raw.free_cancellation) === "1",
     sort: sort === "price_asc" || sort === "price_desc" || sort === "rating" ? sort : "recommended",
   };
-  const [rooms, meta, t] = await Promise.all([getRooms(query, locale, await getNationality()), getMeta(locale), getTranslations("accommodation")]);
+  const grouped = one(raw.group) === "building";
+  const [rooms, meta, t] = await Promise.all([getRooms({ ...query, group_by: grouped ? "building" : undefined }, locale, await getNationality()), getMeta(locale), getTranslations("accommodation")]);
   const nights = query.check_in && query.check_out ? nightsBetween(query.check_in, query.check_out) : undefined;
   const buildings = Array.from(new Map(rooms.data.map((r) => [r.building.slug, { slug: r.building.slug, name: r.building.name }])).values());
   if (!buildings.length) buildings.push(...mockApi.rooms({}, locale).data.map((r) => ({ slug: r.building.slug, name: r.building.name })).filter((b, i, a) => a.findIndex((x) => x.slug === b.slug) === i));
@@ -77,7 +78,7 @@ async function Results({ locale, searchParams }: { locale: Locale; searchParams:
           <p className="mt-1 text-ink-700">{t("emptyText")}</p>
         </div>
       ) : (
-        <AccommodationResults rooms={rooms.data} nights={nights} query={linkQuery} initialView={one(raw.view) === "map" ? "map" : "list"} />
+        <AccommodationResults rooms={rooms.data} groups={rooms.groups} grouped={grouped} nights={nights} query={linkQuery} initialView={one(raw.view) === "map" ? "map" : "list"} />
       )}
     </div>
   );

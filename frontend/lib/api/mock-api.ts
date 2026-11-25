@@ -96,6 +96,7 @@ function tripSummary(t: MockTrip, locale: Locale): TripSummary {
 function tripDetail(t: MockTrip, locale: Locale): TripDetail {
   return {
     ...tripSummary(t, locale),
+    room_options: [],
     description: pick(t.description, locale),
     gallery: t.gallery.map((url, i) => ({ url, alt: `${pick(t.title, locale)} ${i + 1}` })),
     highlights: t.highlights.map((h) => pick(h, locale)),
@@ -353,7 +354,7 @@ export const mockApi = {
   },
 
   quoteRoom(req: RoomQuoteRequest, locale: Locale) {
-    const room = this.room(req.room_id, locale);
+    const room = this.room(req.room_id ?? req.rooms?.[0]?.room_id ?? 0, locale);
     if (!room) throw new Error("Not found");
     return quoteRoom(room, req);
   },
@@ -394,7 +395,7 @@ export const mockApi = {
     let quote;
     let seasonName: string | null = null;
     if (req.service_type === "room" && req.room_id) {
-      const room = this.room(req.room_id, locale);
+      const room = this.room(req.room_id ?? req.rooms?.[0]?.room_id ?? 0, locale);
       if (!room) throw new Error("Room not found");
       quote = quoteRoom(room, { room_id: req.room_id, check_in: req.check_in!, check_out: req.check_out!, adults: req.adults, children: req.children, child_ages: req.child_ages });
       title = `${room.name} · ${room.building.name}`;

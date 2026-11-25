@@ -13,7 +13,7 @@ import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-/** Sign in / sign up (POST /auth/login, /auth/register; token handed to AuthProvider, see lib/auth.tsx). */
+/** Sign in / sign up (POST /api/auth/login|register: the route handler sets the httpOnly session cookie, see lib/auth.tsx). */
 export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
   const t = useTranslations("auth");
   const tv = useTranslations("validation");
@@ -21,7 +21,10 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
   const router = useRouter();
   const { signIn } = useAuth();
   const search = useLocationSearch();
-  const returnTo = safeReturnTo(new URLSearchParams(search).get("returnTo"));
+  const params = new URLSearchParams(search);
+  const returnTo = safeReturnTo(params.get("returnTo"));
+  // Back from /reset-password: the new password is saved, sign in with it.
+  const resetDone = mode === "sign-in" && params.get("reset") === "1";
   const [serverError, setServerError] = useState<string | null>(null);
 
   const schema = useMemo(() => {
@@ -42,12 +45,12 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
   const onSubmit = handleSubmit(async (v) => {
     setServerError(null);
     try {
-      const res =
+      const user =
         mode === "sign-in"
           ? await api.login({ email: v.email, password: v.password }, { locale })
           : await api.register({ name: v.name ?? "", email: v.email, password: v.password, password_confirmation: v.password_confirmation ?? "" }, { locale });
-      signIn(res.token, res.user);
-      const isPartner = res.user.role === "partner" || Boolean(res.user.partner);
+      signIn(user);
+      const isPartner = user.role === "partner" || Boolean(user.partner);
       router.push(returnTo ?? (isPartner ? "/partner" : "/account/bookings"));
     } catch (err) {
       setServerError(err instanceof ApiError && (err.isValidation || err.status === 401) ? Object.values(err.errors).flat()[0] ?? t("invalid") : t("error"));
@@ -56,6 +59,11 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
+      {resetDone && (
+        <p className="rounded-image border border-success bg-success-100 p-3 text-sm text-ink-900" role="status" data-testid="reset-done">
+          {t("resetDone")}
+        </p>
+      )}
       {returnTo && (
         <p className="rounded-image bg-primary-100 p-3 text-sm text-primary-700" role="status">
           {t("continueNote")}
@@ -72,6 +80,11 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
       <Field label={t("password")} htmlFor="password" error={e.password?.message} required hint={mode === "sign-up" ? t("passwordHint") : undefined}>
         <Input id="password" type="password" autoComplete={mode === "sign-in" ? "current-password" : "new-password"} invalid={Boolean(e.password)} {...register("password")} />
       </Field>
+      {mode === "sign-in" && (
+        <Link href="/forgot-password" className="-mt-2 self-end text-sm font-semibold text-primary-700 underline">
+          {t("forgotPassword")}
+        </Link>
+      )}
       {mode === "sign-up" && (
         <Field label={t("confirmPassword")} htmlFor="password_confirmation" error={e.password_confirmation?.message} required>
           <Input id="password_confirmation" type="password" autoComplete="new-password" invalid={Boolean(e.password_confirmation)} {...register("password_confirmation")} />

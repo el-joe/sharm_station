@@ -1,8 +1,8 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Browser, Locator, Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { expect } from "./fixtures";
-import { ADMIN_URL, BUGGY, apiContext, isoDate } from "./helpers";
+import { ADMIN_URL, BUGGY, apiContext, authFile, isoDate } from "./helpers";
 
 /** Flows shared by the v2.3 feature specs: API bookings, admin lookups, the partner booking flow. */
 
@@ -111,4 +111,28 @@ export async function partnerConfirm(page: Page) {
   const created = page.waitForResponse((r) => /\/partner\/bookings(\?|$)/.test(r.url()) && r.request().method() === "POST");
   await page.getByRole("button", { name: "Confirm booking" }).click();
   return created;
+}
+
+/** Runs `fn` in a fresh admin browser context (saved admin session). */
+export async function asAdmin<T>(browser: Browser, fn: (page: Page) => Promise<T>): Promise<T> {
+  const context = await browser.newContext({ storageState: authFile("admin") });
+  const page = await context.newPage();
+  try {
+    return await fn(page);
+  } finally {
+    await context.close();
+  }
+}
+
+/** Admin booking page -> "Record payment" with the prefilled deposit amount; returns the amount (EUR). */
+export async function recordDeposit(browser: Browser, reference: string): Promise<number> {
+  return asAdmin(browser, async (admin) => {
+    const id = await adminBookingId(admin, reference);
+    await admin.goto(`${ADMIN_URL}/bookings/${id}`);
+    const amount = Number(await admin.getByRole("spinbutton", { name: "Amount (EUR)" }).inputValue());
+    await admin.getByRole("textbox", { name: "Note" }).first().fill("E2E deposit");
+    await admin.getByRole("button", { name: "Record payment" }).click();
+    await adminFlash(admin, /recorded|saved|payment/i);
+    return amount;
+  });
 }

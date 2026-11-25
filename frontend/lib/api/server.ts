@@ -10,6 +10,8 @@
  * default-group prices and must not render prices.
  */
 import { cacheLife, cacheTag } from "next/cache";
+import { notFound, permanentRedirect } from "next/navigation";
+import { fetchMovedPath, type RedirectSegment } from "../redirects";
 import { api } from "./client";
 import { mockApi } from "./mock-api";
 import type { Locale, RoomFilters, TripFilters } from "./types";
@@ -130,4 +132,22 @@ export async function getTransferCatalog(locale: Locale) {
   cacheLife("minutes");
   cacheTag("transfers");
   return api.transferCatalog({ locale });
+}
+
+/** Current path of a renamed trip / package / building / blog post (GET /redirects/resolve), or null. */
+export async function getMovedPath(segment: RedirectSegment, slug: string, locale: Locale): Promise<string | null> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("redirects", `redirect:${segment}:${slug}`);
+  return (await fetchMovedPath(segment, slug, locale))?.path ?? null;
+}
+
+/**
+ * Not-found path of the detail pages: a former slug answers a permanent redirect to the current URL
+ * (SRS 15.3), anything else the localized 404.
+ */
+export async function notFoundOrMoved(segment: RedirectSegment, slug: string, locale: Locale): Promise<never> {
+  const moved = await getMovedPath(segment, slug, locale);
+  if (moved) permanentRedirect(moved);
+  notFound();
 }

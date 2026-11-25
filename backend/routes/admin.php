@@ -4,9 +4,12 @@ use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\AddonController;
 use App\Http\Controllers\Admin\AiSuggestionController;
 use App\Http\Controllers\Admin\Auth\LoginController;
+use App\Http\Controllers\Admin\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\Admin\BlogPostController;
 use App\Http\Controllers\Admin\BookingCancellationController;
 use App\Http\Controllers\Admin\BookingController;
+use App\Http\Controllers\Admin\BookingEditorController;
+use App\Http\Controllers\Admin\BookingRefundController;
 use App\Http\Controllers\Admin\BuildingController;
 use App\Http\Controllers\Admin\CalendarController;
 use App\Http\Controllers\Admin\CommissionMatrixController;
@@ -22,17 +25,21 @@ use App\Http\Controllers\Admin\FaqController;
 use App\Http\Controllers\Admin\GoogleReviewController;
 use App\Http\Controllers\Admin\McpAccessController;
 use App\Http\Controllers\Admin\NationalityGroupController;
+use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\Admin\PartnerController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RoomAvailabilityController;
 use App\Http\Controllers\Admin\RoomController;
+use App\Http\Controllers\Admin\RoomIcalController;
+use App\Http\Controllers\Admin\RoomOptionController;
 use App\Http\Controllers\Admin\SeasonPriceController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\StaffUserController;
 use App\Http\Controllers\Admin\TransferController;
 use App\Http\Controllers\Admin\TripController;
+use App\Http\Controllers\Admin\TwoFactorController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -46,10 +53,18 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('guest')->group(function (): void {
     Route::get('login', [LoginController::class, 'create'])->name('login');
     Route::post('login', [LoginController::class, 'store'])->middleware('throttle:admin-login')->name('login.store');
+    Route::get('two-factor-challenge', [TwoFactorChallengeController::class, 'create'])->name('two-factor.challenge');
+    Route::post('two-factor-challenge', [TwoFactorChallengeController::class, 'store'])->middleware('throttle:admin-two-factor')->name('two-factor.challenge.store');
 });
 
-Route::middleware(['auth', 'staff'])->group(function (): void {
+Route::middleware(['auth', 'staff', 'two-factor'])->group(function (): void {
     Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
+
+    // Own two-factor authentication (SRS 14.2)
+    Route::get('security/two-factor', [TwoFactorController::class, 'show'])->name('two-factor.show');
+    Route::post('security/two-factor', [TwoFactorController::class, 'enable'])->middleware('throttle:10,1')->name('two-factor.enable');
+    Route::post('security/two-factor/recovery-codes', [TwoFactorController::class, 'regenerate'])->middleware('throttle:10,1')->name('two-factor.recovery-codes');
+    Route::delete('security/two-factor', [TwoFactorController::class, 'disable'])->middleware('throttle:10,1')->name('two-factor.disable');
     Route::redirect('/', '/admin/dashboard')->name('home');
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
@@ -71,6 +86,10 @@ Route::middleware(['auth', 'staff'])->group(function (): void {
     Route::resource('rooms', RoomController::class)->except('show');
     Route::get('rooms/{room}/calendar', [RoomAvailabilityController::class, 'show'])->name('rooms.calendar');
     Route::post('rooms/{room}/availability', [RoomAvailabilityController::class, 'update'])->name('rooms.availability.update');
+    Route::post('rooms/{room}/ical-feeds', [RoomIcalController::class, 'store'])->middleware('throttle:20,1')->name('rooms.ical.store');
+    Route::post('rooms/{room}/ical-feeds/{feed}/sync', [RoomIcalController::class, 'sync'])->middleware('throttle:20,1')->name('rooms.ical.sync');
+    Route::delete('rooms/{room}/ical-feeds/{feed}', [RoomIcalController::class, 'destroy'])->name('rooms.ical.destroy');
+    Route::post('rooms/{room}/ical-token', [RoomIcalController::class, 'regenerate'])->name('rooms.ical.regenerate');
     Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
     Route::post('calendar/block', [CalendarController::class, 'block'])->name('calendar.block');
 
@@ -81,6 +100,16 @@ Route::middleware(['auth', 'staff'])->group(function (): void {
         Route::put('packages/{package}/seasons', [SeasonPriceController::class, 'updatePackage'])->name('packages.seasons.update');
         Route::put('transfers/routes/{fixedRoute}/seasons', [SeasonPriceController::class, 'updateFixedRoute'])->name('transfers.routes.seasons.update');
         Route::post('seasons/{season}/copy-next-year', [SeasonPriceController::class, 'copyToNextYear'])->name('seasons.copy-next-year');
+        Route::put('room-options/{roomOption}/seasons', [SeasonPriceController::class, 'updateRoomOption'])->name('room-options.seasons.update');
+
+        // Optional rooms of multi-day trips, Nile trips and package stages (SRS 7.1)
+        Route::get('trips/{trip}/room-options', [RoomOptionController::class, 'trip'])->name('trips.room-options');
+        Route::post('trips/{trip}/room-options', [RoomOptionController::class, 'storeForTrip'])->name('trips.room-options.store');
+        Route::get('packages/{package}/room-options', [RoomOptionController::class, 'package'])->name('packages.room-options');
+        Route::post('packages/{package}/room-options', [RoomOptionController::class, 'storeForPackage'])->name('packages.room-options.store');
+        Route::get('room-options/{roomOption}/edit', [RoomOptionController::class, 'edit'])->name('room-options.edit');
+        Route::put('room-options/{roomOption}', [RoomOptionController::class, 'update'])->name('room-options.update');
+        Route::delete('room-options/{roomOption}', [RoomOptionController::class, 'destroy'])->name('room-options.destroy');
     });
 
     // Google reviews (content)
@@ -125,9 +154,23 @@ Route::middleware(['auth', 'staff'])->group(function (): void {
         Route::get('bookings/data', [BookingController::class, 'data'])->name('bookings.data');
         Route::get('bookings/export', [BookingController::class, 'export'])->name('bookings.export');
         Route::get('bookings', [BookingController::class, 'index'])->name('bookings.index');
+        Route::get('bookings/create', [BookingEditorController::class, 'create'])->name('bookings.create');
+        Route::get('bookings/form/product-options', [BookingEditorController::class, 'productOptions'])->name('bookings.product-options');
+        Route::get('bookings/form/customers', [BookingEditorController::class, 'customers'])->middleware('throttle:60,1')->name('bookings.customers');
+        Route::post('bookings/quote', [BookingEditorController::class, 'quote'])->middleware('throttle:60,1')->name('bookings.quote');
+        Route::post('bookings', [BookingEditorController::class, 'store'])->name('bookings.store');
+        Route::get('bookings/{booking}/edit', [BookingEditorController::class, 'edit'])->name('bookings.edit');
+        Route::post('bookings/{booking}/preview', [BookingEditorController::class, 'preview'])->middleware('throttle:60,1')->name('bookings.preview');
+        Route::put('bookings/{booking}', [BookingEditorController::class, 'update'])->name('bookings.update');
+        Route::post('bookings/{booking}/release-hold', [BookingEditorController::class, 'releaseHold'])->name('bookings.release-hold');
+        Route::post('calendar/move', [CalendarController::class, 'move'])->name('calendar.move');
         Route::get('bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
         Route::patch('bookings/{booking}/status', [BookingController::class, 'updateStatus'])->name('bookings.status');
         Route::post('bookings/{booking}/payments', [PaymentController::class, 'recordPayment'])->name('bookings.payments.store');
+        Route::get('bookings/{booking}/voucher', [BookingController::class, 'voucher'])->name('bookings.voucher');
+        Route::patch('bookings/{booking}/balance-due', [BookingController::class, 'updateBalanceDue'])->name('bookings.balance-due');
+        Route::post('bookings/{booking}/refunds', [BookingRefundController::class, 'store'])->name('bookings.refunds.store');
+        Route::post('bookings/{booking}/refunds/{payment}/paid', [BookingRefundController::class, 'markPaid'])->name('bookings.refunds.paid');
         Route::post('bookings/{booking}/cancellation/approve', [BookingCancellationController::class, 'approve'])->name('bookings.cancellation.approve');
         Route::post('bookings/{booking}/cancellation/decline', [BookingCancellationController::class, 'decline'])->name('bookings.cancellation.decline');
 
@@ -234,8 +277,22 @@ Route::middleware(['auth', 'staff'])->group(function (): void {
 
         // Users and roles, activity log (A5, A7)
         Route::get('users/data', [StaffUserController::class, 'data'])->name('users.data');
+        Route::post('users/{user}/two-factor/reset', [TwoFactorController::class, 'reset'])->name('users.two-factor.reset');
         Route::resource('users', StaffUserController::class)->except('show');
         Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity.index');
         Route::get('activity-log/data', [ActivityLogController::class, 'data'])->name('activity.data');
+
+        // Notifications: email templates and sending log (SRS 14.1)
+        Route::prefix('notifications')->name('notifications.')->controller(NotificationController::class)->group(function (): void {
+            Route::get('/', 'index')->name('index');
+            Route::get('log', 'log')->name('log');
+            Route::get('log/data', 'logData')->name('log.data');
+            Route::post('log/{log}/resend', 'resend')->middleware('throttle:30,1')->name('log.resend');
+            Route::get('templates/{event}/{locale}', 'edit')->where('locale', 'en|it')->name('edit');
+            Route::get('templates/{event}/{locale}/render', 'show')->where('locale', 'en|it')->name('render');
+            Route::put('templates/{event}/{locale}', 'update')->where('locale', 'en|it')->name('update');
+            Route::post('templates/{event}/{locale}/preview', 'preview')->where('locale', 'en|it')->name('preview');
+            Route::match(['post', 'put'], 'templates/{event}/{locale}/test', 'sendTest')->where('locale', 'en|it')->middleware('throttle:10,1')->name('test');
+        });
     });
 });

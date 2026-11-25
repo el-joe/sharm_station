@@ -33,4 +33,26 @@
             <x-admin.input name="password_confirmation" label="Confirm password" type="password" autocomplete="new-password" />
         </x-admin.form-section>
     </form>
+
+    @if ($user->exists)
+        <x-admin.card title="Two-factor authentication" class="mt-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <p class="text-sm">
+                    @if ($user->hasTwoFactorEnabled())
+                        <x-admin.status-chip status="enabled" label="Enabled" /> since {{ $user->two_factor_confirmed_at?->format('j M Y') }}
+                    @else
+                        <x-admin.status-chip status="disabled" label="Not set up" />
+                    @endif
+                </p>
+                @if ($user->hasTwoFactorEnabled() && ! $isSelf)
+                    <form method="POST" action="{{ route('admin.users.two-factor.reset', $user) }}" data-confirm="Reset two-factor authentication of {{ $user->name }}? They will sign in with the password only (and enrol again if 2FA is required)." data-confirm-ok="Reset 2FA">
+                        @csrf
+                        <button type="submit" class="btn-danger btn-sm">Reset 2FA</button>
+                    </form>
+                @elseif ($isSelf)
+                    <a href="{{ route('admin.two-factor.show') }}" class="btn-link">Manage your 2FA</a>
+                @endif
+            </div>
+        </x-admin.card>
+    @endif
 </x-admin.layout>

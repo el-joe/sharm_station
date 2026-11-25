@@ -38,7 +38,7 @@ test('the grid shows rooms by building with booked, held and blocked nights', fu
 
     $grid = app(RoomService::class)->occupancy(CarbonImmutable::parse('2026-12-01'));
     expect($grid['days'])->toHaveCount(31)
-        ->and($grid['buildings'][0]['rooms'][0]['cells'][4])->toMatchArray(['status' => 'booked', 'booking' => ['id' => $booking->id, 'reference' => 'BK-7001', 'lead_name' => $booking->lead_name]]);
+        ->and($grid['buildings'][0]['rooms'][0]['cells'][4])->toMatchArray(['status' => 'booked', 'booking' => ['id' => $booking->id, 'reference' => 'BK-7001', 'lead_name' => $booking->lead_name, 'check_in' => $booking->check_in?->toDateString()]]);
 });
 
 test('a free range is blocked and a blocked night is freed; booked nights stay untouched', function () {

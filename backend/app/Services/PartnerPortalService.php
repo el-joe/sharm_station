@@ -27,7 +27,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Collection as SupportCollection;
 
 /**
  * Partner panel (SRS 9.3): KPIs, bookings, monthly statements, catalogue and price list at partner prices
@@ -57,19 +56,18 @@ class PartnerPortalService
      */
     public function dashboard(Partner $partner): array
     {
-        $monthStart = CarbonImmutable::now()->startOfMonth();
-        $active = $this->bookings->partnerQuery($partner->id)->whereNotIn('status', BookingStatus::voided())->with('payments')->get();
-        $month = $active->filter(fn (Booking $booking): bool => $booking->created_at->gte($monthStart));
+        $month = $this->bookings->partnerTotals($partner->id, CarbonImmutable::now()->startOfMonth())[0];
+        $all = $this->bookings->partnerTotals($partner->id)[0];
 
         return [
             'kpis' => [
-                'bookings_month' => $month->count(),
-                'sales_month' => round((float) $month->sum(fn (Booking $booking): float => (float) $booking->retail_total), 2),
-                'commission_saved_month' => round((float) $month->sum(fn (Booking $booking): float => (float) $booking->commission_amount), 2),
-                'balance_due' => round((float) $active->sum(fn (Booking $booking): float => $booking->dueAmount()), 2),
+                'bookings_month' => $month['bookings_count'],
+                'sales_month' => $month['retail_total'],
+                'commission_saved_month' => $month['commission_amount'],
+                'balance_due' => round($all['total'] - $all['paid'], 2),
                 'pending_proofs' => $this->proofs->countPendingForPartner($partner->id),
-                'commission_earned_month' => round((float) $month->sum(fn (Booking $booking): float => (float) $booking->commission_amount), 2),
-                'partner_sales_month' => round((float) $month->sum(fn (Booking $booking): float => (float) ($booking->partner_total ?? $booking->total)), 2),
+                'commission_earned_month' => $month['commission_amount'],
+                'partner_sales_month' => $month['partner_total'],
             ],
             'commissions' => $this->commissions->effectiveFor($partner),
             'recent_bookings' => $this->bookings->partnerQuery($partner->id)->with(['travelers', 'units', 'addons', 'rooms', 'bookable', 'nationalityGroup'])->limit(5)->get(),
@@ -94,15 +92,7 @@ class PartnerPortalService
      */
     public function statements(Partner $partner): array
     {
-        return $this->bookings->partnerQuery($partner->id)
-            ->whereNotIn('status', BookingStatus::voided())
-            ->with('payments')
-            ->get()
-            ->groupBy(fn (Booking $booking): string => $booking->created_at->format('Y-m'))
-            ->map(fn ($group, string $period): array => $this->statementSummary($period, $group))
-            ->sortByDesc('period')
-            ->values()
-            ->all();
+        return array_map(fn (array $totals): array => $this->statementSummary((string) $totals['period'], $totals), $this->bookings->partnerTotals($partner->id, byMonth: true));
     }
 
     /**
@@ -123,7 +113,7 @@ class PartnerPortalService
             ->get();
 
         return [
-            'summary' => $this->statementSummary($period, $bookings),
+            'summary' => $this->statementSummary($period, $this->bookings->partnerTotals($partner->id, $start, $start->endOfMonth())[0]),
             'bookings' => $bookings->map(fn (Booking $booking): array => [
                 'reference' => $booking->reference,
                 'created_at' => $booking->created_at->toDateString(),
@@ -142,16 +132,16 @@ class PartnerPortalService
     }
 
     /**
-     * @param  SupportCollection<int, Booking>  $group
+     * @param  array{bookings_count: int, retail_total: float, commission_amount: float, partner_total: float, paid: float}  $totals  SQL aggregates
      * @return array<string, mixed>
      */
-    private function statementSummary(string $period, SupportCollection $group): array
+    private function statementSummary(string $period, array $totals): array
     {
         $today = CarbonImmutable::today();
         $start = CarbonImmutable::createFromFormat('Y-m-d', $period.'-01')->startOfDay();
         $end = $start->endOfMonth()->startOfDay();
-        $total = round((float) $group->sum(fn (Booking $booking): float => (float) ($booking->partner_total ?? $booking->total)), 2);
-        $paid = round((float) $group->sum(fn (Booking $booking): float => $booking->paidAmount()), 2);
+        $total = $totals['partner_total'];
+        $paid = $totals['paid'];
         $balance = round(max(0, $total - $paid), 2);
 
         return [
@@ -159,9 +149,9 @@ class PartnerPortalService
             'period' => $period,
             'period_start' => $start->toDateString(),
             'period_end' => $end->toDateString(),
-            'bookings_count' => $group->count(),
-            'retail_total' => round((float) $group->sum(fn (Booking $booking): float => (float) $booking->retail_total), 2),
-            'commission_amount' => round((float) $group->sum(fn (Booking $booking): float => (float) $booking->commission_amount), 2),
+            'bookings_count' => $totals['bookings_count'],
+            'retail_total' => $totals['retail_total'],
+            'commission_amount' => $totals['commission_amount'],
             'partner_total' => $total,
             'paid' => $paid,
             'balance' => $balance,

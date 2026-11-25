@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             NationalityPriceSeeder::class,
             BookingSeeder::class,
             PlatformCompletionSeeder::class,
+            NotificationsAndGatewaysSeeder::class,
         ]);
 
         $this->command?->call('media:placeholders');

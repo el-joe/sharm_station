@@ -7,6 +7,7 @@ use App\Http\Resources\V1\PageResource;
 use App\Models\FaqCategory;
 use App\Models\FaqItem;
 use App\Services\ContentService;
+use App\Services\SlugRedirectService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -34,10 +35,12 @@ class ContentController extends ApiController
         return BlogPostResource::collection($this->content->publishedPosts($perPage, $tag));
     }
 
-    public function post(string $slug): BlogPostResource
+    public function post(string $slug, SlugRedirectService $redirects): BlogPostResource
     {
         $post = $this->content->publishedPost($slug);
-        abort_if($post === null, 404, 'Post not found.');
+        if ($post === null) {
+            throw $redirects->notFound('blog_post', $slug, 'Post not found.');
+        }
 
         return new BlogPostResource($post);
     }

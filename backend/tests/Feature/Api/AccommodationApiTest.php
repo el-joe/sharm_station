@@ -45,7 +45,12 @@ test('rooms are listed directly with their building data and the tax included fl
 test('rooms can be filtered by guests and price', function () {
     Room::factory()->for($this->building)->create(['max_total' => 5, 'max_adults' => 4, 'from_price' => 140]);
 
-    $this->getJson('/api/v1/rooms?guests=4')->assertJsonCount(1, 'data');
+    $this->getJson('/api/v1/rooms?guests=4&only_available=1')->assertJsonCount(1, 'data');
+    $this->getJson('/api/v1/rooms?guests=4')
+        ->assertJsonCount(2, 'data')
+        ->assertJsonPath('data.0.available', true)
+        ->assertJsonPath('data.1.available', false)
+        ->assertJsonPath('data.1.unavailable_reason', 'capacity');
     $this->getJson('/api/v1/rooms?price_max=100')->assertJsonCount(1, 'data');
 });
 

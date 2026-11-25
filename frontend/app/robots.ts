@@ -8,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         allow: "/",
         // Transactional and partner pages are never indexed (SRS 15.3).
-        disallow: ["/*/checkout", "/*/booking/", "/*/partner", "/*/account", "/*/sign-in", "/*/sign-up"],
+        disallow: ["/*/checkout", "/*/booking/", "/*/partner", "/*/account", "/*/sign-in", "/*/sign-up", "/*/forgot-password", "/*/reset-password"],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,

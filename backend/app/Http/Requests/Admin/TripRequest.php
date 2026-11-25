@@ -40,6 +40,8 @@ class TripRequest extends FormRequest
             'type' => $this->input('type') ?: ($this->trip()?->type?->value ?? TripType::SingleDay->value),
         ]);
 
+        $this->normaliseContentFields();
+
         if ($this->user()?->can('manage-prices')) {
             // The Pricing tab always posts its lists: an absent list means every row was removed.
             $this->merge([
@@ -65,6 +67,45 @@ class TripRequest extends FormRequest
         $this->merge($locked);
         $this->request->remove('unit_options');
         $this->request->remove('private_tiers');
+    }
+
+    /**
+     * Editor-only inputs → stored shapes: "what_to_bring_lines" (one item per line) → what_to_bring {locale: list},
+     * "faq_rows" (one row per question with EN/IT) → faq {locale: list<{question, answer}>}.
+     */
+    private function normaliseContentFields(): void
+    {
+        if ($this->has('what_to_bring_lines')) {
+            $this->merge(['what_to_bring' => collect((array) $this->input('what_to_bring_lines'))
+                ->map(fn ($text): array => array_values(array_filter(array_map('trim', preg_split('/\R/', (string) $text) ?: []), fn (string $line): bool => $line !== '')))
+                ->filter()
+                ->all() ?: null]);
+            $this->request->remove('what_to_bring_lines');
+        }
+
+        if ($this->has('faq_present')) {
+            $faq = [];
+
+            foreach (array_values((array) $this->input('faq_rows', [])) as $row) {
+                foreach (['en', 'it'] as $locale) {
+                    $question = trim((string) ($row['question'][$locale] ?? ''));
+                    $answer = trim((string) ($row['answer'][$locale] ?? ''));
+
+                    if ($question !== '' || $answer !== '') {
+                        $faq[$locale][] = ['question' => $question, 'answer' => $answer];
+                    }
+                }
+            }
+
+            $this->merge(['faq' => $faq ?: null]);
+            $this->request->remove('faq_rows');
+            $this->request->remove('faq_present');
+        }
+
+        if ($this->has('guide_languages_present')) {
+            $this->merge(['guide_languages' => array_values(array_unique(array_filter((array) $this->input('guide_languages', [])))) ?: null]);
+            $this->request->remove('guide_languages_present');
+        }
     }
 
     /**
@@ -97,6 +138,21 @@ class TripRequest extends FormRequest
             'days' => ['required', 'integer', 'min:1', 'max:60'],
             'nights' => ['required', 'integer', 'min:0', 'max:60'],
             'free_cancellation_hours' => ['nullable', 'integer', 'min:0', 'max:8760'],
+
+            // Trip details shown on the website (unit label, FAQ, what to bring, guide languages, cancellation text)
+            'unit_label' => ['nullable', 'array'],
+            'unit_label.*' => ['nullable', 'string', 'max:40'],
+            'faq' => ['nullable', 'array'],
+            'faq.*' => ['array', 'max:30'],
+            'faq.*.*.question' => ['required', 'string', 'max:255'],
+            'faq.*.*.answer' => ['required', 'string', 'max:2000'],
+            'what_to_bring' => ['nullable', 'array'],
+            'what_to_bring.*' => ['array', 'max:30'],
+            'what_to_bring.*.*' => ['string', 'max:200'],
+            'guide_languages' => ['nullable', 'array'],
+            'guide_languages.*' => ['string', Rule::in(array_keys((array) trans('catalog.languages', [], 'en')))],
+            'cancellation_policy' => ['nullable', 'array'],
+            'cancellation_policy.*' => ['nullable', 'string', 'max:2000'],
 
             // Meeting point
             'meeting_point' => ['nullable', 'array'],

@@ -43,6 +43,14 @@ async function applyCode(page: Page, code: string) {
   return (await (await checked).json()) as { valid: boolean; discount_eur: number; message: string };
 }
 
+
+/** Coupons from earlier runs that were used cannot be deleted, so filter the list to this run's code. */
+async function searchCoupons(page: Page, code: string) {
+  await expect(page.locator("table[data-datatable] tbody tr").first()).toBeVisible();
+  await page.getByRole("main").getByRole("searchbox").fill(code);
+  await expect(page.getByRole("row").filter({ hasText: code })).toHaveCount(1);
+}
+
 test.describe("admin + website", () => {
   test.use({ storageState: authFile("admin") });
 
@@ -62,6 +70,7 @@ test.describe("admin + website", () => {
     couponId = await adminCouponId(page);
 
     await page.goto(`${ADMIN_URL}/coupons`);
+    await searchCoupons(page, CODE);
     const row = page.getByRole("row").filter({ hasText: CODE });
     await expect(row).toContainText("10");
     await expect(row).toContainText(/Trip/);
@@ -143,6 +152,7 @@ test.describe("admin + website", () => {
 
     // The admin list counts the use.
     await page.goto(`${ADMIN_URL}/coupons`);
+    await searchCoupons(page, CODE);
     await expect(page.getByRole("row").filter({ hasText: CODE }).getByRole("cell").nth(4)).toHaveText("1");
   });
 });

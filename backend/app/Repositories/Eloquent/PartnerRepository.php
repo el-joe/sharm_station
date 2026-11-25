@@ -74,4 +74,9 @@ class PartnerRepository extends BaseRepository implements PartnerRepositoryInter
     {
         return $this->query()->whereKey($ids)->get();
     }
+
+    public function activeWithStatementEmails(): Collection
+    {
+        return $this->query()->where('status', PartnerStatus::Active)->where('notify_statements', true)->with('user')->orderBy('id')->get();
+    }
 }

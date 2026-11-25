@@ -1,6 +1,6 @@
 "use client";
 
-import type { BookingDetail, BookingType, CreateBookingResponse, QuoteResult } from "./api/types";
+import type { BookingDetail, BookingType, CreateBookingResponse, QuoteResult, RoomAllocation, RoomOptionSelection } from "./api/types";
 
 /** What the booking widget hands to /checkout (kept in sessionStorage, never in the URL). */
 export interface CheckoutDraft {
@@ -15,6 +15,13 @@ export interface CheckoutDraft {
   child_ages: number[];
   units: { unit_option_id: number; quantity: number; name: string }[];
   addons: { addon_id: number; quantity: number; name: string }[];
+  /** Single room: extra beds / cots. */
+  extra_beds?: number;
+  cots?: number;
+  /** Multi-room stay (B2.1): the allocation sent as rooms[] to POST /bookings. */
+  rooms?: (RoomAllocation & { name: string; number?: string | null })[];
+  /** Trips / packages: optional rooms (B2.3). */
+  room_options?: (RoomOptionSelection & { name: string })[];
   quote: QuoteResult;
   season_note?: string | null;
   created_at: number;

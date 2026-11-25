@@ -10,6 +10,7 @@ use App\DTOs\Pricing\QuoteLineData;
 use App\DTOs\Pricing\QuoteResultData;
 use App\Enums\ActivityAction;
 use App\Enums\BookingStatus;
+use App\Enums\NotificationEvent;
 use App\Enums\PaymentStatus;
 use App\Enums\PricingMode;
 use App\Enums\RoomAvailabilityStatus;
@@ -31,10 +32,14 @@ use App\Repositories\Contracts\PaymentMethodRepositoryInterface;
 use App\Repositories\Contracts\RoomRepositoryInterface;
 use App\Repositories\Contracts\SettingRepositoryInterface;
 use App\Repositories\Contracts\TripRepositoryInterface;
+use App\Services\Notifications\NotificationContextFactory;
+use App\Services\Notifications\NotificationService;
+use App\Services\Payments\PaymentGatewayManager;
 use App\Services\Pricing\PackagePricingEngine;
 use App\Services\Pricing\RoomPricingEngine;
 use App\Services\Pricing\TransferPricingService;
 use App\Services\Pricing\TripPricingEngine;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\LazyCollection;
@@ -67,6 +72,10 @@ class BookingService
         private readonly PaymentMethodRepositoryInterface $paymentMethods,
         private readonly ActivityLogger $activity,
         private readonly CouponService $coupons,
+        private readonly NotificationService $notifications,
+        private readonly NotificationContextFactory $notificationContext,
+        private readonly PaymentGatewayManager $gateways,
+        private readonly BookingRoomWriter $roomWriter,
     ) {}
 
     /**
@@ -81,7 +90,28 @@ class BookingService
             default => $this->createTripBooking($data),
         };
 
-        return $booking->load(['travelers', 'units', 'addons', 'rooms.guests', 'bookable', 'includedTransfers', 'transferRequest', 'nationalityGroup']);
+        $booking->load(['travelers', 'units', 'addons', 'rooms.guests', 'bookable', 'includedTransfers', 'transferRequest', 'nationalityGroup']);
+
+        if ($data->sendNotifications) {
+            $this->notifyCreated($booking);
+        }
+
+        return $booking;
+    }
+
+    /**
+     * SRS 15.1: new booking to the booker and the admin team, plus the transfer request or the included-transfer tasks to arrange.
+     */
+    private function notifyCreated(Booking $booking): void
+    {
+        $this->notifications->booking(NotificationEvent::BookingCreated, $booking);
+        $this->notifications->booking(NotificationEvent::BookingCreatedAdmin, $booking);
+
+        if ($booking->transferRequest !== null || $booking->includedTransfers->isNotEmpty()) {
+            $booking->loadMissing(['transferRequest.hub', 'transferRequest.vehicleType']);
+            $event = $booking->transferRequest !== null ? NotificationEvent::TransferRequestedAdmin : NotificationEvent::IncludedTransferAdmin;
+            $this->notifications->booking($event, $booking, ['transfer_details' => $this->notificationContext->transferDetails($booking, 'en')]);
+        }
     }
 
     public function findByReference(string $reference): ?Booking
@@ -137,6 +167,53 @@ class BookingService
     }
 
     /**
+     * Manual hold release from the admin (SRS 6.5, 12.3): an unpaid accommodation booking that still holds rooms is
+     * cancelled now instead of at the end of the hold, which frees its nights. No e-mail is sent (staff decision).
+     *
+     * @throws DomainValidationException when the booking holds no room
+     */
+    public function releaseHold(Booking $booking, User $actor): Booking
+    {
+        $holds = RoomAvailability::query()->where('booking_id', $booking->id)->where('status', RoomAvailabilityStatus::Held)->count();
+
+        if ($holds === 0 || $booking->status !== BookingStatus::AwaitingPayment) {
+            throw DomainValidationException::withErrors(['booking' => ['This booking holds no room: only unpaid bookings with held nights can be released.']]);
+        }
+
+        $this->changeStatus($booking, BookingStatus::Cancelled, $actor, 'Hold released by the admin');
+        $this->activity->log(ActivityAction::HoldReleased, $booking, "Hold of booking {$booking->reference} released ({$holds} ".str('night')->plural($holds).' freed)', ['nights' => $holds], $actor);
+
+        return $booking;
+    }
+
+    /**
+     * Confirmed and fully paid bookings become "Completed" the day after their service ended. Idempotent.
+     */
+    public function markCompleted(?CarbonImmutable $today = null): int
+    {
+        $today = ($today ?? CarbonImmutable::today())->startOfDay();
+        $count = 0;
+
+        foreach ($this->bookings->endedBefore($today) as $booking) {
+            $this->changeStatus($booking, BookingStatus::Completed, null, 'Service ended on '.($booking->end_date ?? $booking->check_out ?? $booking->start_date)?->toDateString());
+            $count++;
+        }
+
+        return $count;
+    }
+
+    /**
+     * Balance due date chosen by the admin (null = the default: service date minus the settings days).
+     */
+    public function setBalanceDueOn(Booking $booking, ?string $date, User $actor): Booking
+    {
+        $this->bookings->update($booking, ['balance_due_on' => $date]);
+        $this->activity->log(ActivityAction::Updated, $booking, "Balance due date of {$booking->reference} set to ".($date ?? 'default'), ['balance_due_on' => $date], $actor);
+
+        return $booking;
+    }
+
+    /**
      * Payment methods enabled for the booking currency: the payment_methods table when it has rows,
      * otherwise the legacy settings "payment.methods" list.
      *
@@ -144,7 +221,8 @@ class BookingService
      */
     public function paymentOptions(Booking $booking): array
     {
-        $configured = $this->paymentMethods->enabledForCurrency($booking->currency);
+        $configured = $this->paymentMethods->enabledForCurrency($booking->currency)
+            ->filter(fn (PaymentMethod $method): bool => $method->isManual() || $this->gateways->isAvailable($method->driver));
 
         if ($configured->isNotEmpty() || $this->paymentMethods->query()->exists()) {
             return $configured->map(fn (PaymentMethod $method): array => [
@@ -193,25 +271,14 @@ class BookingService
                 'bookable_type' => $trip->getMorphClass(),
                 'bookable_id' => $trip->id,
                 'start_date' => $data->tripQuote->travelDate->toDateString(),
+                'end_date' => $data->tripQuote->travelDate->addDays(max(1, (int) $trip->days) - 1)->toDateString(),
                 'adults' => $data->tripQuote->adults,
                 'children' => $data->tripQuote->children,
             ]);
 
-            foreach ($quote->linesOfType(QuoteLineData::TYPE_UNIT) as $line) {
-                $booking->units()->create([
-                    'trip_unit_option_id' => $line->meta['unit_option_id'],
-                    'name' => $line->label,
-                    'seats' => $line->meta['seats'],
-                    'quantity' => $line->quantity,
-                    'unit_price' => $line->unitPrice,
-                    'total' => $line->total,
-                    'partner_unit_price' => $line->partnerUnitPrice,
-                    'partner_total' => $line->partnerTotal,
-                ]);
-            }
-
+            $this->storeUnits($booking, $quote);
             $this->storeAddons($booking, $quote);
-            $this->storeTravelers($booking, $data->travelers);
+            $this->roomWriter->storeRoomOptions($booking, $quote, $this->storeTravelers($booking, $data->travelers));
 
             return $booking;
         });
@@ -239,12 +306,13 @@ class BookingService
                 'bookable_type' => $package->getMorphClass(),
                 'bookable_id' => $package->id,
                 'start_date' => $data->tripQuote->travelDate->toDateString(),
+                'end_date' => $data->tripQuote->travelDate->addDays(max(1, (int) $package->days) - 1)->toDateString(),
                 'adults' => $data->tripQuote->adults,
                 'children' => $data->tripQuote->children,
             ]);
 
             $this->storeAddons($booking, $quote);
-            $this->storeTravelers($booking, $data->travelers);
+            $this->roomWriter->storeRoomOptions($booking, $quote, $this->storeTravelers($booking, $data->travelers));
 
             foreach ($package->includedTransfers as $template) {
                 $booking->includedTransfers()->create([
@@ -287,6 +355,7 @@ class BookingService
                 'bookable_type' => (new TransferHub)->getMorphClass(),
                 'bookable_id' => $request->hubId,
                 'start_date' => $request->pickupAt->toDateString(),
+                'end_date' => ($request->returnAt ?? $request->pickupAt)->toDateString(),
                 'adults' => $request->passengers,
                 'children' => 0,
             ]);
@@ -298,49 +367,39 @@ class BookingService
         });
     }
 
+    /**
+     * Accommodation booking with one or more rooms of the same building (SRS 6.4, 6.5): the rooms are locked,
+     * priced and validated (allocation rules) inside the transaction, then their nights are held until the
+     * payment deadline.
+     */
     private function createAccommodationBooking(CreateBookingData $data): Booking
     {
         return DB::transaction(function () use ($data): Booking {
-            $room = $this->rooms->lockForBooking((int) $data->roomId);
+            $request = $data->roomQuote;
+            $rooms = $request !== null ? $this->rooms->lockManyForBooking($request->roomIds())->keyBy('id') : collect();
 
-            if ($room === null || $data->roomQuote === null) {
-                throw DomainValidationException::withErrors(['room_id' => ['This room is not available.']]);
+            if ($request === null || $rooms->isEmpty()) {
+                throw DomainValidationException::withErrors([($request?->multiRoom ? 'rooms' : 'room_id') => ['This room is not available.']]);
             }
 
-            $quote = $this->roomPricing->quote($room, $data->roomQuote);
-            $this->ensureBookable($quote, $data, $data->roomQuote->adults, $data->roomQuote->children);
+            $quote = $this->roomPricing->quoteRooms($rooms, $request);
+            $this->ensureBookable($quote, $data, $request->adults, $request->children);
+            $first = $rooms->get($request->rooms[0]->roomId) ?? $rooms->first();
 
             $booking = $this->createBookingRecord($data, $quote, [
                 'service_type' => ServiceType::Accommodation,
-                'bookable_type' => $room->getMorphClass(),
-                'bookable_id' => $room->id,
-                'check_in' => $data->roomQuote->checkIn->toDateString(),
-                'check_out' => $data->roomQuote->checkOut->toDateString(),
-                'start_date' => $data->roomQuote->checkIn->toDateString(),
-                'adults' => $data->roomQuote->adults,
-                'children' => $data->roomQuote->children,
+                'bookable_type' => $first->getMorphClass(),
+                'bookable_id' => $first->id,
+                'check_in' => $request->checkIn->toDateString(),
+                'check_out' => $request->checkOut->toDateString(),
+                'start_date' => $request->checkIn->toDateString(),
+                'end_date' => $request->checkOut->toDateString(),
+                'adults' => $request->adults,
+                'children' => $request->children,
             ]);
 
-            $nightLines = $quote->linesOfType(QuoteLineData::TYPE_NIGHT);
-            $roomTotal = round(array_sum(array_map(fn (QuoteLineData $line): float => $line->total, $nightLines)), 2);
-            $partnerTotal = $quote->isPartnerQuote() ? round(array_sum(array_map(fn (QuoteLineData $line): float => (float) $line->partnerTotal, $nightLines)), 2) : null;
-
-            $bookingRoom = $booking->rooms()->create([
-                'room_id' => $room->id,
-                'room_name' => (string) $room->name,
-                'room_number' => $room->number,
-                'pricing_method' => $room->pricing_mode->value,
-                'nights' => count($nightLines),
-                'price' => count($nightLines) > 0 ? round($roomTotal / count($nightLines), 2) : 0,
-                'total' => $roomTotal,
-                'partner_total' => $partnerTotal,
-            ]);
-
-            foreach ($this->storeTravelers($booking, $data->travelers) as $traveler) {
-                $bookingRoom->guests()->create(['booking_traveler_id' => $traveler->id]);
-            }
-
-            $this->holdNights($room, $booking, $nightLines);
+            $this->roomWriter->storeStayRooms($booking, $rooms, $quote, $this->storeTravelers($booking, $data->travelers));
+            $this->roomWriter->blockNights($booking, $quote, RoomAvailabilityStatus::Held, $booking->payment_due_at);
 
             return $booking;
         });
@@ -433,7 +492,26 @@ class BookingService
         return [$quote->withDiscount($result->discountEur, 'Coupon '.$result->coupon->code, ['coupon_code' => $result->coupon->code]), $result->coupon];
     }
 
-    private function storeAddons(Booking $booking, QuoteResultData $quote): void
+    /**
+     * Per-unit lines of a trip quote as booking units.
+     */
+    public function storeUnits(Booking $booking, QuoteResultData $quote): void
+    {
+        foreach ($quote->linesOfType(QuoteLineData::TYPE_UNIT) as $line) {
+            $booking->units()->create([
+                'trip_unit_option_id' => $line->meta['unit_option_id'],
+                'name' => $line->label,
+                'seats' => $line->meta['seats'],
+                'quantity' => $line->quantity,
+                'unit_price' => $line->unitPrice,
+                'total' => $line->total,
+                'partner_unit_price' => $line->partnerUnitPrice,
+                'partner_total' => $line->partnerTotal,
+            ]);
+        }
+    }
+
+    public function storeAddons(Booking $booking, QuoteResultData $quote): void
     {
         foreach ($quote->linesOfType(QuoteLineData::TYPE_ADDON) as $line) {
             $booking->addons()->create([
@@ -469,21 +547,6 @@ class BookingService
         }
 
         return $stored;
-    }
-
-    /**
-     * @param  list<QuoteLineData>  $nightLines
-     */
-    private function holdNights(Room $room, Booking $booking, array $nightLines): void
-    {
-        $holdUntil = now()->addMinutes((int) $this->settings->get('accommodation.hold_minutes', self::DEFAULT_HOLD_MINUTES));
-
-        foreach ($nightLines as $line) {
-            RoomAvailability::query()->updateOrCreate(
-                ['room_id' => $room->id, 'date' => $line->meta['date']],
-                ['status' => RoomAvailabilityStatus::Held, 'booking_id' => $booking->id, 'held_until' => $holdUntil],
-            );
-        }
     }
 
     private function ensureBookable(QuoteResultData $quote, CreateBookingData $data, int $adults, int $children): void

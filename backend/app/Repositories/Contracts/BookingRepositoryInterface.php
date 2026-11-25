@@ -63,4 +63,47 @@ interface BookingRepositoryInterface extends BaseRepositoryInterface
      * Oldest booking waiting in the given payment status.
      */
     public function oldestWithPaymentStatus(PaymentStatus $status): ?Booking;
+
+    /**
+     * Confirmed bookings with the deposit paid and a balance still to collect, service within the last $pastDays days or later.
+     *
+     * @return Collection<int, Booking>
+     */
+    public function withOpenBalance(CarbonInterface $today, int $pastDays = 60): Collection;
+
+    /**
+     * Unpaid bookings (status awaiting payment) whose payment deadline has passed.
+     *
+     * @return Collection<int, Booking>
+     */
+    public function unpaidPastDeadline(CarbonInterface $now, ?bool $accommodation = null): Collection;
+
+    /**
+     * Accommodation bookings awaiting payment whose hold ends between $now and $until.
+     *
+     * @return Collection<int, Booking>
+     */
+    public function holdsEndingBetween(CarbonInterface $now, CarbonInterface $until): Collection;
+
+    /**
+     * Bookings whose service ended between $from and $to (check-out, else the start date), not voided.
+     *
+     * @return Collection<int, Booking>
+     */
+    public function servicesEndedBetween(CarbonInterface $from, CarbonInterface $to): Collection;
+
+    /**
+     * Partner totals aggregated in SQL over non-voided bookings created in [$from, $to] (EUR), optionally per creation month.
+     * "paid" follows Booking::paidAmount(): succeeded payments minus refunds, else derived from the payment status.
+     *
+     * @return list<array{period: string|null, bookings_count: int, retail_total: float, commission_amount: float, partner_total: float, total: float, paid: float}>
+     */
+    public function partnerTotals(int $partnerId, ?CarbonInterface $from = null, ?CarbonInterface $to = null, bool $byMonth = false): array;
+
+    /**
+     * Confirmed or fully paid bookings whose service ended before the given day (end date, else check-out/start date).
+     *
+     * @return Collection<int, Booking>
+     */
+    public function endedBefore(CarbonInterface $day): Collection;
 }

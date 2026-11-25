@@ -4,6 +4,8 @@
  * Always keeps the "Preview on Google Maps" link in sync with the lat/lng inputs. With a browser key it loads the
  * Google Maps JavaScript API once (Places library), shows a map with a draggable marker, click-to-place and a
  * Places Autocomplete search box, and writes the coordinates (and the address, where the form has one) into the inputs.
+ * When the marker is dragged or the map clicked, the address is filled by reverse geocoding (Geocoding API on the same
+ * browser key); without that API, or on any error, the address is simply left as it was.
  */
 const CALLBACK = '__sharmStationMapsReady';
 let mapsPromise = null;
@@ -130,8 +132,14 @@ async function setUpMap(picker, fields, syncPreview) {
         }
     };
 
-    map.addListener('click', (event) => event.latLng && placeAt(event.latLng));
-    marker.addListener('dragend', (event) => event.latLng && placeAt(event.latLng));
+    const fillAddress = fields.address ? reverseGeocoder(picker, fields, write) : () => {};
+    const pickAt = (latLng) => {
+        placeAt(latLng);
+        fillAddress(latLng);
+    };
+
+    map.addListener('click', (event) => event.latLng && pickAt(event.latLng));
+    marker.addListener('dragend', (event) => event.latLng && pickAt(event.latLng));
 
     // Coordinates typed by hand move the marker.
     [fields.lat, fields.lng].forEach((input) => input.addEventListener('change', () => {
@@ -144,6 +152,46 @@ async function setUpMap(picker, fields, syncPreview) {
     }));
 
     await setUpSearch(picker, fields, map, placeAt, write);
+}
+
+/**
+ * Returns a function that writes the formatted address of a position into the address input (latest call wins).
+ * A missing Geocoding API (REQUEST_DENIED) disables it quietly for the page.
+ */
+function reverseGeocoder(picker, fields, write) {
+    let geocoder = null;
+    let disabled = false;
+    let sequence = 0;
+
+    return async (latLng) => {
+        if (disabled) {
+            return;
+        }
+
+        const current = ++sequence;
+
+        try {
+            if (!geocoder) {
+                const { Geocoder } = await window.google.maps.importLibrary('geocoding');
+                geocoder = new Geocoder();
+            }
+
+            const { results } = await geocoder.geocode({ location: latLng });
+
+            if (current === sequence && results?.[0]?.formatted_address) {
+                write(fields.address, results[0].formatted_address);
+            }
+        } catch (error) {
+            if (String(error?.code ?? error?.message ?? '').includes('REQUEST_DENIED')) {
+                disabled = true;
+                const status = picker.querySelector('[data-location-status]');
+
+                if (status) {
+                    status.textContent = 'Address lookup is off (enable the Geocoding API on the browser key). Type the address by hand.';
+                }
+            }
+        }
+    };
 }
 
 async function setUpSearch(picker, fields, map, placeAt, write) {

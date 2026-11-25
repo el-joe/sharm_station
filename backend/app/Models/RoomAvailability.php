@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Table(name: 'room_availability')]
-#[Fillable(['room_id', 'date', 'status', 'booking_id', 'price_override', 'held_until'])]
+#[Fillable(['room_id', 'date', 'status', 'booking_id', 'room_ical_feed_id', 'price_override', 'held_until'])]
 class RoomAvailability extends Model
 {
     /** @use HasFactory<RoomAvailabilityFactory> */
@@ -44,6 +44,14 @@ class RoomAvailability extends Model
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
+    }
+
+    /**
+     * @return BelongsTo<RoomIcalFeed, $this>
+     */
+    public function icalFeed(): BelongsTo
+    {
+        return $this->belongsTo(RoomIcalFeed::class, 'room_ical_feed_id');
     }
 
     /**

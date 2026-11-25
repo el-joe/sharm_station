@@ -33,7 +33,7 @@ export function PartnerNewBooking() {
   const ts = useTranslations("partnerPanel.services");
   const locale = useLocale() as Locale;
   const { currency } = useCurrency();
-  const { token, signOut } = useAuth();
+  const { hasSession, signOut } = useAuth();
   const queryClient = useQueryClient();
   const [nationality, setNationality] = useClientNationality();
   const [filters, setFilters] = useState<CatalogueFilters>({ service: "single_day_trips", q: "", destination: "", date: "" });
@@ -68,7 +68,7 @@ export function PartnerNewBooking() {
   };
 
   const submit = async (v: ClientValues) => {
-    if (!item || !config || !nationality || !token) return;
+    if (!item || !config || !nationality || !hasSession) return;
     setError(null);
     setCouponError(null);
     setClient(v);
@@ -83,7 +83,7 @@ export function PartnerNewBooking() {
           coupon_code: v.coupon_code,
           notes: [v.notes.trim(), v.voucher === "without_prices" ? "Voucher: without prices" : "Voucher: with prices"].filter(Boolean).join("\n"),
         },
-        { locale, currency, token },
+        { locale, currency },
       );
       setBooking(res);
       void queryClient.invalidateQueries({ queryKey: ["partner"] });
@@ -146,7 +146,7 @@ export function PartnerNewBooking() {
       )}
       {step === 3 && item && config && nationality && (
         <ClientStep
-          title={item.title}
+          title={config.title ?? item.title}
           config={config}
           nationality={nationality}
           serviceLabel={serviceLabel(item.service)}

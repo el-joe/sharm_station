@@ -3,7 +3,6 @@
 import { CouponField, type AppliedCoupon } from "@/components/booking/CouponField";
 import { Button } from "@/components/ui/Button";
 import type { CouponServiceType } from "@/lib/api/types";
-import { useAuth } from "@/lib/auth";
 import { Field, Input, Textarea } from "@/components/ui/Field";
 import { useCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
@@ -85,7 +84,6 @@ export function ClientStep({
   const tv = useTranslations("validation");
   const { format } = useCurrency();
   const q = config.quote;
-  const { token } = useAuth();
   const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
   const onCouponChange = useCallback((c: AppliedCoupon | null) => setCoupon(c), []);
 
@@ -246,7 +244,7 @@ export function ClientStep({
                 serviceType={couponService}
                 totalEur={q.partner_total}
                 forPartner
-                token={token}
+                auth
                 applied={coupon}
                 onChange={onCouponChange}
                 serverError={couponError}

@@ -159,3 +159,20 @@ test('the room calendar closes and reopens dates but leaves booked nights alone'
     $this->actingAs($this->admin)->postJson(route('admin.rooms.availability.update', $room), ['dates' => [$date], 'status' => 'booked'])
         ->assertUnprocessable();
 });
+
+test('rooms store their extra bed and cot prices and limits', function () {
+    $building = Building::factory()->create();
+    $fields = [
+        'building_id' => $building->id, 'name' => ['en' => 'Family room'], 'room_type' => 'family', 'status' => 'active',
+        'max_adults' => 2, 'max_children' => 2, 'max_total' => 4, 'pricing_mode' => 'per_room', 'base_price' => 120, 'min_nights' => 1,
+    ];
+
+    $this->actingAs($this->admin)->post(route('admin.rooms.store'), [...$fields, 'max_extra_beds' => 1, 'max_cots' => 1])
+        ->assertSessionHasErrors(['extra_bed_price', 'cot_price']);
+
+    $this->post(route('admin.rooms.store'), [...$fields, 'max_extra_beds' => 1, 'extra_bed_price' => 25, 'max_cots' => 2, 'cot_price' => 0])->assertSessionHasNoErrors();
+
+    $room = Room::query()->latest('id')->firstOrFail();
+    expect($room->max_extra_beds)->toBe(1)->and((float) $room->extra_bed_price)->toBe(25.0)->and($room->max_cots)->toBe(2)->and((float) $room->cot_price)->toBe(0.0);
+    $this->get(route('admin.rooms.edit', $room))->assertOk()->assertSee('Extra beds and cots');
+});

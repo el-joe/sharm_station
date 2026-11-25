@@ -10,14 +10,18 @@ use App\Services\Pricing\RoomPricingEngine;
 use App\Services\RoomService;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * Stay quote: one room (room_id + adults + child_ages) or several rooms of one building with their guests (rooms[]).
+ */
 class RoomQuoteController extends ApiController
 {
     public function __invoke(RoomQuoteRequest $request, RoomService $rooms, RoomPricingEngine $engine, CurrencyService $currencies): JsonResponse
     {
-        $room = $rooms->findBookable((int) $request->validated('room_id'));
-        abort_if($room === null, 404, 'Room not found.');
+        $data = RoomQuoteRequestData::fromRequest($request, null, $currencies->current(), ...$this->nationality());
+        $found = $rooms->findBookableMany($data->roomIds());
+        abort_if($found->isEmpty(), 404, 'Room not found.');
 
-        $quote = $engine->quote($room, RoomQuoteRequestData::fromRequest($request, null, $currencies->current(), ...$this->nationality()));
+        $quote = $engine->quoteRooms($found, $data);
         $payload = (new QuoteResource($quote))->resolve($request);
 
         if (! $quote->isValid()) {

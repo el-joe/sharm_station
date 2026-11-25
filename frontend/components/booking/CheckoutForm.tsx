@@ -80,7 +80,7 @@ function CheckoutWithDraft({ draft }: { draft: CheckoutDraft }) {
   const format = useFormatter();
   const locale = useLocale() as Locale;
   const { currency } = useCurrency();
-  const { token: authToken } = useAuth();
+  const { hasSession } = useAuth();
   const nationality = useNationalityCode();
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -162,10 +162,14 @@ function CheckoutWithDraft({ draft }: { draft: CheckoutDraft }) {
       currency,
       nationality_code: nationality,
       coupon_code: coupon?.code,
+      rooms: draft.rooms?.map(({ room_id, adults, children_ages, extra_beds, cots }) => ({ room_id, adults, children_ages, extra_beds, cots })),
+      extra_beds: draft.extra_beds || undefined,
+      cots: draft.cots || undefined,
+      room_options: draft.room_options?.map(({ room_option_id, adults, children_ages }) => ({ room_option_id, adults, children_ages })),
     };
     try {
-      // Signed-in customers send their token so the booking is linked to their account (My bookings).
-      const res = await api.createBooking(body, { locale, currency, token: authToken });
+      // Signed-in customers go through /api/proxy (session cookie) so the booking is linked to their account (My bookings).
+      const res = await api.createBooking(body, { locale, currency, auth: hasSession });
       saveBooking({ ...res, draft, lead });
       router.push(`/booking/${res.reference}`);
     } catch (err) {
@@ -290,12 +294,14 @@ function CheckoutWithDraft({ draft }: { draft: CheckoutDraft }) {
             <li className="flex items-center gap-2"><Users className="size-4" aria-hidden />{t("party", { adults: draft.adults, children: draft.children })}{draft.booking_type ? ` · ${t(`type.${draft.booking_type}`)}` : ""}</li>
             {draft.season_note && <li className="text-xs font-medium text-ink-900">{t("season", { season: draft.season_note })}</li>}
           </ul>
+          {draft.rooms && draft.rooms.length > 0 && <DraftRooms rooms={draft.rooms} />}
+          {draft.room_options && draft.room_options.length > 0 && <DraftRooms rooms={draft.room_options} />}
           <PriceSummary quote={draft.quote} discount={coupon ? { code: coupon.code, amount: coupon.discount_eur } : null} />
           <CouponField
             serviceType={couponService(draft)}
             totalEur={draft.quote.total}
             email={leadEmail}
-            token={authToken}
+            auth={hasSession}
             applied={coupon}
             onChange={onCouponChange}
             serverError={couponError}
@@ -304,5 +310,26 @@ function CheckoutWithDraft({ draft }: { draft: CheckoutDraft }) {
         </div>
       </aside>
     </div>
+  );
+}
+
+/** Per-room party of a multi-room stay or of the optional trip rooms (checkout summary). */
+function DraftRooms({ rooms }: { rooms: { name: string; number?: string | null; adults: number; children_ages: number[]; extra_beds?: number; cots?: number }[] }) {
+  const t = useTranslations("bookingRooms");
+  return (
+    <section aria-label={t("title")}>
+      <h3 className="text-sm font-semibold text-ink-900">{t("title")}</h3>
+      <ol className="mt-2 flex flex-col gap-1.5 text-sm text-ink-700">
+        {rooms.map((r, i) => (
+          <li key={i} className="flex flex-wrap justify-between gap-x-3">
+            <span className="font-medium text-ink-900">{t("room", { n: i + 1, name: [r.name, r.number].filter(Boolean).join(" ") })}</span>
+            <span>
+              {t("guests", { adults: r.adults, children: r.children_ages.length })}
+              {(r.extra_beds || r.cots) ? ` · ${t("extras", { beds: r.extra_beds ?? 0, cots: r.cots ?? 0 }).replace(/^ · /, "")}` : ""}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }

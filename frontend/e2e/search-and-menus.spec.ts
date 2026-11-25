@@ -76,7 +76,8 @@ for (const path of ["/en/trips", "/en/accommodation"]) {
     await page.getByRole("listbox", { name: "Sort by" }).getByRole("option", { name: "Price: low to high" }).click();
     await expect(sort).toHaveText(/Price: low to high/);
     await expect(page).toHaveURL(/sort=/);
-    const cards = page.getByRole("main").getByRole("article");
+    // Rooms that cannot be booked for the search are listed after the bookable ones (API v2.4 B2.4).
+    const cards = page.getByRole("main").getByRole("article").and(page.locator(':not([data-available="false"])'));
     await expect(cards.first()).toBeVisible();
     await page.waitForLoadState("networkidle");
     const prices: number[] = [];

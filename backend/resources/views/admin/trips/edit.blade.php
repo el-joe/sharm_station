@@ -42,6 +42,9 @@
     <x-admin.page-header :title="$title" :breadcrumbs="['Catalogue' => null, $section => $indexUrl, $title => null]"
                          :subtitle="$trip->exists ? $trip->type->label().' · '.($trip->destination?->name ?? '').' · '.$trip->status->label() : 'Fill in the basics, then pricing. The price list is available after the first save.'">
         <x-slot:actions>
+            @if ($trip->exists && $trip->type !== \App\Enums\TripType::SingleDay)
+                @can('manage-prices')<a href="{{ route('admin.trips.room-options', $trip) }}" class="btn-ghost">{{ $trip->type === \App\Enums\TripType::Nile ? 'Cabins' : 'Rooms' }}</a>@endcan
+            @endif
             @if ($trip->exists)
                 <form method="POST" action="{{ route('admin.trips.destroy', $trip) }}" data-confirm="Delete “{{ $title }}”? This cannot be undone.">
                     @csrf @method('DELETE')
@@ -93,6 +96,44 @@
                 <x-admin.form-section title="Meeting point" description="Where customers meet the guide or are picked up. Shown on the trip page and in the booking confirmation.">
                     <x-admin.translatable name="meeting_point" label="Meeting point" :value="$trip->getTranslations('meeting_point')" span="md:col-span-6" />
                     <x-admin.location-picker :lat="$trip->lat" :lng="$trip->lng" lat-label="Meeting point latitude" lng-label="Meeting point longitude" search-label="Search the meeting point" />
+                </x-admin.form-section>
+
+                @php
+                    $faq = (array) ($trip->getTranslations('faq') ?: []);
+                    $faqRows = old('faq_rows') ?? collect(range(0, max(count($faq['en'] ?? []), count($faq['it'] ?? [])) - 1))
+                        ->filter(fn ($i) => $i >= 0)
+                        ->map(fn ($i) => [
+                            'question' => ['en' => $faq['en'][$i]['question'] ?? '', 'it' => $faq['it'][$i]['question'] ?? ''],
+                            'answer' => ['en' => $faq['en'][$i]['answer'] ?? '', 'it' => $faq['it'][$i]['answer'] ?? ''],
+                        ])->values()->all();
+                    $bring = collect($trip->getTranslations('what_to_bring') ?: [])->map(fn ($items) => implode("\n", (array) $items))->all();
+                    $languages = (array) trans('catalog.languages', [], 'en');
+                @endphp
+                <x-admin.form-section title="Trip details" description="Shown on the trip page: unit label, what to bring, guide languages, cancellation text and FAQ.">
+                    <x-admin.translatable name="unit_label" label="Unit label (per-unit trips)" :value="$trip->getTranslations('unit_label')" span="md:col-span-2" />
+                    <div data-field class="md:col-span-4">
+                        <input type="hidden" name="guide_languages_present" value="1">
+                        <x-admin.select name="guide_languages[]" label="Guide languages" :options="$languages" :selected="old('guide_languages', $trip->guide_languages ?? [])" multiple data-s2-tags placeholder="Choose languages" span="" />
+                    </div>
+                    <x-admin.translatable name="what_to_bring_lines" label="What to bring (one item per line)" type="textarea" :rows="4" :value="$bring" span="md:col-span-3" />
+                    <x-admin.translatable name="cancellation_policy" label="Cancellation policy" type="textarea" :rows="4" :value="$trip->getTranslations('cancellation_policy')" span="md:col-span-3" />
+                    <div class="md:col-span-6">
+                        <p class="form-label">FAQ</p>
+                        <input type="hidden" name="faq_present" value="1">
+                        <div data-repeater data-sortable>
+                            <div data-repeater-list>
+                                @foreach ($faqRows as $index => $row)
+                                    @include('admin.trips.partials.faq-row', ['index' => (string) $index, 'row' => $row])
+                                @endforeach
+                            </div>
+                            <p data-repeater-empty class="py-3 text-sm text-ink-500" @if ($faqRows !== []) hidden @endif>No questions yet.</p>
+                            <template data-repeater-template>
+                                @include('admin.trips.partials.faq-row', ['index' => '__INDEX__', 'row' => []])
+                            </template>
+                            <button type="button" data-repeater-add class="btn-ghost btn-sm mt-3">Add question</button>
+                            @if ($errors->has('faq') || $errors->has('faq.*'))<p class="form-error">Every question needs both the question and the answer in that language.</p>@endif
+                        </div>
+                    </div>
                 </x-admin.form-section>
 
                 <x-admin.form-section title="Booking types and visibility">

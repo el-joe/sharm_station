@@ -18,12 +18,12 @@ beforeEach(function () {
 });
 
 test('rooms are filtered by availability for the whole stay and by minimum nights', function () {
-    $ids = $this->getJson('/api/v1/rooms?check_in=2026-12-01&check_out=2026-12-04')->assertOk()->json('data.*.id');
+    $ids = $this->getJson('/api/v1/rooms?check_in=2026-12-01&check_out=2026-12-04&only_available=1')->assertOk()->json('data.*.id');
 
     expect($ids)->toBe([$this->free->id]);
 
     // The booked night is the check-out day: the stay is still possible.
-    $ids = $this->getJson('/api/v1/rooms?check_in=2026-11-30&check_out=2026-12-02')->assertOk()->json('data.*.id');
+    $ids = $this->getJson('/api/v1/rooms?check_in=2026-11-30&check_out=2026-12-02&only_available=1')->assertOk()->json('data.*.id');
     expect($ids)->toEqualCanonicalizing([$this->free->id, $this->booked->id]);
 });
 

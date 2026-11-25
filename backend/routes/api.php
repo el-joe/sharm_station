@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AccountController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BookingController;
 use App\Http\Controllers\Api\V1\BookingPaymentController;
+use App\Http\Controllers\Api\V1\BookingVoucherController;
 use App\Http\Controllers\Api\V1\BuildingController;
 use App\Http\Controllers\Api\V1\CancellationRequestController;
 use App\Http\Controllers\Api\V1\ContactController;
@@ -20,6 +21,8 @@ use App\Http\Controllers\Api\V1\PackageQuoteController;
 use App\Http\Controllers\Api\V1\PartnerApplicationController;
 use App\Http\Controllers\Api\V1\PartnerPanelController;
 use App\Http\Controllers\Api\V1\PaymentWebhookController;
+use App\Http\Controllers\Api\V1\RedirectController;
+use App\Http\Controllers\Api\V1\RoomCombinationController;
 use App\Http\Controllers\Api\V1\RoomController;
 use App\Http\Controllers\Api\V1\RoomQuoteController;
 use App\Http\Controllers\Api\V1\SearchSuggestController;
@@ -55,9 +58,11 @@ Route::prefix('v1')->name('api.v1.')->middleware(SetLocaleAndCurrency::class)->g
 
     Route::get('rooms', [RoomController::class, 'index'])->name('rooms.index');
     Route::post('rooms/quote', RoomQuoteController::class)->middleware('throttle:60,1,quotes')->name('rooms.quote');
+    Route::get('rooms/combinations', RoomCombinationController::class)->middleware('throttle:60,1,room-combinations')->name('rooms.combinations');
     Route::get('rooms/{id}', [RoomController::class, 'show'])->whereNumber('id')->name('rooms.show');
     Route::get('buildings/{slug}', [BuildingController::class, 'show'])->name('buildings.show');
 
+    Route::get('redirects/resolve', RedirectController::class)->middleware('throttle:120,1,redirects')->name('redirects.resolve');
     Route::get('reviews/google', GoogleReviewController::class)->name('reviews.google');
 
     Route::get('pages/{slug}', [ContentController::class, 'page'])->name('pages.show');
@@ -67,18 +72,22 @@ Route::prefix('v1')->name('api.v1.')->middleware(SetLocaleAndCurrency::class)->g
 
     Route::post('bookings', [BookingController::class, 'store'])->middleware('throttle:20,1,bookings')->name('bookings.store');
     Route::get('bookings/{reference}', [BookingController::class, 'show'])->name('bookings.show');
+    Route::get('bookings/{reference}/voucher.pdf', BookingVoucherController::class)->middleware('throttle:30,1,vouchers')->name('bookings.voucher');
     Route::get('bookings/{reference}/payment-methods', [BookingPaymentController::class, 'methods'])->name('bookings.payment-methods');
     Route::post('bookings/{reference}/proofs', [BookingPaymentController::class, 'storeProof'])->middleware('throttle:10,1,payment-proofs')->name('bookings.proofs.store');
     Route::post('bookings/{reference}/checkout', [BookingPaymentController::class, 'checkout'])->middleware('throttle:20,1,payment-checkout')->name('bookings.checkout');
     Route::post('bookings/{reference}/cancellation-request', CancellationRequestController::class)->middleware('throttle:10,1,cancellation-requests')->name('bookings.cancellation-request');
     Route::post('coupons/validate', [CouponController::class, 'check'])->middleware('throttle:30,1,coupons')->name('coupons.validate');
     Route::post('payments/webhooks/{driver}', PaymentWebhookController::class)->whereAlpha('driver')->name('payments.webhook');
+    Route::get('payments/paypal/return', [PaymentWebhookController::class, 'paypalReturn'])->middleware('throttle:30,1,payment-return')->name('payments.paypal.return');
 
     Route::post('newsletter', NewsletterController::class)->middleware('throttle:10,1,newsletter')->name('newsletter.subscribe');
 
     Route::prefix('auth')->name('auth.')->group(function (): void {
         Route::post('register', [AuthController::class, 'register'])->middleware('throttle:10,1,register')->name('register');
         Route::post('login', [AuthController::class, 'login'])->middleware('throttle:10,1,login')->name('login');
+        Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1,forgot-password')->name('forgot-password');
+        Route::post('reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:10,1,reset-password')->name('reset-password');
 
         Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('logout', [AuthController::class, 'logout'])->name('logout');

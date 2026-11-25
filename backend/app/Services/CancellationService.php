@@ -6,6 +6,7 @@ use App\DTOs\Cancellation\RefundSuggestionData;
 use App\Enums\ActivityAction;
 use App\Enums\BookingStatus;
 use App\Enums\CancellationDecision;
+use App\Enums\NotificationEvent;
 use App\Exceptions\DomainValidationException;
 use App\Models\Booking;
 use App\Models\Package;
@@ -14,6 +15,8 @@ use App\Models\Trip;
 use App\Models\User;
 use App\Repositories\Contracts\BookingRepositoryInterface;
 use App\Repositories\Contracts\SettingRepositoryInterface;
+use App\Services\Notifications\NotificationContextFactory;
+use App\Services\Notifications\NotificationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Number;
@@ -41,10 +44,14 @@ class CancellationService
         private readonly BookingService $bookingService,
         private readonly SettingRepositoryInterface $settings,
         private readonly ActivityLogger $activity,
+        private readonly RefundService $refunds,
+        private readonly NotificationService $notifications,
+        private readonly NotificationContextFactory $context,
     ) {}
 
     /**
-     * Records the request once; asking again returns the booking unchanged (idempotent).
+     * Records the request once; asking again while it is pending returns the booking unchanged (idempotent).
+     * After a declined request the booker may ask again: the previous decision is cleared.
      *
      * @return array{booking: Booking, created: bool}
      *
@@ -52,7 +59,7 @@ class CancellationService
      */
     public function request(Booking $booking, string $reason, ?User $requester): array
     {
-        if ($booking->cancellation_requested_at !== null) {
+        if ($booking->hasPendingCancellationRequest()) {
             return ['booking' => $booking, 'created' => false];
         }
 
@@ -65,6 +72,9 @@ class CancellationService
                 'cancellation_requested_at' => now(),
                 'cancellation_reason' => $reason,
                 'cancellation_requested_by' => $requester?->id,
+                'cancellation_decision' => null,
+                'cancellation_decided_at' => null,
+                'cancellation_decision_note' => null,
             ]);
 
             $booking->statusLogs()->create([
@@ -73,6 +83,8 @@ class CancellationService
                 'user_id' => $requester?->id,
                 'note' => 'Cancellation requested: '.$reason,
             ]);
+
+            $this->notifications->booking(NotificationEvent::CancellationRequestedAdmin, $booking, ['reason' => $reason]);
 
             return ['booking' => $booking, 'created' => true];
         });
@@ -128,7 +140,7 @@ class CancellationService
             throw DomainValidationException::withErrors(['refund_amount' => ['The refund must be between €0.00 and the amount paid ('.Number::currency($paid, 'EUR', 'en').').']]);
         }
 
-        return DB::transaction(function () use ($booking, $actor, $refundAmount, $note): Booking {
+        $booking = DB::transaction(function () use ($booking, $actor, $refundAmount, $note): Booking {
             $this->bookings->update($booking, [
                 'cancellation_decision' => CancellationDecision::Approved,
                 'cancellation_decided_at' => now(),
@@ -139,8 +151,18 @@ class CancellationService
             $this->bookingService->changeStatus($booking, BookingStatus::Cancelled, $actor, trim('Cancellation request approved, refund '.Number::currency($refundAmount, 'EUR', 'en').'. '.($note ?? '')));
             $this->activity->log(ActivityAction::CancellationApproved, $booking, "Cancellation of booking {$booking->reference} approved", ['refund_amount' => round($refundAmount, 2), 'note' => $note], $actor);
 
+            $locale = $booking->locale === 'it' ? 'it' : 'en';
+            $this->notifications->booking(NotificationEvent::CancellationApproved, $booking, [
+                'refund_amount' => $this->context->money($refundAmount * (float) $booking->exchange_rate, $booking->currency, $locale),
+            ]);
+
             return $booking;
         });
+
+        // Gateway refunds run after the commit (never inside the transaction); failures become pending manual refunds.
+        $this->refunds->issueForCancellation($booking, $refundAmount, $actor);
+
+        return $booking;
     }
 
     /**
@@ -165,6 +187,7 @@ class CancellationService
             ]);
 
             $this->activity->log(ActivityAction::CancellationDeclined, $booking, "Cancellation request of booking {$booking->reference} declined", ['reason' => $reason], $actor);
+            $this->notifications->booking(NotificationEvent::CancellationDeclined, $booking, ['reason' => $reason]);
 
             return $booking;
         });

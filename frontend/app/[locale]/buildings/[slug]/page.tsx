@@ -1,18 +1,18 @@
 import { BuildingCard } from "@/components/accommodation/BuildingCard";
 import { getNationality } from "@/lib/api/nationality-server";
+import { MultiRoomBooking } from "@/components/accommodation/MultiRoomBooking";
 import { RoomCard } from "@/components/accommodation/RoomCard";
 import { MapEmbed } from "@/components/map/MapEmbed";
 import { hasCoords } from "@/components/map/types";
 import { GoogleReviewsSection } from "@/components/reviews/GoogleReviewsSection";
 import { AppImage } from "@/components/ui/AppImage";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
-import { getBuilding, getCatalogueKeys, getGoogleReviews } from "@/lib/api/server";
+import { getBuilding, getCatalogueKeys, getGoogleReviews, notFoundOrMoved } from "@/lib/api/server";
 import type { Locale } from "@/lib/api/types";
 import { pageMetadata } from "@/lib/seo";
 import { MapPin } from "lucide-react";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 export async function generateStaticParams() {
@@ -38,7 +38,7 @@ export default function BuildingPage({ params }: PageProps<"/[locale]/buildings/
 async function Content({ params }: { params: PageProps<"/[locale]/buildings/[slug]">["params"] }) {
   const { locale, slug } = await params;
   const b = await getBuilding(slug, locale as Locale, await getNationality());
-  if (!b) notFound();
+  if (!b) return notFoundOrMoved("buildings", slug, locale as Locale);
   const [t, tc, tn, tm, reviews] = await Promise.all([getTranslations("building"), getTranslations("common"), getTranslations("nav"), getTranslations("map"), getGoogleReviews(locale as Locale)]);
   return (
     <div className="container-page py-8 lg:py-12">
@@ -64,6 +64,11 @@ async function Content({ params }: { params: PageProps<"/[locale]/buildings/[slu
           {b.rooms.map((r) => (<li key={r.id}><RoomCard room={r} className="h-full" /></li>))}
         </ul>
       </section>
+      {b.rooms.length > 0 && (
+        <div className="mt-12">
+          <MultiRoomBooking building={{ slug: b.slug, name: b.name, location: b.location }} rooms={b.rooms} image={b.image.url} />
+        </div>
+      )}
       <div className="mt-12">
         <GoogleReviewsSection data={reviews} compact limit={2} />
       </div>

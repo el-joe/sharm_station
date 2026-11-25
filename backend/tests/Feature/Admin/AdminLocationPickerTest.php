@@ -25,6 +25,7 @@ function locationPickerPages(): array
         route('admin.trips.edit', Trip::factory()->create(['lat' => 27.91, 'lng' => 34.33])),
         route('admin.settings.edit'),
         route('admin.ai-suggestions.show', AiSuggestion::factory()->create()->id),
+        route('admin.transfers.simulator'),
     ];
 }
 
@@ -114,4 +115,13 @@ test('the trip meeting point and its coordinates are saved from the editor', fun
     expect($trip->getTranslations('meeting_point'))->toBe(['en' => 'Naama Bay marina', 'it' => 'Marina di Naama Bay'])
         ->and((float) $trip->lat)->toBe(27.9123456)
         ->and((float) $trip->lng)->toBe(34.3254321);
+});
+
+test('the transfer simulator picks the other end of the route on the map and keeps the direction', function () {
+    $this->actingAs($this->admin)->get(route('admin.transfers.simulator', ['direction' => 'to_hub', 'destination' => ['name' => 'Naama Bay', 'lat' => 27.9158, 'lng' => 34.33]]))
+        ->assertOk()
+        ->assertSee('data-lat-input="#f-destination-lat" data-lng-input="#f-destination-lng"', false)
+        ->assertSee('data-address-input="#f-destination-name"', false)
+        ->assertSee('<option value="to_hub" selected', false)
+        ->assertSee('https://www.google.com/maps?q=27.9158,34.33', false);
 });

@@ -59,7 +59,7 @@ export function MobileDrawer() {
           </nav>
           <div className="flex flex-col gap-4 border-t border-ink-100 p-4">
             <div className="flex flex-wrap items-center gap-1.5">
-              <NationalityChip className="border border-ink-300" />
+              <NationalityChip className="border border-ink-300" variant="sheet" />
               <Suspense fallback={<LanguageSwitcherFallback className="border border-ink-300" />}>
                 <LanguageSwitcher className="border border-ink-300" />
               </Suspense>

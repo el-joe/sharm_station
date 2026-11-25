@@ -21,6 +21,7 @@ import { AlertCircle, CheckCircle2, Info, Lock, MessageCircle, Users } from "luc
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { AddonOptionCard } from "./AddonOptionCard";
+import { RoomOptionsPicker, roomOptionsPayload, type PickedRoomOption } from "./RoomOptionsPicker";
 import { PriceSummary } from "./PriceSummary";
 import { UnitOptionCard } from "./UnitOptionCard";
 
@@ -38,6 +39,8 @@ function useTripBooking(trip: TripDetail) {
     return sorted.length > 1 ? { [sorted[0].id]: 1, [sorted[1].id]: 1 } : { [sorted[0].id]: 1 };
   });
   const [addons, setAddons] = useState<number[]>(() => trip.addons.filter((a) => a.required).map((a) => a.id));
+  const [roomPicks, setRoomPicks] = useState<PickedRoomOption[]>([]);
+  const roomOptions = roomOptionsPayload(roomPicks, trip.room_options, adults, childAges);
 
   // Date defaults to the first open day once the browser clock is known (never during prerender).
   const now = today ? parseISODate(today) : null;
@@ -59,6 +62,7 @@ function useTripBooking(trip: TripDetail) {
       .filter(([, q]) => q > 0)
       .map(([id, quantity]) => ({ unit_option_id: Number(id), quantity })),
     addons: addons.map((id) => ({ addon_id: id, quantity: 1 })),
+    ...(roomOptions.length ? { room_options: roomOptions } : {}),
   };
 
   const validation = validateParty(trip, { ...request, child_ages: childAges.map((a) => (a == null ? NaN : a)) });
@@ -83,6 +87,8 @@ function useTripBooking(trip: TripDetail) {
     setUnits,
     addons,
     setAddons,
+    roomPicks,
+    setRoomPicks,
     request,
     validation,
   };
@@ -141,6 +147,7 @@ export function BookingWidget({ trip }: { trip: TripDetail }) {
       child_ages: state.request.child_ages,
       units: state.request.units.map((u) => ({ ...u, name: trip.unit_options.find((o) => o.id === u.unit_option_id)?.name ?? "" })),
       addons: state.request.addons.map((a) => ({ ...a, name: trip.addons.find((x) => x.id === a.addon_id)?.name ?? "" })),
+      room_options: state.request.room_options?.map((r) => ({ ...r, name: trip.room_options.find((o) => o.id === r.room_option_id)?.name ?? "" })),
       quote: quote.data,
       season_note: quote.data.season?.name ?? null,
       created_at: Date.now(),
@@ -241,6 +248,7 @@ function WidgetBody({
 }) {
   const t = useTranslations("booking");
   const te = useTranslations("booking.errors");
+  const tr = useTranslations("roomOptions");
   const format = useFormatter();
   const { format: money } = useCurrency();
   const id = (s: string) => `${prefix}-${s}`;
@@ -391,6 +399,13 @@ function WidgetBody({
           </div>
         )}
       </div>
+
+      {trip.room_options.length > 0 && (
+        <section className="flex flex-col gap-3" aria-labelledby={id("rooms-title")}>
+          <h3 id={id("rooms-title")} className="text-[22px] font-semibold leading-[30px] text-ink-900">{tr("title")}</h3>
+          <RoomOptionsPicker options={trip.room_options} adults={state.adults} childAges={state.childAges} value={state.roomPicks} onChange={state.setRoomPicks} idPrefix={id("ro")} />
+        </section>
+      )}
 
       {visibleAddons.length > 0 && (
         <div className="flex flex-col gap-3">

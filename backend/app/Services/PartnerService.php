@@ -6,6 +6,7 @@ use App\DTOs\Partner\CommissionMatrixData;
 use App\DTOs\Partner\PartnerApplicationData;
 use App\Enums\ActivityAction;
 use App\Enums\CommissionCategory;
+use App\Enums\NotificationEvent;
 use App\Enums\PartnerStatus;
 use App\Enums\UserRole;
 use App\Exceptions\DomainValidationException;
@@ -13,6 +14,8 @@ use App\Models\Partner;
 use App\Models\User;
 use App\Repositories\Contracts\PartnerRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Services\Notifications\NotificationContextFactory;
+use App\Services\Notifications\NotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +29,8 @@ class PartnerService
         private readonly PartnerRepositoryInterface $partners,
         private readonly UserRepositoryInterface $users,
         private readonly ActivityLogger $activity,
+        private readonly NotificationService $notifications,
+        private readonly NotificationContextFactory $notificationContext,
     ) {}
 
     /**
@@ -72,6 +77,8 @@ class PartnerService
                 'status' => PartnerStatus::Pending,
             ]);
 
+            $this->notifications->admins(NotificationEvent::PartnerApplicationAdmin, fn (string $locale): array => $this->notificationContext->partner($partner->setRelation('user', $user), $locale), $partner);
+
             return ['partner' => $partner, 'user' => $user, 'token' => $token];
         });
     }
@@ -92,6 +99,7 @@ class PartnerService
 
             $this->users->update($partner->user, ['role' => UserRole::Partner]);
             $this->activity->log(ActivityAction::PartnerApproved, $partner, "Partner “{$partner->company}” approved", causer: $approver);
+            $this->notifications->partner(NotificationEvent::PartnerApproved, $partner);
 
             return $partner;
         });
@@ -150,6 +158,7 @@ class PartnerService
             }
 
             $this->activity->log(ActivityAction::PartnerRejected, $partner, "Partner application “{$partner->company}” rejected", ['reason' => $reason], $actor);
+            $this->notifications->partner(NotificationEvent::PartnerRejected, $partner, ['reason' => $reason]);
 
             return $partner;
         });

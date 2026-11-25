@@ -39,6 +39,29 @@ interface RoomRepositoryInterface extends BaseRepositoryInterface
     public function lockForBooking(int $id): ?Room;
 
     /**
+     * Bookable rooms of a building free for the whole stay and fitting its length, with the stay's calendar rows.
+     *
+     * @return Collection<int, Room>
+     */
+    public function freeInBuilding(int $buildingId, CarbonInterface $checkIn, CarbonInterface $checkOut): Collection;
+
+    /**
+     * Bookable rooms by id with what the stay pricing needs.
+     *
+     * @param  list<int>  $ids
+     * @return Collection<int, Room>
+     */
+    public function findBookableMany(array $ids): Collection;
+
+    /**
+     * Bookable rooms locked for update (in id order, to avoid deadlocks) inside the booking transaction.
+     *
+     * @param  list<int>  $ids
+     * @return Collection<int, Room>
+     */
+    public function lockManyForBooking(array $ids): Collection;
+
+    /**
      * @return Builder<Room>
      */
     public function adminQuery(?int $buildingId = null): Builder;

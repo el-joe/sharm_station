@@ -2,6 +2,7 @@
 
 use App\Exceptions\DomainValidationException;
 use App\Http\Middleware\EnsureStaffRole;
+use App\Http\Middleware\EnsureTwoFactorEnrolled;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
@@ -27,7 +28,9 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias(['staff' => EnsureStaffRole::class]);
+        // The Next.js server proxies auth calls and forwards X-Forwarded-For: per-IP rate limits use the real client IP.
+        $middleware->trustProxies(at: ['127.0.0.1', '::1']);
+        $middleware->alias(['staff' => EnsureStaffRole::class, 'two-factor' => EnsureTwoFactorEnrolled::class]);
         $middleware->redirectGuestsTo(fn () => route('admin.login'));
         $middleware->redirectUsersTo(fn () => route('admin.dashboard'));
     })

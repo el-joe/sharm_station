@@ -156,7 +156,7 @@ test('the stripe skeleton refuses to start without keys and rejects unsigned web
 });
 
 test('the stripe webhook signature is verified with the t and v1 scheme', function () {
-    config(['payments.gateways.stripe.webhook_secret' => 'whsec_test']);
+    config(['payments.gateways.stripe.secret' => 'sk_test_123', 'payments.gateways.stripe.webhook_secret' => 'whsec_test']);
     $payload = json_encode(['type' => 'customer.created', 'data' => ['object' => ['id' => 'cus_1']]]);
     $timestamp = now()->getTimestamp();
     $signature = 't='.$timestamp.',v1='.hash_hmac('sha256', $timestamp.'.'.$payload, 'whsec_test');

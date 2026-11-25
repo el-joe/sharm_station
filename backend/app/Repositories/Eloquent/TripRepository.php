@@ -83,6 +83,7 @@ class TripRepository extends BaseRepository implements TripRepositoryInterface
                 'seasonPrices' => fn ($query) => $query->where('is_active', true),
                 'childPolicy.bands',
                 'addons' => fn ($query) => $query->where('is_active', true),
+                'roomOptions' => fn ($query) => $query->where('is_active', true)->with('productPrices'),
             ])
             ->first();
     }

@@ -43,7 +43,7 @@ export function CouponField({
   totalEur,
   email,
   forPartner,
-  token,
+  auth = false,
   applied,
   onChange,
   serverError,
@@ -52,7 +52,7 @@ export function CouponField({
   totalEur: number;
   email?: string;
   forPartner?: boolean;
-  token?: string | null;
+  auth?: boolean;
   applied: AppliedCoupon | null;
   onChange: (coupon: AppliedCoupon | null) => void;
   /** 422 on coupon_code returned by the booking request. */
@@ -75,7 +75,7 @@ export function CouponField({
     setBusy(true);
     setError(null);
     try {
-      return await api.validateCoupon({ code: value, service_type: serviceType, total_eur: totalEur, email: email || undefined, for_partner: forPartner || undefined }, { locale, token });
+      return await api.validateCoupon({ code: value, service_type: serviceType, total_eur: totalEur, email: email || undefined, for_partner: forPartner || undefined }, { locale, auth });
     } catch (err) {
       if (err instanceof ApiError && err.isValidation) setError(Object.values(err.errors).flat()[0] ?? t("errors.invalid"));
       else if (err instanceof ApiError && err.status === 429) setError(t("errors.tooMany"));
@@ -112,7 +112,7 @@ export function CouponField({
     if (!applied || previous === totalEur) return;
     let cancelled = false;
     api
-      .validateCoupon({ code: applied.code, service_type: serviceType, total_eur: totalEur, email: email || undefined, for_partner: forPartner || undefined }, { locale, token })
+      .validateCoupon({ code: applied.code, service_type: serviceType, total_eur: totalEur, email: email || undefined, for_partner: forPartner || undefined }, { locale, auth })
       .then((res) => {
         if (cancelled) return;
         if (res.valid && res.discount_eur > 0) {
@@ -126,7 +126,7 @@ export function CouponField({
     return () => {
       cancelled = true;
     };
-  }, [totalEur, applied, serviceType, email, forPartner, locale, token, onChange, t]);
+  }, [totalEur, applied, serviceType, email, forPartner, locale, auth, onChange, t]);
 
   const shownError = serverError ? couponMessage(serverError, t) : error;
 

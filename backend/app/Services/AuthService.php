@@ -73,6 +73,20 @@ class AuthService
      */
     public function attemptStaffLogin(LoginData $data, bool $remember = false): User
     {
+        $user = $this->validateStaffCredentials($data);
+        $this->loginStaff($user, $remember);
+
+        return $user;
+    }
+
+    /**
+     * Checks the password and that the account may enter the back office, without signing in
+     * (the two-factor challenge may still be required).
+     *
+     * @throws DomainValidationException
+     */
+    public function validateStaffCredentials(LoginData $data): User
+    {
         $user = $this->users->findByEmail($data->email);
 
         if ($user === null || ! Hash::check($data->password, $user->password)) {
@@ -87,9 +101,12 @@ class AuthService
             throw DomainValidationException::withErrors(['email' => ['This account has been deactivated.']]);
         }
 
-        Auth::guard('web')->login($user, $remember);
-
         return $user;
+    }
+
+    public function loginStaff(User $user, bool $remember = false): void
+    {
+        Auth::guard('web')->login($user, $remember);
     }
 
     public function logoutStaff(): void

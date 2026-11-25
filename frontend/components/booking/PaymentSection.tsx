@@ -24,8 +24,8 @@ const noop = () => () => {};
 export interface PaymentSectionProps {
   reference: string;
   accessToken: string | null;
-  /** Bearer token when the visitor is signed in (owners can open their booking without the access token). */
-  authToken?: string | null;
+  /** The visitor is signed in: calls go through /api/proxy (owners can open their booking without the access token). */
+  auth?: boolean;
   status: BookingStatus;
   /** Deposit and total in EUR. */
   deposit: number;
@@ -47,7 +47,7 @@ export interface PaymentSectionProps {
  * and the booking's payment options.
  */
 export function PaymentSection(props: PaymentSectionProps) {
-  const { reference, accessToken, authToken, status, deposit, fallbackOptions } = props;
+  const { reference, accessToken, auth, status, deposit, fallbackOptions } = props;
   const t = useTranslations("payment");
   const tc = useTranslations("confirmation");
   const locale = useLocale() as Locale;
@@ -57,8 +57,8 @@ export function PaymentSection(props: PaymentSectionProps) {
 
   const payable = status === "awaiting_payment";
   const methods = useQuery({
-    queryKey: ["payment-methods", reference, accessToken, authToken, locale],
-    queryFn: ({ signal }) => api.paymentMethods(reference, { locale, accessToken, token: authToken, signal }),
+    queryKey: ["payment-methods", reference, accessToken, auth, locale],
+    queryFn: ({ signal }) => api.paymentMethods(reference, { locale, accessToken, auth, signal }),
     enabled: payable && !proofSent && !submitted,
     retry: false,
   });
@@ -188,7 +188,7 @@ function useMethodAmount(method: PaymentMethod, depositEur: number, bookingCurre
   return { currency, amount, formatted, converted: currency !== bookingCurrency };
 }
 
-function OnlinePay({ method, reference, accessToken, authToken, deposit, bookingCurrency }: PaymentSectionProps & { method: PaymentMethod }) {
+function OnlinePay({ method, reference, accessToken, auth, deposit, bookingCurrency }: PaymentSectionProps & { method: PaymentMethod }) {
   const t = useTranslations("payment");
   const locale = useLocale() as Locale;
   const { formatted, converted, currency } = useMethodAmount(method, deposit, bookingCurrency);
@@ -199,7 +199,7 @@ function OnlinePay({ method, reference, accessToken, authToken, deposit, booking
     setError(null);
     setState("loading");
     try {
-      const res = await api.checkout(reference, method.id, { locale, accessToken, token: authToken });
+      const res = await api.checkout(reference, method.id, { locale, accessToken, auth });
       if (res.status === "ok") {
         setState("redirecting");
         window.location.assign(res.data.redirect_url);
@@ -225,7 +225,7 @@ function OnlinePay({ method, reference, accessToken, authToken, deposit, booking
   );
 }
 
-function ManualPay({ method, reference, accessToken, authToken, deposit, bookingCurrency, dueAt, createdAt, onProofSent }: PaymentSectionProps & { method: PaymentMethod; onProofSent: () => void }) {
+function ManualPay({ method, reference, accessToken, auth, deposit, bookingCurrency, dueAt, createdAt, onProofSent }: PaymentSectionProps & { method: PaymentMethod; onProofSent: () => void }) {
   const t = useTranslations("payment");
   const tv = useTranslations("validation");
   const format = useFormatter();
@@ -265,7 +265,7 @@ function ManualPay({ method, reference, accessToken, authToken, deposit, booking
     }
     setUpload("uploading");
     try {
-      const res = await api.uploadProofs(reference, { ...v, files, payment_method_id: method.id }, { locale, accessToken, token: authToken });
+      const res = await api.uploadProofs(reference, { ...v, files, payment_method_id: method.id }, { locale, accessToken, auth });
       if (res.status === "ok") {
         setUpload("success");
         setTimeout(onProofSent, 900);
@@ -359,4 +359,80 @@ function safeSet(key: string, value: string) {
   } catch {
     /* ignore */
   }
+}
+
+/**
+ * "Pay the balance" (SRS 10): once the deposit is paid and a balance remains, POST /bookings/{ref}/checkout charges
+ * the amount due now, which the server computes as the balance (PaymentService::amountDueNow). Only online methods
+ * are offered here; `amount_due` from the methods endpoint is the balance incl. the method's surcharge.
+ */
+/** Balance the customer can pay online now: deposit paid, booking active, prices visible. 0 otherwise. */
+export function balanceDue(b: { status: BookingStatus; payment_status?: string | null; prices_hidden?: boolean; due?: number | null; totals: { balance: number } }): number {
+  if (b.prices_hidden || b.payment_status !== "deposit_paid") return 0;
+  if (!["confirmed", "awaiting_payment"].includes(b.status)) return 0;
+  return Math.max(0, Math.round((b.due ?? b.totals.balance) * 100) / 100);
+}
+
+export function BalancePayment({
+  reference,
+  accessToken,
+  auth,
+  due,
+  bookingCurrency,
+  balanceDueOn,
+}: {
+  reference: string;
+  accessToken: string | null;
+  auth?: boolean;
+  /** Balance still due (EUR). */
+  due: number;
+  bookingCurrency: CurrencyCode;
+  balanceDueOn?: string | null;
+}) {
+  const t = useTranslations("balance");
+  const format = useFormatter();
+  const locale = useLocale() as Locale;
+  const { format: money } = useCurrency();
+  const methods = useQuery({
+    queryKey: ["payment-methods", "balance", reference, accessToken, auth, locale],
+    queryFn: ({ signal }) => api.paymentMethods(reference, { locale, accessToken, auth, signal }),
+    retry: false,
+  });
+  const online = methods.data?.status === "ok" ? methods.data.data.filter((m) => m.type === "online") : [];
+  const dueDate = balanceDueOn ? format.dateTime(new Date(`${balanceDueOn}T12:00:00`), { day: "numeric", month: "long", year: "numeric" }) : null;
+
+  return (
+    <section className="rounded-card border border-ink-100 bg-white p-6 shadow-card md:p-8" aria-labelledby="balance-title" data-testid="balance-payment">
+      <h2 id="balance-title" className="text-h4 text-ink-900">{t("title")}</h2>
+      <p className="mt-1 text-ink-700">{dueDate ? t("subtitleDue", { amount: money(due), date: dueDate }) : t("subtitle", { amount: money(due) })}</p>
+      <div className="mt-5">
+        {methods.isPending ? (
+          <p className="flex items-center gap-2 text-ink-700" role="status">
+            <span className="size-4 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" aria-hidden />
+            {t("loading")}
+          </p>
+        ) : online.length === 0 ? (
+          <p className="rounded-image bg-sand-50 p-4 text-sm text-ink-900">
+            {t("noOnline")}{" "}
+            <a href={whatsappHref(`${reference}: `)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold text-primary-700 underline">
+              <MessageCircle className="size-4" aria-hidden /> WhatsApp
+            </a>
+          </p>
+        ) : (
+          <MethodPicker
+            reference={reference}
+            accessToken={accessToken}
+            auth={auth}
+            status="confirmed"
+            deposit={due}
+            total={due}
+            bookingCurrency={bookingCurrency}
+            fallbackOptions={[]}
+            methods={online}
+            onProofSent={() => {}}
+          />
+        )}
+      </div>
+    </section>
+  );
 }

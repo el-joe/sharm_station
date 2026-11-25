@@ -91,21 +91,21 @@ function periodKey(s: PartnerStatement): string {
   return (s.period_start || s.period).slice(0, 7);
 }
 
-/** PDF / Excel buttons: fetch with the partner token -> Blob -> download, with loading and error states. */
+/** PDF / Excel buttons: fetch through /api/proxy (partner session cookie) -> Blob -> download, with loading and error states. */
 function StatementDownloads({ statement, label }: { statement: PartnerStatement; label: string }) {
   const t = useTranslations("partnerPanel.statements");
   const locale = useLocale() as Locale;
-  const { token, signOut } = useAuth();
+  const { hasSession, signOut } = useAuth();
   const [busy, setBusy] = useState<"pdf" | "xlsx" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const key = periodKey(statement);
 
   const download = async (format: "pdf" | "xlsx") => {
-    if (!token || busy) return;
+    if (!hasSession || busy) return;
     setBusy(format);
     setError(null);
     try {
-      const { blob, filename } = await api.partnerStatementFile(key, format, { locale, token });
+      const { blob, filename } = await api.partnerStatementFile(key, format, { locale });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

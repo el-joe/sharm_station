@@ -38,6 +38,7 @@ class PackageQuoteRequest extends FormRequest
             'addons' => ['nullable', 'array', 'max:30'],
             'addons.*.addon_id' => ['required', 'integer'],
             'addons.*.quantity' => ['nullable', 'integer', 'min:1', 'max:100'],
+            ...TripQuoteRequest::roomOptionRules(),
         ];
     }
 }

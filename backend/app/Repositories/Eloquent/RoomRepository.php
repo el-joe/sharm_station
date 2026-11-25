@@ -35,16 +35,40 @@ class RoomRepository extends BaseRepository implements RoomRepositoryInterface
             ->when($filters->destination, fn (Builder $query, string $slug) => $query->whereHas('building.destination', fn (Builder $destination) => $destination->where('slug', $slug)))
             ->when($filters->building, fn (Builder $query, string $slug) => $query->whereHas('building', fn (Builder $building) => $building->where('slug', $slug)))
             ->when($filters->roomType, fn (Builder $query, $type) => $query->where('room_type', $type))
-            ->when($filters->guests, fn (Builder $query, int $guests) => $query->where('max_total', '>=', $guests))
+            ->when($filters->guests && $filters->onlyAvailable, fn (Builder $query) => $query->whereRaw('max_total + max_extra_beds >= ?', [$filters->guests]))
             ->when($filters->priceMin !== null, fn (Builder $query) => $query->where('from_price', '>=', $filters->priceMin))
             ->when($filters->priceMax !== null, fn (Builder $query) => $query->where('from_price', '<=', $filters->priceMax))
             ->when($filters->stars, fn (Builder $query, int $stars) => $query->whereHas('building', fn (Builder $building) => $building->where('stars', '>=', $stars)))
             ->when($filters->freeCancellation, fn (Builder $query) => $query->whereHas('building', fn (Builder $building) => $building->whereNotNull('free_cancellation_hours')))
-            ->when($filters->nights() !== null, fn (Builder $query) => $query
+            ->when($filters->nights() !== null && $filters->onlyAvailable, fn (Builder $query) => $query
                 ->where('min_nights', '<=', $filters->nights())
                 ->where(fn (Builder $query) => $query->whereNull('max_nights')->orWhere('max_nights', '>=', $filters->nights()))
                 ->availableBetween($filters->checkIn, $filters->checkOut))
+            ->when($filters->nights() !== null, fn (Builder $query) => $query->withStayAvailability($filters->checkIn, $filters->checkOut))
             ->withAvailabilitySummary();
+
+        if ($filters->groupBy === 'building') {
+            $query->orderBy('building_id');
+        }
+
+        if ($filters->checksAvailability() && ! $filters->onlyAvailable) {
+            // Bookable rooms first, the unavailable ones after them (greyed with their reason, SRS 6.3).
+            $nights = $filters->nights();
+            $conditions = [];
+            $bindings = [];
+
+            if ($nights !== null) {
+                $conditions[] = 'stay_booked = 1 OR stay_closed = 1 OR rooms.min_nights > ? OR (rooms.max_nights IS NOT NULL AND rooms.max_nights < ?)';
+                array_push($bindings, $nights, $nights);
+            }
+
+            if ($filters->guests !== null) {
+                $conditions[] = 'rooms.max_total + rooms.max_extra_beds < ?';
+                $bindings[] = $filters->guests;
+            }
+
+            $query->orderByRaw('('.implode(' OR ', $conditions).') ASC', $bindings);
+        }
 
         match ($filters->sort) {
             'price_asc' => $query->orderBy('from_price'),
@@ -93,6 +117,39 @@ class RoomRepository extends BaseRepository implements RoomRepositoryInterface
         return $this->query()->bookable()->lockForUpdate()->find($id);
     }
 
+    public function freeInBuilding(int $buildingId, CarbonInterface $checkIn, CarbonInterface $checkOut): Collection
+    {
+        $nights = (int) $checkIn->diffInDays($checkOut);
+
+        return $this->query()
+            ->bookable()
+            ->where('building_id', $buildingId)
+            ->where('min_nights', '<=', $nights)
+            ->where(fn (Builder $query) => $query->whereNull('max_nights')->orWhere('max_nights', '>=', $nights))
+            ->availableBetween($checkIn, $checkOut)
+            ->with([
+                'building.childPolicy.bands', 'childPolicy.bands', 'seasonPrices' => fn ($query) => $query->where('is_active', true), 'productPrices',
+                'availability' => fn ($query) => $query->whereBetween('date', [$checkIn->toDateString(), $checkOut->copy()->subDay()->toDateString()]),
+            ])
+            ->orderBy('sort')
+            ->orderBy('id')
+            ->get();
+    }
+
+    public function findBookableMany(array $ids): Collection
+    {
+        return $this->query()
+            ->bookable()
+            ->with(['building.destination', 'building.childPolicy.bands', 'childPolicy.bands', 'seasonPrices' => fn ($query) => $query->where('is_active', true), 'productPrices'])
+            ->whereKey($ids)
+            ->get();
+    }
+
+    public function lockManyForBooking(array $ids): Collection
+    {
+        return $this->query()->bookable()->whereKey($ids)->orderBy('id')->lockForUpdate()->get();
+    }
+
     public function adminQuery(?int $buildingId = null): Builder
     {
         return $this->query()
@@ -139,8 +196,8 @@ class RoomRepository extends BaseRepository implements RoomRepositoryInterface
         }
 
         return RoomAvailability::query()
-            ->select(['id', 'room_id', 'date', 'status', 'booking_id', 'held_until'])
-            ->with('booking:id,reference,lead_name')
+            ->select(['id', 'room_id', 'date', 'status', 'booking_id', 'room_ical_feed_id', 'held_until'])
+            ->with('booking:id,reference,lead_name,check_in,check_out,status,payment_due_at')
             ->whereIn('room_id', $roomIds)
             ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
             ->get();

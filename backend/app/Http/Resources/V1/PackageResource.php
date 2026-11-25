@@ -97,6 +97,7 @@ class PackageResource extends JsonResource
                 'max_quantity' => $addon->max_quantity,
                 'booking_types' => $addon->booking_types ?? [],
             ])->values(),
+            'room_options' => $this->roomOptionsPayload($this->roomOptions, $this->stages->mapWithKeys(fn ($stage): array => [(int) $stage->position => (int) $stage->nights])->all()),
             'availability' => collect(BookingType::cases())->mapWithKeys(fn (BookingType $type): array => [
                 $type->value => ['enabled' => $this->supportsBookingType($type), 'lead_time_hours' => 24],
             ])->all(),

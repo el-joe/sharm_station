@@ -238,6 +238,12 @@ export function isDateAvailable(trip: TripDetail, bookingType: "private" | "grou
   const rule = trip.availability.group;
   if (!rule) return false;
   if (date <= now) return false;
+  // Group departures also have a notice period (e.g. 72 h for Nile cruises): the server refuses earlier dates.
+  if (rule.lead_time_hours) {
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59);
+    if (endOfDay < new Date(now.getTime() + rule.lead_time_hours * 3_600_000)) return false;
+  }
   if (rule.blackout_dates.includes(iso)) return false;
   return rule.weekdays.includes(date.getDay()) || rule.dates.includes(iso);
 }

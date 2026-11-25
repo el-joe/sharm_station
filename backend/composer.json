@@ -10,12 +10,15 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "bacon/bacon-qr-code": "^3.1",
         "barryvdh/laravel-dompdf": "^3.1",
         "laravel/framework": "^13.17",
         "laravel/mcp": "^1.2",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
         "phpoffice/phpspreadsheet": "^5.12",
+        "pragmarx/google2fa": "^9.1",
+        "stripe/stripe-php": "^23.1",
         "yajra/laravel-datatables-oracle": "^13"
     },
     "require-dev": {

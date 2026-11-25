@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * A payment attempt (online) or a recorded payment (approved proof, balance recorded by the admin). Amount in EUR.
  */
 #[Fillable([
-    'booking_id', 'payment_method_id', 'type', 'status', 'amount', 'currency', 'exchange_rate', 'amount_in_currency',
+    'booking_id', 'parent_payment_id', 'payment_method_id', 'type', 'status', 'amount', 'currency', 'exchange_rate', 'amount_in_currency',
     'transaction_id', 'gateway_reference', 'paid_at', 'recorded_by', 'note', 'meta',
 ])]
 class Payment extends Model

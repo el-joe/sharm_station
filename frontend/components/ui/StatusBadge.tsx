@@ -13,6 +13,7 @@ const MAP: Record<BookingStatus | PaymentStatus, { tone: BadgeTone; Icon: typeof
   completed: { tone: "neutral", Icon: CheckCircle2 },
   cancelled: { tone: "neutral", Icon: XCircle },
   refunded: { tone: "neutral", Icon: Undo2 },
+  partially_refunded: { tone: "info", Icon: Undo2 },
   failed: { tone: "warning", Icon: XCircle },
 };
 

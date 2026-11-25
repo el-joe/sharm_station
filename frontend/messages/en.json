@@ -249,7 +249,17 @@
     "stars": "{count} stars",
     "taxExtraPrefix": "+",
     "taxExtraSuffix": "taxes and fees per night",
-    "taxNotIncluded": "Taxes not included"
+    "taxNotIncluded": "Taxes not included",
+    "unavailable": {
+      "booked": "Booked on these dates",
+      "closed": "Closed on these dates",
+      "min_stay": "Stay too short or too long",
+      "capacity": "Too small for your party"
+    },
+    "unavailableBadge": "Not available",
+    "unavailableAria": "Not available: {reason}",
+    "viewRoom": "View room",
+    "extraBeds": "{count, plural, one {# extra bed} other {# extra beds}} available"
   },
   "reviews": {
     "title": "What travellers say",
@@ -513,7 +523,11 @@
     "totalPending": "Total (child pending)",
     "payToday": "Pay today ({percent}%)",
     "balanceLater": "Balance later",
-    "discount": "Promo code {code}"
+    "discount": "Promo code {code}",
+    "extraBed": "Extra bed · {count} × {price}",
+    "cot": "Cot · {count} × {price}",
+    "roomHeading": "Room {n} · {name}",
+    "roomSubtotal": "Room {n} total"
   },
   "accommodation": {
     "crumb": "Accommodation",
@@ -538,7 +552,13 @@
     "viewMap": "Map",
     "mapLabel": "Map of the accommodation results",
     "mapListTitle": "Rooms on the map",
-    "mapUnmapped": "{count, plural, one {# room has} other {# rooms have}} no map location yet and appear only in the list."
+    "mapUnmapped": "{count, plural, one {# room has} other {# rooms have}} no map location yet and appear only in the list.",
+    "groupByBuilding": "Group by building",
+    "groupAvailable": "{available} of {total} {total, plural, one {room} other {rooms}} available",
+    "groupNoneAvailable": "No rooms available for this search",
+    "bookSeveral": "Book several rooms",
+    "unavailableTitle": "Not available for your search",
+    "unavailableText": "These rooms cannot be booked for the dates or party you chose. Change the search to see them again."
   },
   "roomPage": {
     "taxIncluded": "Tax included",
@@ -563,7 +583,14 @@
     "maxGuests": "This room sleeps up to {count} guests.",
     "taxIncluded": "Tax included",
     "checkDates": "Check dates",
-    "taxNotIncluded": "Local taxes and fees are added to the total."
+    "taxNotIncluded": "Local taxes and fees are added to the total.",
+    "extraBeds": "Extra beds",
+    "extraBedsHint": "{price} per night each · adds one place",
+    "cots": "Cots",
+    "cotsHint": "{price} per night each",
+    "cotsFree": "Free",
+    "severalRooms": "Travelling with more people? Book several rooms in this building.",
+    "severalRoomsLink": "Book several rooms"
   },
   "building": {
     "stars": "{count} stars",
@@ -683,7 +710,11 @@
     "lookupText": "We could not load booking {reference} on this device. Check the confirmation email or contact us.",
     "home": "Back to home",
     "titleConfirmed": "Booking confirmed",
-    "textConfirmed": "Your deposit has been received and your booking is confirmed. We have emailed your voucher."
+    "textConfirmed": "Your deposit has been received and your booking is confirmed. We have emailed your voucher.",
+    "metaTitleReceived": "Booking received {reference}",
+    "metaTitleConfirmed": "Booking confirmed {reference}",
+    "metaTitleCancelled": "Booking cancelled {reference}",
+    "metaTitleNeutral": "Your booking {reference}"
   },
   "auth": {
     "signInTitle": "Sign in",
@@ -702,7 +733,9 @@
     "signInLink": "Sign in",
     "invalid": "Email or password is not correct.",
     "error": "We could not reach the server. Please try again.",
-    "continueNote": "Please sign in to continue."
+    "continueNote": "Please sign in to continue.",
+    "forgotPassword": "Forgot password?",
+    "resetDone": "Your new password is saved. Sign in with it."
   },
   "partner": {
     "crumb": "Become a partner",
@@ -794,7 +827,8 @@
     "completed": "Completed",
     "cancelled": "Cancelled",
     "refunded": "Refunded",
-    "failed": "Payment failed"
+    "failed": "Payment failed",
+    "partially_refunded": "Partially refunded"
   },
   "service": {
     "trip": "Trip",
@@ -1168,7 +1202,12 @@
         "vehicleCapacity": "{name} (up to {count})",
         "flight": "Flight number (optional)",
         "passengersLabel": "Passengers",
-        "passengers": "{count, plural, one {# passenger} other {# passengers}}"
+        "passengers": "{count, plural, one {# passenger} other {# passengers}}",
+        "roomsCommission": "The trip's commission ({percent}%) also applies to the rooms.",
+        "building": "Building",
+        "chooseBuilding": "Choose a building",
+        "roomsTitle": "Rooms & allocation",
+        "roomsText": "Pick one of the best combinations of {building} or add rooms, then decide who sleeps where. Extra beds and cots are per room."
       },
       "client": {
         "title": "Client & payment",
@@ -1251,7 +1290,8 @@
       "voucher": "Client voucher",
       "voucherText": "Send your client the voucher with or without prices.",
       "voucherWith": "Voucher with prices",
-      "voucherWithout": "Voucher without prices"
+      "voucherWithout": "Voucher without prices",
+      "printable": "Printable version"
     },
     "voucher": {
       "metaTitle": "Voucher {reference}",
@@ -1485,7 +1525,8 @@
     "apply": "Apply",
     "privacy": "We save your choice in a cookie and in your account, and use it only to show prices. See our <link>Privacy policy</link>.",
     "chipLabel": "Nationality: {country}. Change nationality",
-    "chipEmpty": "Nationality"
+    "chipEmpty": "Nationality",
+    "popoverSubtitle": "Prices are shown for travellers from {country} (group {group})."
   },
   "map": {
     "from": "from",
@@ -1559,6 +1600,201 @@
       "forbidden": "You cannot request a cancellation for this booking from here. Sign in with the account that made it, or use the link in your confirmation email.",
       "tooMany": "Too many requests. Please wait a minute and try again.",
       "network": "We could not send your request. Check your connection and try again."
+    },
+    "requestAgain": "Request cancellation again",
+    "declinedAgainText": "If your situation has changed you can send a new request with more details.",
+    "refundSent": "Refund of {amount} sent on {date}.",
+    "refundPending": "Refund of {amount} in progress.",
+    "refundFailed": "Refund of {amount} could not be completed: our team will contact you.",
+    "refundsLabel": "Refunds"
+  },
+  "paymentHistory": {
+    "title": "Payments",
+    "empty": "No payments yet.",
+    "paid": "Paid",
+    "due": "Still to pay",
+    "balanceDueOn": "Balance due by {date}",
+    "refundOf": "Refund",
+    "types": {
+      "deposit": "Deposit",
+      "balance": "Balance",
+      "refund": "Refund",
+      "other": "Payment"
+    },
+    "statuses": {
+      "pending": "Processing",
+      "succeeded": "Paid",
+      "failed": "Failed",
+      "refunded": "Refunded"
+    },
+    "refundStatuses": {
+      "pending": "Refund in progress",
+      "succeeded": "Refunded",
+      "failed": "Refund failed",
+      "refunded": "Refunded"
     }
+  },
+  "paymentReturn": {
+    "successTitle": "Payment received",
+    "successText": "Thank you, your payment went through. Your booking is updated below and we have emailed you the confirmation.",
+    "confirmingTitle": "Confirming your payment…",
+    "confirmingText": "The payment provider is sending us the confirmation. This page updates by itself in a few seconds.",
+    "pendingTitle": "Payment being processed",
+    "pendingText": "We have not received the confirmation from the payment provider yet. You do not need to pay again: we will email you as soon as it arrives.",
+    "cancelTitle": "Payment cancelled",
+    "cancelText": "You left the payment page and nothing was charged. Your booking is still reserved: you can pay below whenever you are ready.",
+    "failedTitle": "Payment not completed",
+    "failedText": "The payment provider declined or did not complete the payment. Nothing was charged. Please try again or choose another method.",
+    "checkAgain": "Check again",
+    "dismiss": "Dismiss"
+  },
+  "voucherDownload": {
+    "title": "Voucher",
+    "text": "Show the voucher (printed or on your phone) at the start of the service.",
+    "download": "Download voucher (PDF)",
+    "withPrices": "Voucher with prices (PDF)",
+    "clientCopy": "Client copy without prices (PDF)",
+    "clientCopyHint": "The client copy hides every price: send it to your client.",
+    "notYet": "The PDF voucher is available once the deposit has been paid.",
+    "printable": "Printable version"
+  },
+  "multiRoom": {
+    "title": "Book several rooms",
+    "subtitle": "Tell us who is travelling: we suggest the best room combinations of {building}, then you decide who sleeps where.",
+    "stay": "Your stay",
+    "party": "Who is travelling",
+    "adults": "Adults",
+    "adultsHint": "18 years and over",
+    "children": "Children",
+    "childrenHint": "0 to 17 years",
+    "childAge": "Age of child {n}",
+    "selectAge": "Age",
+    "agesRequired": "Enter the age of every child to see the combinations.",
+    "suggestionsTitle": "Best combinations",
+    "suggestionsText": "The cheapest sets of free rooms that fit your party.",
+    "suggestionsLoading": "Looking for free rooms…",
+    "suggestionsError": "We could not load the suggestions. Choose the rooms yourself below.",
+    "suggestionsNone": "No combination of free rooms fits your party on these dates.",
+    "roomsCount": "{count, plural, one {# room} other {# rooms}}",
+    "sleeps": "Sleeps {count}",
+    "guestsIn": "{adults, plural, one {# adult} other {# adults}}{children, plural, =0 {} one { + # child} other { + # children}}",
+    "apply": "Choose these rooms",
+    "applyAria": "Choose combination {n}: {rooms} for {total}",
+    "applied": "Selected",
+    "totalFor": "Total for {nights, plural, one {# night} other {# nights}}",
+    "addRoom": "Add a room",
+    "addRoomPlaceholder": "Choose a room to add",
+    "addRoomOption": "{name} · sleeps {count} · from {price} per night",
+    "removeRoom": "Remove {room}",
+    "noRooms": "Choose a combination above or add rooms to start.",
+    "reserve": "Reserve {count, plural, one {# room} other {# rooms}}",
+    "fixErrors": "Fix the allocation to continue.",
+    "announceApplied": "{count, plural, one {# room} other {# rooms}} selected and guests assigned.",
+    "draftTitle": "{building} · {count, plural, one {# room} other {# rooms}}",
+    "extraBeds": "{count, plural, one {# extra bed} other {# extra beds}}",
+    "cots": "{count, plural, one {# cot} other {# cots}}"
+  },
+  "allocation": {
+    "title": "Who sleeps where?",
+    "subtitle": "Every guest needs a bed. No shared rooms: each room is private to your booking.",
+    "autoAssign": "Auto-assign",
+    "unassigned": "Unassigned travellers",
+    "everyoneAssigned": "Everyone is in a room",
+    "dragHint": "Drag a traveller onto a room, or tap a traveller and then the room.",
+    "room": "Room {n}",
+    "sleeps": "Sleeps {count}",
+    "sleepsAria": "{used} of {count} places used",
+    "adult": "Adult {n}",
+    "child": "Child {age} y",
+    "childUnknown": "Child {n}",
+    "chipAria": "{name}, {place}. Press to move.",
+    "chipSelectedAria": "{name} selected. Choose a room.",
+    "inRoom": "in {room}",
+    "notAssigned": "not in a room",
+    "moveHere": "Move {name} here",
+    "moveHereAria": "Move {name} to {room}",
+    "unassignHere": "Remove {name} from the room",
+    "cancelSelection": "Cancel",
+    "announceMoved": "{name} moved to {room}.",
+    "announceUnassigned": "{name} is not in a room.",
+    "announceSelected": "{name} selected. Choose a room.",
+    "allValid": "All {count} guests are in a room and every room is valid",
+    "extraBeds": "Extra beds",
+    "cots": "Cots",
+    "perNight": "{price} per night",
+    "errors": {
+      "unassigned": "Every guest must be in a room.",
+      "cannotFit": "These rooms cannot fit {count} guests, add a room.",
+      "empty": "Room {n} is empty: every booked room needs at least one guest.",
+      "childAlone": "A child cannot stay in a room without an adult.",
+      "maxAdults": "Room {n} sleeps at most {max} adults.",
+      "noChildren": "Room {n} does not accept children.",
+      "maxChildren": "Room {n} accepts at most {max} children.",
+      "capacity": "Room {n} exceeds its capacity of {max}."
+    },
+    "removeRoomAria": "Remove {room}"
+  },
+  "roomOptions": {
+    "title": "Rooms (optional)",
+    "text": "Add rooms or cabins to the trip. Every traveller must then be in exactly one room.",
+    "stage": "Stage {n}",
+    "stageNights": "Stage {n} · {nights, plural, one {# night} other {# nights}}",
+    "capacity": "Up to {total} guests ({adults, plural, one {# adult} other {# adults}}{children, plural, =0 {} one {, # child} other {, # children}})",
+    "pricePerNight": "{price} per night",
+    "pricePerStay": "{price} per stay",
+    "perPerson": "per person",
+    "perRoom": "per room",
+    "add": "Add",
+    "addAria": "Add {name}",
+    "maxReached": "Maximum reached",
+    "roomN": "Room {n} · {name}",
+    "remove": "Remove",
+    "removeAria": "Remove room {n}",
+    "adults": "Adults in room {n}",
+    "childToggle": "Child {n} ({age} y)",
+    "childToggleUnknown": "Child {n}",
+    "agesFirst": "Enter the children's ages to place them in rooms.",
+    "unassigned": "{count, plural, one {# traveller is} other {# travellers are}} not in a room yet.",
+    "allAssigned": "Every traveller is in a room.",
+    "noRooms": "No room added: the standard accommodation is included."
+  },
+  "bookingRooms": {
+    "title": "Rooms",
+    "room": "Room {n} · {name}",
+    "number": "No. {number}",
+    "guests": "{adults, plural, one {# adult} other {# adults}}{children, plural, =0 {} one { + # child} other { + # children}}",
+    "extras": "{beds, plural, =0 {} one {# extra bed} other {# extra beds}}{cots, plural, =0 {} one { · # cot} other { · # cots}}",
+    "stage": "Stage {n}"
+  },
+  "balance": {
+    "title": "Pay the balance",
+    "subtitle": "Your deposit is paid. {amount} is left to pay.",
+    "subtitleDue": "Your deposit is paid. {amount} is left to pay by {date}.",
+    "noOnline": "Online payment is not available for this booking. Contact us to pay the balance.",
+    "loading": "Loading payment methods…"
+  },
+  "passwordReset": {
+    "forgotTitle": "Forgot your password?",
+    "forgotText": "Enter the e-mail of your account: we will send you a link to choose a new password.",
+    "email": "Email",
+    "send": "Send the link",
+    "sent": "If an account exists for this e-mail, we have sent a link to choose a new password.",
+    "sentHint": "The link is valid for 60 minutes. Check your spam folder if you do not see it.",
+    "backToSignIn": "Back to sign in",
+    "tooMany": "Too many attempts. Please wait a minute and try again.",
+    "error": "We could not reach the server. Please try again.",
+    "resetTitle": "Choose a new password",
+    "resetText": "Set the password you will use to sign in.",
+    "forAccount": "Account: {email}",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm the new password",
+    "rulesTitle": "Password requirements",
+    "ruleLength": "At least {count} characters",
+    "ruleMatch": "Both passwords match",
+    "ruleMet": "done",
+    "save": "Save the new password",
+    "expired": "This password link is invalid or has expired. Ask for a new one with “Forgot password”.",
+    "incomplete": "This password link is incomplete. Open it again from the e-mail or ask for a new one.",
+    "askNewLink": "Ask for a new link"
   }
 }

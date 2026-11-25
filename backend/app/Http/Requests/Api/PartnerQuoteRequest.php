@@ -41,7 +41,7 @@ class PartnerQuoteRequest extends FormRequest
         $common = [
             'product_type' => ['required', Rule::in(self::PRODUCT_TYPES)],
             'slug' => [Rule::requiredIf(in_array($productType, ['trip', 'package'], true)), 'nullable', 'string', 'max:255'],
-            'id' => [Rule::requiredIf($productType === 'room'), 'nullable', 'integer'],
+            'id' => [Rule::requiredIf($productType === 'room' && ! request()->has('rooms')), 'nullable', 'integer'],
             'nationality_code' => ['required', 'string', 'size:2', Rule::exists('countries', 'code')],
         ];
 

@@ -11,7 +11,7 @@ import { NationalityDialog } from "./NationalityDialog";
  * the account entry pages (a signed-in account brings its own nationality; ?returnTo is kept as is),
  * the partner application and the legal texts the gate links to.
  */
-const EXEMPT = [/^\/partner(\/|$)/, /^\/sign-in$/, /^\/sign-up$/, /^\/become-a-partner$/, /^\/privacy$/, /^\/cookie-policy$/];
+const EXEMPT = [/^\/partner(\/|$)/, /^\/sign-in$/, /^\/sign-up$/, /^\/forgot-password$/, /^\/reset-password$/, /^\/become-a-partner$/, /^\/privacy$/, /^\/cookie-policy$/];
 
 const BOT = /bot|crawl|spider|slurp|bingpreview|lighthouse|facebookexternalhit|embedly|whatsapp/i;
 const noop = () => () => {};

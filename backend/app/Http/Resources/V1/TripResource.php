@@ -100,6 +100,7 @@ class TripResource extends JsonResource
                 'max_quantity' => $addon->max_quantity,
                 'booking_types' => $addon->booking_types ?? [],
             ])->values(),
+            'room_options' => $this->type !== TripType::SingleDay && $this->nights > 0 ? $this->roomOptionsPayload($this->roomOptions, [0 => (int) $this->nights]) : [],
             'nile' => $this->when($this->type === TripType::Nile, fn (): array => [
                 'vessel_name' => $this->vessel_name,
                 'itinerary_from' => $this->itinerary_from,

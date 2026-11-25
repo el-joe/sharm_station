@@ -107,8 +107,12 @@ test.describe("Public website", () => {
     await page.getByRole("link", { name: /M\/S Nile Sun/ }).first().click();
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Nile Sun");
     await page.waitForLoadState("networkidle");
-    // "sun deck" is a ship facility, not a cabin deck choice.
-    const text = (await page.getByRole("main").innerText()).replace(/sun deck/gi, "");
+    // "sun deck" is a ship facility, not a cabin deck choice; optional cabins (v2.4 room options) are named by the
+    // admin ("Upper deck cabin upgrade") and are priced add-ons by type, not a deck selector.
+    let text = (await page.getByRole("main").innerText()).replace(/sun deck/gi, "");
+    for (const options of await page.getByTestId("room-options").all()) {
+      for (const line of (await options.innerText()).split("\n").filter((l) => l.trim())) text = text.split(line).join("");
+    }
     expect(text).not.toMatch(/\bdecks?\b/i);
   });
 

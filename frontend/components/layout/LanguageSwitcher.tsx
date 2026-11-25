@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useRouter } from "@/i18n/navigation";
+import { getPathname, usePathname, useRouter } from "@/i18n/navigation";
+import { mapsNeedReloadFor } from "@/lib/maps/google";
 import { routing } from "@/i18n/routing";
 import { SelectMenu } from "@/components/ui/SelectMenu";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,13 @@ export function LanguageSwitcher({ className, tone = "light" }: { className?: st
       onChange={(e) => {
         const next = e.target.value;
         const search = typeof window !== "undefined" ? window.location.search : "";
+        // A Google Maps JS instance keeps the language it was loaded with: switch with a full page
+        // load in that case (only then), so maps and place suggestions come back in the new language.
+        if (mapsNeedReloadFor(next)) {
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full load is intended (Maps JS language)
+          window.location.assign(`${getPathname({ href: pathname, locale: next })}${search}${window.location.hash}`);
+          return;
+        }
         startTransition(() => router.replace(`${pathname}${search}`, { locale: next }));
       }}
       leading={<Globe aria-hidden />}

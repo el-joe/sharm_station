@@ -4,7 +4,7 @@ import { Button, buttonClasses } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Field";
 import { Link } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api/client";
-import type { BookingCancellation, Locale } from "@/lib/api/types";
+import type { BookingCancellation, BookingPayment, Locale } from "@/lib/api/types";
 import { useCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { AlertCircle, CalendarX2, CheckCircle2, Clock, X, XCircle } from "lucide-react";
@@ -24,17 +24,20 @@ const MAX = 1000;
 export function CancellationRequest({
   reference,
   cancellation,
+  refunds,
   accessToken,
-  token,
+  auth = false,
   onChange,
   className,
 }: {
   reference: string;
   cancellation: BookingCancellation | null | undefined;
+  /** Refund rows of the booking's payments (type "refund"): their outcome is shown under an approved request. */
+  refunds?: BookingPayment[];
   /** Booking link token (?token=) for guests. */
   accessToken?: string | null;
-  /** Customer or partner bearer token. */
-  token?: string | null;
+  /** Signed-in customer or partner: sent through /api/proxy with the session cookie. */
+  auth?: boolean;
   onChange?: (c: BookingCancellation) => void;
   className?: string;
 }) {
@@ -55,6 +58,7 @@ export function CancellationRequest({
   const c = local ?? cancellation ?? null;
   if (!c) return null;
 
+  const dateOnly = (iso: string) => format.dateTime(new Date(iso), { day: "numeric", month: "long", year: "numeric" });
   const date = (iso: string | null) => (iso ? format.dateTime(new Date(iso), { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
 
   const open = () => {
@@ -78,7 +82,7 @@ export function CancellationRequest({
     setError(null);
     setFieldError(null);
     try {
-      const res = await api.requestCancellation(reference, value, { locale, accessToken, token });
+      const res = await api.requestCancellation(reference, value, { locale, accessToken, auth });
       const next: BookingCancellation = res.cancellation ?? { ...c, can_request: false, status: "pending", requested_at: new Date().toISOString(), reason: value };
       setLocal(next);
       setNotice(t("sent"));
@@ -125,6 +129,22 @@ export function CancellationRequest({
             <p className="mt-1 text-ink-700">
               {c.refund_amount != null && c.refund_amount > 0 ? t("approvedRefund", { amount: money(c.refund_amount, { decimals: true }) }) : t("approvedNoRefund")}
             </p>
+            {refunds && refunds.length > 0 && (
+              <ul className="mt-2 flex flex-col gap-1 text-ink-700" aria-label={t("refundsLabel")}>
+                {refunds.map((r, i) => {
+                  const amount = money(r.amount, { decimals: true });
+                  return (
+                    <li key={i} data-refund-status={r.status}>
+                      {r.status === "succeeded" || r.status === "refunded"
+                        ? t("refundSent", { amount, date: r.paid_at ? dateOnly(r.paid_at) : "" })
+                        : r.status === "failed"
+                          ? t("refundFailed", { amount })
+                          : t("refundPending", { amount })}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
             {c.decided_at && <p className="mt-1 text-ink-500">{t("decidedAt", { date: date(c.decided_at) })}</p>}
             {c.decision_note && <p className="mt-2 border-s-2 border-ink-300 ps-3 text-ink-700">{c.decision_note}</p>}
           </div>
@@ -143,9 +163,9 @@ export function CancellationRequest({
 
       {c.can_request ? (
         <>
-          <p className="mt-2 text-sm text-ink-700">{t("intro")}</p>
+          <p className="mt-2 text-sm text-ink-700">{status === "declined" ? t("declinedAgainText") : t("intro")}</p>
           <button ref={triggerRef} type="button" className={buttonClasses("outline", "md", "mt-4 w-full sm:w-auto")} onClick={open} aria-haspopup="dialog">
-            {t("button")}
+            {status === "declined" ? t("requestAgain") : t("button")}
           </button>
         </>
       ) : (

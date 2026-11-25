@@ -13,6 +13,8 @@ use App\Models\Destination;
 use App\Models\FaqCategory;
 use App\Models\FaqItem;
 use App\Models\NationalityGroup;
+use App\Models\NotificationLog;
+use App\Models\NotificationTemplate;
 use App\Models\Package;
 use App\Models\Page;
 use App\Models\Partner;
@@ -20,7 +22,9 @@ use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\PaymentProof;
 use App\Models\Room;
+use App\Models\RoomOption;
 use App\Models\Setting;
+use App\Models\SlugRedirect;
 use App\Models\TransferFixedRoute;
 use App\Models\TransferHub;
 use App\Models\Trip;
@@ -86,6 +90,7 @@ class AppServiceProvider extends ServiceProvider
             'package' => Package::class,
             'building' => Building::class,
             'room' => Room::class,
+            'room_option' => RoomOption::class,
             'booking' => Booking::class,
             'transfer_hub' => TransferHub::class,
             'transfer_fixed_route' => TransferFixedRoute::class,
@@ -105,6 +110,9 @@ class AppServiceProvider extends ServiceProvider
             'blog_post' => BlogPost::class,
             'faq_category' => FaqCategory::class,
             'faq_item' => FaqItem::class,
+            'notification_template' => NotificationTemplate::class,
+            'notification_log' => NotificationLog::class,
+            'slug_redirect' => SlugRedirect::class,
         ]);
 
         Gate::define('manage-prices', fn (User $user): bool => $user->role?->canManagePrices() ?? false);
@@ -115,6 +123,9 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('admin-login', fn (Request $request): Limit => Limit::perMinute(5)
             ->by(strtolower((string) $request->input('email')).'|'.$request->ip()));
+
+        RateLimiter::for('admin-two-factor', fn (Request $request): Limit => Limit::perMinute(5)
+            ->by('2fa|'.($request->session()->get('admin.two_factor_login')['user_id'] ?? $request->ip())));
 
         // Claude MCP server: 60 calls per minute per token (CR-14).
         RateLimiter::for('mcp', fn (Request $request): Limit => Limit::perMinute(60)

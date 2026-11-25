@@ -226,3 +226,33 @@ test('a trip can be deleted', function () {
 
     expect(Trip::query()->find($trip->id))->toBeNull();
 });
+
+test('the trip editor saves the unit label, FAQ, what to bring, guide languages and cancellation text', function () {
+    $this->actingAs($this->admin)->post(route('admin.trips.store'), perUnitTripPayload($this->destination, [
+        'unit_label' => ['en' => 'quad', 'it' => 'quad'],
+        'what_to_bring_lines' => ['en' => "Sunglasses\r\n\r\nScarf ", 'it' => "Occhiali da sole\nFoulard"],
+        'guide_languages_present' => '1',
+        'guide_languages' => ['en', 'it', 'de'],
+        'cancellation_policy' => ['en' => 'Free up to 24 hours before.', 'it' => 'Gratis fino a 24 ore prima.'],
+        'faq_present' => '1',
+        'faq_rows' => [
+            'n1' => ['question' => ['en' => 'Is a licence needed?', 'it' => 'Serve la patente?'], 'answer' => ['en' => 'No.', 'it' => 'No.']],
+            'n2' => ['question' => ['en' => 'Helmets?', 'it' => ''], 'answer' => ['en' => 'Included.', 'it' => '']],
+        ],
+    ]))->assertSessionHasNoErrors();
+
+    $trip = Trip::query()->latest('id')->first();
+    expect($trip->getTranslations('unit_label'))->toBe(['en' => 'quad', 'it' => 'quad'])
+        ->and($trip->getTranslations('what_to_bring'))->toBe(['en' => ['Sunglasses', 'Scarf'], 'it' => ['Occhiali da sole', 'Foulard']])
+        ->and($trip->guide_languages)->toBe(['en', 'it', 'de'])
+        ->and($trip->translate('cancellation_policy', 'it'))->toBe('Gratis fino a 24 ore prima.')
+        ->and($trip->getTranslations('faq')['en'])->toHaveCount(2)
+        ->and($trip->getTranslations('faq')['it'])->toEqual([['question' => 'Serve la patente?', 'answer' => 'No.']]);
+
+    $this->actingAs($this->admin)->get(route('admin.trips.edit', $trip))->assertOk()->assertSee('Serve la patente?')->assertSee('Occhiali da sole');
+
+    $this->actingAs($this->admin)->put(route('admin.trips.update', $trip), perUnitTripPayload($this->destination, [
+        'slug' => $trip->slug, 'faq_present' => '1', 'faq_rows' => ['n1' => ['question' => ['en' => 'Only a question'], 'answer' => ['en' => '']]],
+        'guide_languages_present' => '1', 'guide_languages' => ['xx'],
+    ]))->assertSessionHasErrors(['faq.en.0.answer', 'guide_languages.0']);
+});

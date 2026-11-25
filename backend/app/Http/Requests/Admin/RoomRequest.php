@@ -17,7 +17,7 @@ class RoomRequest extends FormRequest
     /**
      * @var list<string>
      */
-    public const PRICE_FIELDS = ['pricing_mode', 'base_price', 'extra_bed_price'];
+    public const PRICE_FIELDS = ['pricing_mode', 'base_price', 'extra_bed_price', 'max_extra_beds', 'cot_price', 'max_cots'];
 
     public function authorize(): bool
     {
@@ -26,7 +26,11 @@ class RoomRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge(['amenities' => $this->input('amenities', [])]);
+        $this->merge([
+            'amenities' => $this->input('amenities', []),
+            'max_extra_beds' => $this->input('max_extra_beds') ?? 0,
+            'max_cots' => $this->input('max_cots') ?? 0,
+        ]);
 
         if ($this->user()?->can('manage-prices')) {
             return;
@@ -42,6 +46,8 @@ class RoomRequest extends FormRequest
 
         $locked['pricing_mode'] ??= RoomPricingMode::PerRoom->value;
         $locked['base_price'] ??= 0;
+        $locked['max_extra_beds'] ??= 0;
+        $locked['max_cots'] ??= 0;
         $this->merge($locked);
     }
 
@@ -72,7 +78,10 @@ class RoomRequest extends FormRequest
             'amenities.*' => ['string', 'max:60'],
             'pricing_mode' => ['required', Rule::enum(RoomPricingMode::class)],
             'base_price' => ['required', 'numeric', 'min:0'],
-            'extra_bed_price' => ['nullable', 'numeric', 'min:0'],
+            'extra_bed_price' => ['nullable', 'numeric', 'min:0', 'required_unless:max_extra_beds,0'],
+            'max_extra_beds' => ['required', 'integer', 'min:0', 'max:5'],
+            'cot_price' => ['nullable', 'numeric', 'min:0', 'required_unless:max_cots,0'],
+            'max_cots' => ['required', 'integer', 'min:0', 'max:5'],
             'min_nights' => ['required', 'integer', 'min:1', 'max:365'],
             'max_nights' => ['nullable', 'integer', 'gte:min_nights', 'max:365'],
             'sort' => ['nullable', 'integer', 'min:0'],
@@ -86,6 +95,8 @@ class RoomRequest extends FormRequest
     {
         return [
             'max_total.gte' => 'The total capacity must be at least the maximum adults.',
+            'extra_bed_price.required_unless' => 'Enter the extra bed price (0 for free) when extra beds are allowed.',
+            'cot_price.required_unless' => 'Enter the cot price (0 for free) when cots are allowed.',
         ];
     }
 

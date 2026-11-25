@@ -157,7 +157,7 @@ export interface TimelineDay {
 
 export interface AvailabilityRules {
   private: { lead_time_hours: number; blackout_dates: string[] } | null;
-  group: { weekdays: number[]; dates: string[]; blackout_dates: string[] } | null;
+  group: { weekdays: number[]; dates: string[]; blackout_dates: string[]; lead_time_hours?: number | null } | null;
 }
 
 export interface ChildAgeBand {
@@ -241,6 +241,8 @@ export interface TripDetail extends TripSummary {
   stages?: PackageStage[] | null;
   transfers_included: boolean;
   seo?: { title?: string; description?: string } | null;
+  /** B2.3 optional rooms (empty for single-day trips). Packages: `stage_position` is the stage. */
+  room_options: RoomOption[];
 }
 
 export interface TripFilters {
@@ -264,9 +266,11 @@ export interface TripQuoteRequest {
   child_ages: number[];
   units: { unit_option_id: number; quantity: number }[];
   addons: { addon_id: number; quantity: number }[];
+  /** B2.3 optional rooms (multi-day, Nile, packages). */
+  room_options?: RoomOptionSelection[];
 }
 
-export type QuoteLineKind = "adult" | "child" | "child_free" | "unit" | "addon" | "night" | "tier" | "tax";
+export type QuoteLineKind = "adult" | "child" | "child_free" | "unit" | "addon" | "night" | "tier" | "tax" | "room" | "extra_bed" | "cot";
 
 export interface QuoteLine {
   kind: QuoteLineKind;
@@ -277,6 +281,8 @@ export interface QuoteLine {
   unit_price: number;
   total: number;
   age?: number | null;
+  /** Multi-room stays: index of the room in `rooms[]` (meta.room_index). */
+  room_index?: number | null;
 }
 
 export interface QuoteResult {
@@ -294,6 +300,8 @@ export interface QuoteResult {
   per_person_price?: number | null;
   seats_total?: number | null;
   persons: number;
+  /** Multi-room stays: one item per room (lines carry `room_index`). */
+  rooms?: QuoteRoom[];
 }
 
 export interface Building {
@@ -342,6 +350,28 @@ export interface RoomSummary {
   few_left: boolean;
   min_nights: number;
   max_nights: number;
+  /** Room number in the building ("102"). */
+  number?: string | null;
+  pricing_mode?: "per_room" | "per_person";
+  /**
+   * B2.4: with dates / guests the listing also returns rooms that cannot be booked.
+   * `false` = not bookable for the searched stay (undefined on older payloads and saved favourites = bookable).
+   */
+  available?: boolean;
+  unavailable_reason?: UnavailableReason | null;
+  unavailable_reasons?: UnavailableReason[];
+  /** Extra beds / cots the room offers (price per night per bed/cot, EUR; null when none). */
+  extra_beds?: { max: number; price: number | null };
+  cots?: { max: number; price: number | null };
+}
+
+export type UnavailableReason = "booked" | "closed" | "min_stay" | "capacity";
+
+/** GET /rooms?group_by=building item. */
+export interface RoomGroup {
+  building: RoomSummary["building"];
+  available_count: number;
+  rooms: RoomSummary[];
 }
 
 export interface RoomDetail extends RoomSummary {
@@ -365,20 +395,105 @@ export interface RoomFilters {
   free_cancellation?: boolean;
   sort?: "recommended" | "price_asc" | "price_desc" | "rating";
   page?: number;
+  /** B2.4: group the page by building. */
+  group_by?: "building";
+}
+
+/** One room of a multi-room stay (B2.1): every guest is allocated to exactly one room. */
+export interface RoomAllocation {
+  room_id: number;
+  adults: number;
+  children_ages: number[];
+  extra_beds: number;
+  cots: number;
 }
 
 export interface RoomQuoteRequest {
-  room_id: number;
+  /** Single room (v2.3 payload). */
+  room_id?: number;
   check_in: string;
   check_out: string;
   adults: number;
   children: number;
   child_ages: number[];
+  extra_beds?: number;
+  cots?: number;
+  /** Several rooms of one building (B2.1). */
+  rooms?: RoomAllocation[];
+}
+
+/** Quote `rooms[]` context item (per room totals). */
+export interface QuoteRoom {
+  index: number;
+  room_id: number;
+  name: string;
+  number: string | null;
+  adults: number;
+  children_ages: number[];
+  extra_beds: number;
+  cots: number;
+  nights: number;
+  room_total: number;
+  extras_total: number;
+  total: number;
 }
 
 export interface RoomQuoteResult extends QuoteResult {
   nights: number;
   tax_included: boolean;
+}
+
+/** GET /rooms/combinations item. */
+export interface RoomCombination {
+  rooms_count: number;
+  capacity: number;
+  total: number;
+  tax_included: boolean;
+  rooms: {
+    room_id: number;
+    name: string;
+    number: string | null;
+    room_type: string;
+    capacity: { max_adults: number; max_children: number; max_total: number };
+    adults: number;
+    children_ages: number[];
+    /** Extra beds / cots the suggestion uses for this room (newer API; absent = 0, `request.rooms` may carry them too). */
+    extra_beds?: number;
+    cots?: number;
+    total: number;
+  }[];
+  /** Ready for /rooms/quote and /bookings; `extra_beds` / `cots` may be missing on older payloads. */
+  request: { check_in: string; check_out: string; rooms: (Omit<RoomAllocation, "extra_beds" | "cots"> & { extra_beds?: number; cots?: number })[] };
+}
+
+export interface RoomCombinations {
+  combinations: RoomCombination[];
+  message: string | null;
+  nights: number;
+}
+
+/** Optional room of a multi-day trip, Nile trip or package stage (B2.3). */
+export interface RoomOption {
+  id: number;
+  stage_position: number | null;
+  unit_type: "room" | "suite" | "cabin" | "villa" | "tent" | (string & {});
+  unit_type_label: string;
+  name: string;
+  stars: number;
+  pricing_mode: "per_room" | "per_person";
+  price_period: "per_night" | "per_stay";
+  /** EUR, nationality group base price. */
+  price: number;
+  nights: number;
+  capacity: { max_adults: number; max_children: number; max_total: number };
+  max_quantity: number;
+}
+
+/** room_options[] item of a trip / package quote or booking. */
+export interface RoomOptionSelection {
+  room_option_id: number;
+  adults: number;
+  children_ages: number[];
 }
 
 export interface GoogleReview {
@@ -443,6 +558,28 @@ export interface CreateBookingRequest {
   nationality_code: string;
   /** Promo code checked with POST /coupons/validate; applied again by the server (422 on coupon_code when invalid). */
   coupon_code?: string;
+  /** Accommodation: several rooms of one building (B2.1). */
+  rooms?: RoomAllocation[];
+  /** Single room: extra beds / cots. */
+  extra_beds?: number;
+  cots?: number;
+  /** Trips / packages: optional rooms (B2.3). */
+  room_options?: RoomOptionSelection[];
+}
+
+/** BookingResource `rooms[]` item (accommodation rooms and optional trip / package rooms). */
+export interface BookingRoom {
+  room_id: number | null;
+  room_option_id: number | null;
+  stage_position: number | null;
+  name: string;
+  number: string | null;
+  adults: number;
+  children_ages: number[];
+  extra_beds: number;
+  cots: number;
+  nights: number;
+  total: number;
 }
 
 /** Service types known by the coupon rules (backend App\Enums\ServiceType). */
@@ -484,7 +621,25 @@ export interface BookingTotals {
 /** Booking lifecycle (SRS 12.1, backend App\Enums\BookingStatus). */
 export type BookingStatus = "awaiting_payment" | "awaiting_receipt_review" | "confirmed" | "fully_paid" | "completed" | "cancelled" | "refunded";
 /** Backend App\Enums\PaymentStatus. */
-export type PaymentStatus = "awaiting_payment" | "awaiting_receipt_review" | "proof_rejected" | "deposit_paid" | "fully_paid" | "failed" | "refunded";
+export type PaymentStatus = "awaiting_payment" | "awaiting_receipt_review" | "proof_rejected" | "deposit_paid" | "fully_paid" | "failed" | "refunded" | "partially_refunded";
+
+/**
+ * BookingResource `payments[]` row. `amount` is EUR; refunds have `type: "refund"` (positive amount,
+ * `parent_payment_id` = the refunded payment when the API sends it). Status: App\Enums\PaymentRecordStatus.
+ */
+export interface BookingPayment {
+  type: "deposit" | "balance" | "refund" | (string & {});
+  status: "pending" | "succeeded" | "failed" | "refunded" | (string & {});
+  amount: number;
+  currency: string | null;
+  amount_in_currency: number | null;
+  method: string | null;
+  paid_at: string | null;
+  parent_payment_id: number | null;
+}
+
+/** Payment return state on /booking/[reference]?payment= (hosted checkout and PayPal return). */
+export type PaymentReturn = "success" | "cancel" | "pending" | "failed";
 
 export interface CreateBookingResponse {
   reference: string;
@@ -513,6 +668,18 @@ export interface BookingDetail extends CreateBookingResponse {
   payment_due_at?: string | null;
   coupon_code?: string | null;
   cancellation?: BookingCancellation | null;
+  /** YYYY-MM-DD the balance is due by (null when nothing is left to pay later). */
+  balance_due_on?: string | null;
+  /** The voucher PDF can be downloaded (deposit paid: confirmed / fully paid / completed). */
+  voucher_available?: boolean;
+  /** End client of a partner booking: totals and payments are not shown. */
+  prices_hidden?: boolean;
+  payments?: BookingPayment[];
+  /** payment_summary in EUR (null when hidden). */
+  paid?: number | null;
+  due?: number | null;
+  /** Rooms of the booking (multi-room stays, optional trip rooms). */
+  rooms?: BookingRoom[];
   created_at: string;
 }
 
@@ -530,11 +697,6 @@ export interface AuthUser {
   /** ISO-2 nationality saved on the account (CR-10). */
   nationality_code?: string | null;
   partner?: { id: number; company: string; status: PartnerStatus; show_retail_price: boolean } | null;
-}
-
-export interface AuthResponse {
-  token: string;
-  user: AuthUser;
 }
 
 export interface PartnerApplication {
@@ -826,6 +988,10 @@ export interface PartnerQuoteRequest {
   units?: { unit_option_id: number; quantity: number }[];
   addons?: { addon_id: number; quantity: number }[];
   transfer?: PartnerTransferFields;
+  /** Trips / packages: optional rooms (B2.3). */
+  room_options?: RoomOptionSelection[];
+  /** Accommodation: several rooms of one building with the allocation (B2.1); `id` is then not needed. */
+  rooms?: RoomAllocation[];
 }
 
 export interface PartnerQuoteLine {
@@ -837,6 +1003,8 @@ export interface PartnerQuoteLine {
   partner_unit_price: number;
   partner_total: number;
   commission_percent: number;
+  /** Multi-room stays: index of the room in `rooms[]` (meta.room_index). */
+  room_index?: number | null;
 }
 
 export interface PartnerQuote {
@@ -853,6 +1021,8 @@ export interface PartnerQuote {
   deposit_amount: number;
   balance_amount: number;
   nights?: number;
+  /** Multi-room stays: one item per room (lines carry `room_index`). */
+  rooms?: QuoteRoom[];
 }
 
 /** POST /partner/bookings */
@@ -896,9 +1066,13 @@ export interface PartnerBookingDetail {
   };
   paid: number;
   due: number;
-  payments: { type: string; status: string; amount: number; method: string | null; paid_at: string | null }[];
+  balance_due_on: string | null;
+  voucher_available: boolean;
+  payments: BookingPayment[];
   payment_options: { id?: number; code?: string; type?: string; name: string; proof_required?: boolean }[];
   transfer: { destination: { name: string }; pickup_at: string; passengers: number } | null;
+  /** Rooms of the booking (multi-room stays, optional trip rooms). */
+  rooms: BookingRoom[];
   coupon_code?: string | null;
   cancellation?: BookingCancellation | null;
   created_at: string;

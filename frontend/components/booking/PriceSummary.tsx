@@ -1,6 +1,6 @@
 "use client";
 
-import type { QuoteLine, QuoteResult } from "@/lib/api/types";
+import type { QuoteLine, QuoteResult, QuoteRoom } from "@/lib/api/types";
 import { useCurrency } from "@/lib/currency";
 import { cn, round2 } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
@@ -22,9 +22,50 @@ export function lineLabel(line: QuoteLine, t: Translate, money: (n: number) => s
       return line.quantity > 1 ? `${line.name} × ${line.quantity}` : `${line.name}`;
     case "night":
       return t("nights", { count: line.quantity, price: money(line.unit_price) });
+    case "extra_bed":
+      return t("extraBed", { count: line.quantity, price: money(line.unit_price) });
+    case "cot":
+      return t("cot", { count: line.quantity, price: money(line.unit_price) });
     default:
       return line.name ?? "";
   }
+}
+
+/**
+ * Quote lines; multi-room stays are grouped per room (line.room_index, never the label) with a heading and
+ * the room total, so checkout and confirmation show one block per room.
+ */
+export function QuoteLineList({ lines, rooms, className }: { lines: QuoteLine[]; rooms?: { index: number; name: string; number?: string | null; total?: number }[]; className?: string }) {
+  const t = useTranslations("summary");
+  const { format } = useCurrency();
+  const money = (n: number) => format(n);
+  const item = (l: QuoteLine, i: number) => (
+    <li key={i} className="flex justify-between gap-3">
+      <span>{lineLabel(l, t, money)}</span>
+      <span className="tabular-nums text-ink-900">{l.total === 0 ? t("free") : money(l.total)}</span>
+    </li>
+  );
+  const grouped = rooms && rooms.length > 1 && lines.some((l) => l.room_index != null);
+  if (!grouped) return <ul className={cn("flex flex-col gap-2 text-sm text-ink-700", className)}>{lines.map(item)}</ul>;
+  const rest = lines.filter((l) => l.room_index == null || !rooms.some((r) => r.index === l.room_index));
+  return (
+    <div className={cn("flex flex-col gap-3 text-sm text-ink-700", className)}>
+      {rooms.map((r) => {
+        const own = lines.filter((l) => l.room_index === r.index);
+        const total = r.total ?? own.reduce((s, l) => s + l.total, 0);
+        return (
+          <section key={r.index} aria-label={t("roomHeading", { n: r.index + 1, name: r.name })} className="rounded-image border border-ink-100 p-3" data-testid="quote-room">
+            <h4 className="flex justify-between gap-3 font-semibold text-ink-900">
+              <span>{t("roomHeading", { n: r.index + 1, name: [r.name, r.number].filter(Boolean).join(" ") })}</span>
+              <span className="tabular-nums">{money(total)}</span>
+            </h4>
+            <ul className="mt-2 flex flex-col gap-1.5">{own.map(item)}</ul>
+          </section>
+        );
+      })}
+      {rest.length > 0 && <ul className="flex flex-col gap-2">{rest.map(item)}</ul>}
+    </div>
+  );
 }
 
 /** Live price summary: itemised lines, add-ons, total, deposit and balance (SRS 10.1). */
@@ -68,14 +109,7 @@ export function PriceSummary({
         </div>
       ) : (
         <div className={cn("flex flex-col gap-3 transition-opacity", loading && "opacity-60")}>
-          <ul className="flex flex-col gap-2 text-sm text-ink-700">
-            {quote.lines.map((l, i) => (
-              <li key={i} className="flex justify-between gap-3">
-                <span>{lineLabel(l, t, money)}</span>
-                <span className="tabular-nums text-ink-900">{l.total === 0 ? t("free") : money(l.total)}</span>
-              </li>
-            ))}
-          </ul>
+          <QuoteLineList lines={quote.lines} rooms={quote.rooms as QuoteRoom[] | undefined} />
           {quote.addon_lines.length > 0 && (
             <>
               <p className="border-t border-ink-100 pt-3 text-xs text-ink-500">{t("addons")}</p>

@@ -41,6 +41,23 @@ class TripQuoteRequest extends FormRequest
             'addons' => ['nullable', 'array', 'max:30'],
             'addons.*.addon_id' => ['required', 'integer'],
             'addons.*.quantity' => ['nullable', 'integer', 'min:1', 'max:100'],
+            ...self::roomOptionRules(),
+        ];
+    }
+
+    /**
+     * Optional rooms of multi-day trips, Nile trips and packages (SRS 7.1), each with its guests.
+     *
+     * @return array<string, mixed>
+     */
+    public static function roomOptionRules(): array
+    {
+        return [
+            'room_options' => ['nullable', 'array', 'max:30'],
+            'room_options.*.room_option_id' => ['required', 'integer'],
+            'room_options.*.adults' => ['required', 'integer', 'min:0', 'max:20'],
+            'room_options.*.children_ages' => ['nullable', 'array', 'max:20'],
+            'room_options.*.children_ages.*' => ['integer', 'min:0', 'max:17'],
         ];
     }
 }

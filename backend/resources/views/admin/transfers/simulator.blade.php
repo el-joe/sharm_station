@@ -9,9 +9,11 @@
             <div class="grid grid-cols-1 gap-4 md:grid-cols-6">
                 <x-admin.select name="hub_id" label="Hub" :options="$hubs" :selected="$input['hub_id'] ?? null" placeholder="Choose a hub" span="md:col-span-3" />
                 <x-admin.select name="vehicle_type_id" label="Vehicle" :options="$vehicles" :selected="$input['vehicle_type_id'] ?? null" placeholder="Choose a vehicle" span="md:col-span-3" />
-                <x-admin.input name="destination[name]" label="Destination name" :value="$input['destination']['name'] ?? 'Test destination'" span="md:col-span-2" />
-                <x-admin.input name="destination[lat]" label="Latitude" type="number" step="0.0000001" :value="$input['destination']['lat'] ?? null" span="md:col-span-2" />
-                <x-admin.input name="destination[lng]" label="Longitude" type="number" step="0.0000001" :value="$input['destination']['lng'] ?? null" span="md:col-span-2" />
+                <x-admin.select name="direction" label="Direction" :options="\App\Enums\TransferDirection::options()" :selected="$input['direction'] ?? 'from_hub'" :select2="false" span="md:col-span-6"
+                                hint="From the hub: the hub is the origin and the point below the destination. To the hub: the point below is the pickup (origin)." />
+                <x-admin.location-picker lat-name="destination[lat]" lng-name="destination[lng]" address-name="destination[name]"
+                                         :lat="$input['destination']['lat'] ?? null" :lng="$input['destination']['lng'] ?? null" :address="$input['destination']['name'] ?? 'Test destination'"
+                                         address-label="Place name (origin or destination)" lat-label="Latitude" lng-label="Longitude" search-label="Search the origin or destination" />
                 <x-admin.input name="pickup_at" label="Pickup (YYYY-MM-DD HH:MM)" :value="$input['pickup_at'] ?? now()->addDay()->setTime(10, 0)->format('Y-m-d H:i')" span="md:col-span-2" />
                 <x-admin.input name="passengers" label="Passengers" type="number" min="1" :value="$input['passengers'] ?? 2" span="md:col-span-1" />
                 <x-admin.input name="luggage" label="Luggage" type="number" min="0" :value="$input['luggage'] ?? 2" span="md:col-span-1" />

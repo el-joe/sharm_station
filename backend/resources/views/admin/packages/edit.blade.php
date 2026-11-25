@@ -31,6 +31,7 @@
                          :subtitle="$package->exists ? $package->days.' days · '.$package->stages->count().' stages · '.$package->status->label() : 'Build the programme from existing trips. The price list is available after the first save.'">
         <x-slot:actions>
             @if ($package->exists)
+                @can('manage-prices')<a href="{{ route('admin.packages.room-options', $package) }}" class="btn-ghost">Rooms</a>@endcan
                 <form method="POST" action="{{ route('admin.packages.destroy', $package) }}" data-confirm="Delete “{{ $title }}”? This cannot be undone.">
                     @csrf @method('DELETE')
                     <button type="submit" class="btn-ghost text-error">Delete</button>

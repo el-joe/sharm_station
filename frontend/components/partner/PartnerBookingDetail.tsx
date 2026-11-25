@@ -1,13 +1,15 @@
 "use client";
 
+import { BookingRooms } from "@/components/booking/BookingRooms";
 import { CancellationRequest } from "@/components/booking/CancellationRequest";
+import { PaymentHistory } from "@/components/booking/PaymentHistory";
 import { PaymentSection } from "@/components/booking/PaymentSection";
+import { VoucherDownload } from "@/components/booking/VoucherDownload";
 import { buttonClasses } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Link } from "@/i18n/navigation";
 import { api } from "@/lib/api/client";
-import { useAuth } from "@/lib/auth";
 import { useCurrency } from "@/lib/currency";
 import { parseISODate } from "@/lib/utils";
 import { BadgePercent, FileSearch } from "lucide-react";
@@ -35,16 +37,17 @@ function Card({ id, title, text, children, actions }: { id: string; title: strin
   );
 }
 
-/** /partner/bookings/[reference] (Figma 255:35331): GET /bookings/{reference} with the partner token. */
+/** /partner/bookings/[reference] (Figma 255:35331): GET /bookings/{reference} with the partner session (via /api/proxy). */
 export function PartnerBookingDetail({ params }: { params: Promise<{ reference: string }> }) {
   const { reference } = use(params);
   const t = useTranslations("partnerPanel.detail");
   const tb = useTranslations("partnerPanel.bookings");
   const ts = useTranslations("partnerPanel.summary");
   const tbk = useTranslations("booking");
+  const tp = useTranslations("paymentHistory");
+  const tv = useTranslations("voucherDownload");
   const format = useFormatter();
   const { format: money } = useCurrency();
-  const { token } = useAuth();
   const service = useServiceLabel();
   const source = useCommissionSource();
   const query = usePartnerQuery(["booking", reference], (o) => api.partnerBooking(reference, o));
@@ -99,6 +102,8 @@ export function PartnerBookingDetail({ params }: { params: Promise<{ reference: 
                   )}
                 </Card>
 
+                {b.rooms.length > 0 && <BookingRooms rooms={b.rooms} />}
+
                 <Card id="pd-items" title={t("items")} text={b.season_name ? t("season", { season: b.season_name }) : undefined}>
                   <div className="overflow-x-auto rounded-image border border-ink-100">
                     <table className="w-full min-w-[520px] text-sm">
@@ -124,30 +129,13 @@ export function PartnerBookingDetail({ params }: { params: Promise<{ reference: 
                   </div>
                 </Card>
 
-                <Card id="pd-payments" title={t("payments")} text={t("paymentsText")}>
-                  {b.payments.length ? (
-                    <ul className="divide-y divide-ink-100 rounded-image border border-ink-100 text-sm">
-                      {b.payments.map((p, i) => (
-                        <li key={i} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3">
-                          <span>
-                            <span className="block font-semibold text-ink-900">{p.type === "deposit" ? t("deposit") : p.type === "balance" ? t("balancePayment") : p.type}</span>
-                            <span className="text-xs text-ink-500">{[p.method, p.paid_at ? date(p.paid_at) : null].filter(Boolean).join(" · ")}</span>
-                          </span>
-                          <span className="font-semibold text-ink-900">{money(p.amount, { decimals: true })}</span>
-                          <span className="rounded-pill bg-sand-50 px-2.5 py-0.5 text-xs font-semibold">{p.status}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-ink-700">{t("noPayments")}</p>
-                  )}
-                </Card>
+                <PaymentHistory payments={b.payments} title={t("payments")} text={t("paymentsText")} />
 
                 {b.status === "awaiting_payment" && (
                   <PaymentSection
                     reference={b.reference}
                     accessToken={null}
-                    authToken={token}
+                    auth
                     status={b.status}
                     deposit={tot.deposit_amount}
                     total={tot.total}
@@ -179,20 +167,39 @@ export function PartnerBookingDetail({ params }: { params: Promise<{ reference: 
                     <div className="mt-1 border-t border-ink-100 pt-3">
                       <Row label={t("paid")} value={money(b.paid, { decimals: true })} />
                       <Row label={t("balanceDue")} value={<span className="font-semibold text-warning">{money(b.due, { decimals: true })}</span>} />
+                      {b.balance_due_on && b.due > 0 && b.status !== "awaiting_payment" && (
+                        <p className="mt-1 text-xs text-ink-500">{tp("balanceDueOn", { date: date(b.balance_due_on) })}</p>
+                      )}
                     </div>
                   </dl>
                 </Card>
-                <Card id="pd-voucher" title={t("voucher")} text={t("voucherText")}>
-                  <div className="flex flex-col gap-3">
-                    <Link href={voucherHref(true)} target="_blank" className={buttonClasses("outline", "md", "w-full")}>
-                      {t("voucherWith")}
-                    </Link>
-                    <Link href={voucherHref(false)} target="_blank" className={buttonClasses("partner", "md", "w-full")}>
-                      {t("voucherWithout")}
-                    </Link>
-                  </div>
-                </Card>
-                <CancellationRequest reference={b.reference} cancellation={b.cancellation} token={token} onChange={() => void query.refetch()} />
+                {b.voucher_available ? (
+                  <VoucherDownload reference={b.reference} auth variants={["prices", "client"]} tone="partner">
+                    <p className="text-sm text-ink-500">
+                      {t("printable")}:{" "}
+                      <Link href={voucherHref(true)} target="_blank" className="font-semibold text-partner-600 underline">
+                        {t("voucherWith")}
+                      </Link>
+                      {" · "}
+                      <Link href={voucherHref(false)} target="_blank" className="font-semibold text-partner-600 underline">
+                        {t("voucherWithout")}
+                      </Link>
+                    </p>
+                  </VoucherDownload>
+                ) : (
+                  <Card id="pd-voucher" title={t("voucher")} text={t("voucherText")}>
+                    <div className="flex flex-col gap-3">
+                      <p className="text-sm text-ink-700">{tv("notYet")}</p>
+                      <Link href={voucherHref(true)} target="_blank" className={buttonClasses("outline", "md", "w-full")}>
+                        {t("voucherWith")}
+                      </Link>
+                      <Link href={voucherHref(false)} target="_blank" className={buttonClasses("partner", "md", "w-full")}>
+                        {t("voucherWithout")}
+                      </Link>
+                    </div>
+                  </Card>
+                )}
+                <CancellationRequest reference={b.reference} cancellation={b.cancellation} refunds={b.payments.filter((p) => p.type === "refund")} auth onChange={() => void query.refetch()} />
               </div>
             </div>
           </div>

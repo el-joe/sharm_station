@@ -10,7 +10,7 @@ import { useEffect, type ReactNode } from "react";
 
 /**
  * Client-side protection for /account/* and /partner/*. The API enforces access
- * with the bearer token anyway; this only keeps signed-out visitors out of the UI
+ * with the session cookie (via /api/proxy) anyway; this only keeps signed-out visitors out of the UI
  * and sends them to /sign-in?returnTo=<current path>.
  */
 export function AuthGuard({ children, partner = false }: { children: ReactNode; partner?: boolean }) {

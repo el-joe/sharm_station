@@ -4,13 +4,13 @@ import { PageIntro } from "@/components/ui/PageIntro";
 import { Link } from "@/i18n/navigation";
 import { RichHtml } from "@/components/content/RichHtml";
 import { getBlogPost, getBlogSlugs, tocFromHtml } from "@/lib/api/content";
+import { notFoundOrMoved } from "@/lib/api/server";
 import type { Locale } from "@/lib/api/types";
 import { pageMetadata } from "@/lib/seo";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { getFormatter, getTranslations } from "next-intl/server";
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 export async function generateStaticParams() {
@@ -37,7 +37,7 @@ async function Article({ params }: { params: PageProps<"/[locale]/blog/[slug]">[
   const { locale: l, slug } = await params;
   const locale = l as Locale;
   const post = await getBlogPost(slug, locale);
-  if (!post) notFound();
+  if (!post) return notFoundOrMoved("blog", slug, locale);
   const c = post;
   const toc = tocFromHtml(post.body_html);
   const image = post.cover_image.startsWith("http") ? post.cover_image : `${SITE_URL}${post.cover_image}`;

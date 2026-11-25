@@ -7,6 +7,7 @@
 <x-admin.layout title="Bookings">
     <x-admin.page-header title="Bookings" :breadcrumbs="['Sales' => null, 'Bookings' => null]" subtitle="All services. Amounts in EUR.">
         <x-slot:actions>
+            <a href="{{ route('admin.bookings.create') }}" class="btn-cta">New booking</a>
             <a id="bookings-export" href="{{ route('admin.bookings.export', array_filter($initial)) }}" data-base="{{ route('admin.bookings.export') }}" class="btn-primary">
                 <x-admin.icon name="download" size="18" /> Export CSV
             </a>

@@ -7,6 +7,7 @@ use App\Enums\PublishStatus;
 use App\Models\Concerns\HasChildPolicy;
 use App\Models\Concerns\HasTranslations;
 use App\Models\Concerns\LogsActivity;
+use App\Models\Concerns\RecordsSlugRedirects;
 use Database\Factories\BuildingFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -24,7 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Building extends Model
 {
     /** @use HasFactory<BuildingFactory> */
-    use HasChildPolicy, HasFactory, HasTranslations, LogsActivity;
+    use HasChildPolicy, HasFactory, HasTranslations, LogsActivity, RecordsSlugRedirects;
 
     /**
      * @var list<string>

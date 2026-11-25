@@ -18,6 +18,12 @@ final readonly class QuoteLineData
 
     public const TYPE_DISCOUNT = 'discount';
 
+    public const TYPE_EXTRA_BED = 'extra_bed';
+
+    public const TYPE_COT = 'cot';
+
+    public const TYPE_ROOM = 'room';
+
     /**
      * @param  array<string, mixed>  $meta
      */

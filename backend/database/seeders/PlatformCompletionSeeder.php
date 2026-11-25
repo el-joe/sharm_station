@@ -12,6 +12,6 @@ class PlatformCompletionSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->call([CmsContentSeeder::class, OfficeLocationSeeder::class, CouponSeeder::class]);
+        $this->call([CmsContentSeeder::class, OfficeLocationSeeder::class, CouponSeeder::class, RoomOptionSeeder::class]);
     }
 }

@@ -74,3 +74,16 @@ test('throttles of different endpoints do not share one counter', function () {
     $this->postJson('/api/v1/auth/login', ['email' => 'nobody@example.test', 'password' => 'wrong-password'])
         ->assertUnprocessable();
 });
+
+test('requests proxied by the local Next.js server are rate limited by the forwarded client ip', function () {
+    $login = fn (string $clientIp) => $this->withServerVariables(['REMOTE_ADDR' => '127.0.0.1'])
+        ->withHeader('X-Forwarded-For', $clientIp)
+        ->postJson('/api/v1/auth/login', ['email' => 'nobody@example.test', 'password' => 'wrong-password']);
+
+    for ($i = 0; $i < 10; $i++) {
+        $login('203.0.113.10')->assertUnprocessable();
+    }
+
+    $login('203.0.113.10')->assertTooManyRequests();
+    $login('203.0.113.20')->assertUnprocessable();
+});

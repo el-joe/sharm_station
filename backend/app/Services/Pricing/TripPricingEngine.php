@@ -8,6 +8,7 @@ use App\DTOs\Pricing\QuoteResultData;
 use App\DTOs\Pricing\ResolvedPriceData;
 use App\Enums\BookingType;
 use App\Enums\PricingMode;
+use App\Enums\TripType;
 use App\Models\ChildAgeBand;
 use App\Models\Trip;
 use App\Models\TripPrivateTier;
@@ -22,7 +23,7 @@ use App\Services\NationalityService;
  */
 class TripPricingEngine
 {
-    use BuildsQuotes;
+    use BuildsQuotes, PricesRoomOptions;
 
     public function __construct(
         private readonly PriceResolver $prices,
@@ -34,7 +35,7 @@ class TripPricingEngine
 
     public function quote(Trip $trip, QuoteRequestData $request): QuoteResultData
     {
-        $trip->loadMissing(['unitOptions', 'privateTiers', 'availabilityRules', 'childPolicy.bands', 'addons', 'seasonPrices', 'productPrices']);
+        $trip->loadMissing(['unitOptions', 'privateTiers', 'availabilityRules', 'childPolicy.bands', 'addons', 'seasonPrices', 'productPrices', 'roomOptions.seasonPrices', 'roomOptions.productPrices']);
 
         $this->beginQuote($request->partner, $trip->type->commissionCategory(), $request->nationalityGroupId, $request->nationalityCode);
         $persons = $request->persons();
@@ -56,6 +57,10 @@ class TripPricingEngine
         $unitCount = array_sum(array_map(fn (QuoteLineData $line): int => $line->quantity, array_filter($lines, fn (QuoteLineData $line): bool => $line->type === QuoteLineData::TYPE_UNIT)));
 
         $lines = [...$lines, ...$this->productAddonLines($trip->addons, $request, $persons, $unitCount)];
+        $stages = $trip->type !== TripType::SingleDay && $trip->nights > 0
+            ? [0 => ['start' => $request->travelDate, 'nights' => (int) $trip->nights, 'label' => null]]
+            : [];
+        $lines = [...$lines, ...$this->roomOptionLines($trip->roomOptions, $request, $stages, $trip->childPolicy, 'trip')];
 
         return $this->buildResult(
             serviceType: $trip->type->serviceType(),

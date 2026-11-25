@@ -23,11 +23,12 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 #[Fillable([
     'reference', 'access_token', 'service_type', 'booking_type', 'pricing_mode', 'bookable_type', 'bookable_id', 'season_name',
-    'start_date', 'check_in', 'check_out', 'user_id', 'partner_id', 'lead_name', 'lead_email', 'lead_phone', 'adults',
+    'start_date', 'check_in', 'check_out', 'end_date', 'user_id', 'partner_id', 'lead_name', 'lead_email', 'lead_phone', 'adults',
     'children', 'retail_total', 'partner_total', 'commission_amount', 'commission_percent', 'nationality_code', 'nationality_group_id', 'price_rule', 'total', 'deposit_percent',
     'deposit_amount', 'balance_amount', 'currency', 'exchange_rate', 'total_in_currency', 'status', 'payment_status', 'payment_due_at',
     'locale', 'notes', 'price_lines', 'coupon_id', 'coupon_code', 'discount_amount', 'cancellation_requested_at', 'cancellation_reason',
     'cancellation_requested_by', 'cancellation_decision', 'cancellation_decided_at', 'cancellation_decision_note', 'refund_amount',
+    'balance_due_on',
 ])]
 #[Hidden(['access_token'])]
 class Booking extends Model
@@ -50,6 +51,7 @@ class Booking extends Model
             'start_date' => 'immutable_date',
             'check_in' => 'immutable_date',
             'check_out' => 'immutable_date',
+            'end_date' => 'immutable_date',
             'adults' => 'integer',
             'children' => 'integer',
             'retail_total' => 'decimal:2',
@@ -64,6 +66,7 @@ class Booking extends Model
             'total_in_currency' => 'decimal:2',
             'price_lines' => 'array',
             'payment_due_at' => 'immutable_datetime',
+            'balance_due_on' => 'immutable_date',
             'discount_amount' => 'decimal:2',
             'cancellation_requested_at' => 'immutable_datetime',
             'cancellation_decision' => CancellationDecision::class,

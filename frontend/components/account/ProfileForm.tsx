@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/Button";
 import { NationalityCombobox } from "@/components/nationality/NationalityCombobox";
 import { useNationality } from "@/lib/nationality";
 import { Field, Input, Select } from "@/components/ui/Field";
-import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { Link, getPathname, usePathname, useRouter } from "@/i18n/navigation";
+import { mapsNeedReloadFor } from "@/lib/maps/google";
 import { api, ApiError } from "@/lib/api/client";
 import type { CurrencyCode, Locale } from "@/lib/api/types";
 import { useAuth } from "@/lib/auth";
@@ -55,7 +56,7 @@ export function ProfileForm() {
   const t = useTranslations("account.profile");
   const tv = useTranslations("validation");
   const locale = useLocale() as Locale;
-  const { user, token, setUser, signOut } = useAuth();
+  const { user, setUser, signOut } = useAuth();
   const { currency, currencies, setCurrency } = useCurrency();
   const nationality = useNationality();
   const router = useRouter();
@@ -100,7 +101,10 @@ export function ProfileForm() {
   const applyLocal = (v: ProfileValues) => {
     if (v.currency !== currency) setCurrency(v.currency as CurrencyCode);
     if (v.nationality_code !== nationality.code) void nationality.setNationality(v.nationality_code);
-    if (v.locale !== locale) router.replace(pathname, { locale: v.locale });
+    if (v.locale === locale) return;
+    // Maps JS keeps its first language: switch with a full load when it is on the page (see lib/maps/google.ts).
+    if (mapsNeedReloadFor(v.locale)) window.location.assign(getPathname({ href: pathname, locale: v.locale }));
+    else router.replace(pathname, { locale: v.locale });
   };
 
   const onProfile = profile.handleSubmit(async (v) => {
@@ -108,7 +112,7 @@ export function ProfileForm() {
     try {
       const res = await api.updateProfile(
         { name: v.name, phone: v.phone || undefined, locale: v.locale, currency: v.currency, newsletter: v.newsletter, nationality_code: v.nationality_code },
-        { locale, token: token! },
+        { locale },
       );
       if (res.status === "ok") {
         setUser(res.data);
@@ -124,7 +128,7 @@ export function ProfileForm() {
   const onPassword = pw.handleSubmit(async (v) => {
     setPwNotice(null);
     try {
-      const res = await api.updatePassword(v, { locale, token: token! });
+      const res = await api.updatePassword(v, { locale });
       if (res.status === "ok") {
         pw.reset();
         setPwNotice({ tone: "success", text: t("passwordSaved") });

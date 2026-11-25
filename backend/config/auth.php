@@ -99,6 +99,17 @@ return [
             'expire' => 60,
             'throttle' => 60,
         ],
+
+        /*
+         * Welcome e-mail of customer accounts created by staff: a longer-lived "set your password" link, kept in its
+         * own table so a normal reset token never gets the longer lifetime.
+         */
+        'welcome' => [
+            'provider' => 'users',
+            'table' => 'password_welcome_tokens',
+            'expire' => (int) env('AUTH_WELCOME_TOKEN_EXPIRE', 10080),
+            'throttle' => 0,
+        ],
     ],
 
     /*

@@ -1,4 +1,11 @@
+import $ from 'jquery';
 import DataTable from 'datatables.net-dt';
+
+// DataTables looks up window.jQuery on every event. Select2 (loaded lazily, sometimes later) sets it,
+// which used to switch DataTables to jQuery events half-way and left listeners such as the
+// processing indicator unreachable. Registering jQuery up front keeps it on one event system.
+window.$ = window.jQuery = $;
+DataTable.use($);
 
 /**
  * Server-side Yajra DataTables.

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SeasonPricesRequest;
 use App\Models\Package;
 use App\Models\Room;
+use App\Models\RoomOption;
 use App\Models\SeasonPrice;
 use App\Models\TransferFixedRoute;
 use App\Models\Trip;
@@ -52,6 +53,13 @@ class SeasonPriceController extends Controller
         return redirect()->to(route('admin.transfers.routes.edit', $fixedRoute).'#price-matrix')->with('success', 'Price matrix saved.');
     }
 
+    public function updateRoomOption(SeasonPricesRequest $request, RoomOption $roomOption): RedirectResponse
+    {
+        $this->matrix->save($roomOption, $request->baseRows(), $request->rows());
+
+        return redirect()->to(route('admin.room-options.edit', $roomOption).'#season-form')->with('success', 'Price matrix saved.');
+    }
+
     public function copyToNextYear(SeasonPrice $season): RedirectResponse
     {
         $copy = $this->seasons->copyToNextYear($season);
@@ -59,6 +67,7 @@ class SeasonPriceController extends Controller
             $season->priceable instanceof Room => ['admin.rooms.edit', '#tab-prices'],
             $season->priceable instanceof Package => ['admin.packages.edit', '#tab-prices'],
             $season->priceable instanceof TransferFixedRoute => ['admin.transfers.routes.edit', '#price-matrix'],
+            $season->priceable instanceof RoomOption => ['admin.room-options.edit', '#season-form'],
             default => ['admin.trips.edit', '#tab-prices'],
         };
 

@@ -30,6 +30,14 @@ enum ActivityAction: string
     case Deactivated = 'deactivated';
     case PasswordChanged = 'password_changed';
     case NotesUpdated = 'notes_updated';
+    case RefundRecorded = 'refund_recorded';
+    case TwoFactorEnabled = 'two_factor_enabled';
+    case TwoFactorDisabled = 'two_factor_disabled';
+    case NotificationResent = 'notification_resent';
+    case BookingCreated = 'booking_created';
+    case BookingModified = 'booking_modified';
+    case HoldReleased = 'hold_released';
+    case CalendarSynced = 'calendar_synced';
 
     public function label(): string
     {
@@ -53,6 +61,14 @@ enum ActivityAction: string
             self::Deactivated => 'Deactivated',
             self::PasswordChanged => 'Password changed',
             self::NotesUpdated => 'Notes updated',
+            self::RefundRecorded => 'Refund recorded',
+            self::TwoFactorEnabled => 'Two-factor enabled',
+            self::TwoFactorDisabled => 'Two-factor disabled',
+            self::NotificationResent => 'Email resent',
+            self::BookingCreated => 'Booking created',
+            self::BookingModified => 'Booking modified',
+            self::HoldReleased => 'Hold released',
+            self::CalendarSynced => 'Calendar synced',
         };
     }
 }

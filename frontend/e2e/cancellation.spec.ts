@@ -1,7 +1,7 @@
-import type { Browser, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { ADMIN_URL, apiContext, authFile, money, readToken, setNationality } from "./helpers";
-import { adminBookingId, adminFlash, confirmDialog, createTripBooking, partnerConfirm, partnerToClientStep } from "./flows";
+import { adminBookingId, adminFlash, asAdmin, confirmDialog, createTripBooking, partnerConfirm, partnerToClientStep, recordDeposit } from "./flows";
 
 /**
  * Cancellation requests (PLAN-v2.3 W4): website confirmation page (guest link), account booking detail
@@ -34,16 +34,6 @@ async function requestCancellation(page: Page) {
   return section;
 }
 
-async function asAdmin<T>(browser: Browser, fn: (page: Page) => Promise<T>): Promise<T> {
-  const context = await browser.newContext({ storageState: authFile("admin") });
-  const page = await context.newPage();
-  try {
-    return await fn(page);
-  } finally {
-    await context.close();
-  }
-}
-
 /** Admin booking page: the request card shows the reason and the suggested refund; returns that amount. */
 async function adminRequestCard(page: Page, reference: string) {
   const id = await adminBookingId(page, reference);
@@ -64,15 +54,7 @@ test("guest: confirmation page -> request -> admin approves with the suggested r
   const { reference, access_token } = await createTripBooking({ email: `e2e.cancel.${Date.now()}@example.test` });
 
   // Record the deposit so the policy suggests a refund.
-  const deposit = await asAdmin(browser, async (admin) => {
-    const id = await adminBookingId(admin, reference);
-    await admin.goto(`${ADMIN_URL}/bookings/${id}`);
-    const amount = Number(await admin.getByRole("spinbutton", { name: "Amount (EUR)" }).inputValue());
-    await admin.getByRole("textbox", { name: "Note" }).first().fill("E2E deposit");
-    await admin.getByRole("button", { name: "Record payment" }).click();
-    await adminFlash(admin, /recorded|saved|payment/i);
-    return amount;
-  });
+  const deposit = await recordDeposit(browser, reference);
   expect(deposit).toBeGreaterThan(0);
 
   await page.goto(`/en/booking/${reference}?token=${access_token}`);
@@ -106,12 +88,19 @@ test("guest: confirmation page -> request -> admin approves with the suggested r
   expect(approved.cancellation.status).toBe("approved");
   expect(approved.cancellation.refund_amount).toBeCloseTo(refund, 2);
   expect(approved.status).toMatch(/cancel/);
+  // Refund outcome: refund rows of payments[] are listed under the approval and in the payment history.
+  const refundRows = (approved.payments as { type: string; status: string }[]).filter((p) => p.type === "refund");
+  if (refundRows.length) {
+    await expect(section.getByRole("list", { name: "Refunds" })).toContainText(/Refund of €\s?[\d.,]+/);
+    await expect(page.getByRole("region", { name: "Payments" }).locator('[data-payment-type="refund"]')).toHaveCount(refundRows.length);
+  }
 });
 
 test.describe("customer", () => {
   test.use({ storageState: authFile("customer") });
 
-  test("account booking detail -> request -> admin declines with a note -> declined", async ({ page, browser }) => {
+  test("account booking detail -> request -> admin declines with a note -> declined, reason shown -> request again", async ({ page, browser }) => {
+    test.setTimeout(120_000);
     const { reference } = await createTripBooking({ token: readToken("customer"), email: "customer@sharmstation.test" });
     await page.goto(`/en/account/bookings/${reference}`);
     await expect(page.getByText(reference).first()).toBeVisible();
@@ -124,11 +113,29 @@ test.describe("customer", () => {
       await adminFlash(admin, /declined/i);
     });
 
+    // F5: the decline shows its reason and the customer can ask again (can_request is true after a decline).
     await page.reload();
     const section = page.getByRole("region", { name: "Cancellation" });
     await expect(section.getByText("Cancellation request declined")).toBeVisible();
     await expect(section).toContainText("E2E declined: please ignore.");
-    await expect(section.getByRole("button", { name: "Request cancellation" })).toHaveCount(0);
+    await expect(section.getByText("If your situation has changed you can send a new request")).toBeVisible();
+    await expect(section.getByRole("button", { name: "Request cancellation again" })).toBeVisible();
+    const api = await apiContext(readToken("customer"));
+    const declined = (await (await api.get(`bookings/${reference}`)).json()).data;
+    expect(declined.cancellation.status).toBe("declined");
+    expect(declined.cancellation.can_request).toBe(true);
+
+    await requestCancellation(page);
+    await expect(section.getByText("Cancellation request declined")).toHaveCount(0);
+    const again = (await (await api.get(`bookings/${reference}`)).json()).data;
+    await api.dispose();
+    expect(again.cancellation.status).toBe("pending");
+    expect(again.cancellation.can_request).toBe(false);
+
+    // The second request reaches the admin again.
+    await asAdmin(browser, async (admin) => {
+      await adminRequestCard(admin, reference);
+    });
   });
 });
 

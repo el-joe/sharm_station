@@ -55,10 +55,7 @@ class PartnerBookingService
                 $this->packages->findPublishedBySlug((string) $data['slug']) ?? throw $this->notFound('slug', 'This package is not available.'),
                 QuoteRequestData::fromArray($data, $partner, $currency, $code, $groupId),
             ),
-            'room' => $this->roomPricing->quote(
-                $this->rooms->findBookable((int) $data['id']) ?? throw $this->notFound('id', 'This room is not available.'),
-                RoomQuoteRequestData::fromArray($data, $partner, $currency, $code, $groupId),
-            ),
+            'room' => $this->roomQuote($partner, $data, $currency, $code, $groupId),
             'transfer' => $this->transferPricing->quote(TransferQuoteRequestData::fromArray($data['transfer'], $partner, $currency, $code, $groupId)),
         };
     }
@@ -75,7 +72,7 @@ class PartnerBookingService
         $payload = match ($data['product_type']) {
             'trip' => [...$data, 'trip_slug' => $data['slug']],
             'package' => [...$data, 'package_slug' => $data['slug']],
-            'room' => [...$data, 'room_id' => (int) $data['id']],
+            'room' => isset($data['rooms']) ? [...$data, 'service' => 'accommodation'] : [...$data, 'room_id' => (int) $data['id']],
             'transfer' => $data,
         };
 
@@ -92,6 +89,23 @@ class PartnerBookingService
     public function paymentOptions(Booking $booking): array
     {
         return $this->bookings->paymentOptions($booking);
+    }
+
+    /**
+     * One room (id) or several rooms of one building (rooms[]): accommodation has no commission.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function roomQuote(Partner $partner, array $data, string $currency, string $code, int $groupId): QuoteResultData
+    {
+        $request = RoomQuoteRequestData::fromArray($data, $partner, $currency, $code, $groupId);
+        $rooms = $this->rooms->findBookableMany($request->roomIds());
+
+        if ($rooms->isEmpty()) {
+            throw $this->notFound($request->multiRoom ? 'rooms' : 'id', 'This room is not available.');
+        }
+
+        return $this->roomPricing->quoteRooms($rooms, $request);
     }
 
     private function notFound(string $field, string $message): DomainValidationException

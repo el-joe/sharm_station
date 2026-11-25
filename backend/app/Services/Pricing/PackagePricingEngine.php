@@ -30,7 +30,7 @@ use Carbon\CarbonImmutable;
  */
 class PackagePricingEngine
 {
-    use BuildsQuotes;
+    use BuildsQuotes, PricesRoomOptions;
 
     public function __construct(
         private readonly PriceResolver $prices,
@@ -44,7 +44,7 @@ class PackagePricingEngine
         $package->loadMissing([
             'stages.destination', 'stages.stageTrips.trip.privateTiers', 'stages.stageTrips.trip.unitOptions',
             'stages.stageTrips.trip.seasonPrices', 'stages.stageTrips.trip.productPrices', 'includedTransfers', 'childPolicy.bands',
-            'addons', 'seasonPrices', 'productPrices',
+            'addons', 'seasonPrices', 'productPrices', 'roomOptions.seasonPrices', 'roomOptions.productPrices',
         ]);
 
         $this->beginQuote($request->partner, CommissionCategory::Packages, $request->nationalityGroupId, $request->nationalityCode);
@@ -74,6 +74,7 @@ class PackagePricingEngine
         }
 
         $lines = [...$lines, ...$this->productAddonLines($package->addons, $request, $persons, 0, 'package')];
+        $lines = [...$lines, ...$this->roomOptionLines($package->roomOptions, $request, $this->stageStays($package, $request->travelDate), $package->childPolicy, 'package')];
 
         return $this->buildResult(
             serviceType: ServiceType::Package,
@@ -112,6 +113,31 @@ class PackagePricingEngine
             'to' => $transfer->to_place,
             'vehicle_type' => $transfer->vehicle_type?->value,
         ])->values()->all();
+    }
+
+    /**
+     * Stay of every stage with nights (stage position => first night, nights), for its optional rooms.
+     *
+     * @return array<int, array{start: CarbonImmutable, nights: int, label: string}>
+     */
+    public function stageStays(Package $package, CarbonImmutable $travelDate): array
+    {
+        $startDays = $package->stageStartDays();
+        $stays = [];
+
+        foreach ($package->stages as $stage) {
+            if ((int) $stage->nights < 1) {
+                continue;
+            }
+
+            $stays[(int) $stage->position] = [
+                'start' => $travelDate->addDays($startDays[$stage->id] - 1),
+                'nights' => (int) $stage->nights,
+                'label' => 'Stage '.$stage->position.($stage->destination !== null ? ' · '.$stage->destination->name : ''),
+            ];
+        }
+
+        return $stays;
     }
 
     private function validateRequest(Package $package, QuoteRequestData $request): void

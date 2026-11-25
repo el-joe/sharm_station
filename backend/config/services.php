@@ -55,6 +55,14 @@ return [
     ],
 
     /*
+    | Exchange rates (SRS 11): free keyless API returning {"result": "success", "rates": {"USD": 1.08, ...}} relative to EUR.
+    */
+    'exchange_rates' => [
+        'url' => env('EXCHANGE_RATES_URL', 'https://open.er-api.com/v6/latest/EUR'),
+        'timeout' => (int) env('EXCHANGE_RATES_TIMEOUT', 10),
+    ],
+
+    /*
     | Next.js website on-demand revalidation (ISR tags), called after admin content changes.
     */
     'frontend' => [

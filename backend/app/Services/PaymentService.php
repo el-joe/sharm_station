@@ -6,8 +6,10 @@ use App\DTOs\Payment\CheckoutSessionData;
 use App\DTOs\Payment\PaymentMethodData;
 use App\DTOs\Payment\ProofSubmissionData;
 use App\DTOs\Payment\RecordPaymentData;
+use App\DTOs\Payment\WebhookEventData;
 use App\Enums\ActivityAction;
 use App\Enums\BookingStatus;
+use App\Enums\NotificationEvent;
 use App\Enums\PaymentMethodType;
 use App\Enums\PaymentRecordStatus;
 use App\Enums\PaymentStatus;
@@ -24,7 +26,11 @@ use App\Repositories\Contracts\BookingRepositoryInterface;
 use App\Repositories\Contracts\PaymentMethodRepositoryInterface;
 use App\Repositories\Contracts\PaymentProofRepositoryInterface;
 use App\Repositories\Contracts\PaymentRepositoryInterface;
+use App\Services\Notifications\NotificationService;
+use App\Services\Payments\CapturesPayments;
+use App\Services\Payments\PaymentGatewayException;
 use App\Services\Payments\PaymentGatewayManager;
+use App\Services\Payments\ReturnUrls;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -54,6 +60,7 @@ class PaymentService
         private readonly CurrencyService $currencies,
         private readonly PaymentGatewayManager $gateways,
         private readonly ActivityLogger $activity,
+        private readonly NotificationService $notifications,
     ) {}
 
     /**
@@ -61,7 +68,9 @@ class PaymentService
      */
     public function methodsFor(Booking $booking): Collection
     {
-        return $this->methods->enabledForCurrency($booking->currency);
+        return $this->methods->enabledForCurrency($booking->currency)
+            ->filter(fn (PaymentMethod $method): bool => $method->isManual() || $this->gateways->isAvailable($method->driver))
+            ->values();
     }
 
     /**
@@ -140,6 +149,7 @@ class PaymentService
             }
 
             $this->transfers->syncWithPayment($booking, TransferStatus::AwaitingReceiptReview);
+            $this->notifications->booking(NotificationEvent::ProofUploadedAdmin, $booking, ['admin_url' => route('admin.receipts.show', $proof)]);
 
             return $proof;
         });
@@ -172,7 +182,10 @@ class PaymentService
                 'rejection_reason' => null,
             ]);
 
-            $this->settle($booking, $reviewer, 'Proof of payment approved');
+            if ($this->settle($booking, $reviewer, 'Proof of payment approved') === null) {
+                $this->notifications->booking(NotificationEvent::ProofApproved, $booking);
+            }
+
             $this->activity->log(ActivityAction::ProofApproved, $proof, "Proof #{$proof->id} of booking {$booking->reference} approved (€".number_format($amount, 2).')', ['payment_id' => $payment->id, 'amount' => $amount], $reviewer);
 
             return $payment;
@@ -204,6 +217,7 @@ class PaymentService
 
             $this->transfers->syncWithPayment($booking, TransferStatus::AwaitingPayment);
             $this->activity->log(ActivityAction::ProofRejected, $proof, "Proof #{$proof->id} of booking {$booking->reference} rejected", ['reason' => $reason], $reviewer);
+            $this->notifications->booking(NotificationEvent::ProofRejected, $booking, ['reason' => $reason]);
 
             return $proof;
         });
@@ -243,7 +257,7 @@ class PaymentService
     {
         $method = $this->methods->findEnabled($paymentMethodId);
 
-        if ($method === null || $method->type !== PaymentMethodType::Online || ! $method->supportsCurrency($booking->currency) || ! $this->gateways->has((string) $method->driver)) {
+        if ($method === null || $method->type !== PaymentMethodType::Online || ! $method->supportsCurrency($booking->currency) || ! $this->gateways->isAvailable($method->driver)) {
             throw DomainValidationException::withErrors(['payment_method_id' => ['This payment method is not available for this booking.']]);
         }
 
@@ -278,21 +292,32 @@ class PaymentService
     /**
      * Applies a verified gateway webhook. Unknown or repeated events are ignored (idempotent).
      *
+     * @param  array<string, string>  $headers  request headers, lower-case names
      * @return bool false when the signature is invalid
      */
-    public function handleWebhook(string $driver, string $payload, ?string $signature): bool
+    public function handleWebhook(string $driver, string $payload, array $headers): bool
     {
-        if (! $this->gateways->has($driver)) {
+        if (! $this->gateways->isAvailable($driver)) {
             return false;
         }
 
         $gateway = $this->gateways->driver($driver);
 
-        if (! $gateway->verifyWebhook($payload, $signature)) {
+        if (! $gateway->verifyWebhook($payload, $headers)) {
             return false;
         }
 
         $event = $gateway->parseWebhook($payload);
+
+        if ($event->needsCapture && $event->reference !== null && $gateway instanceof CapturesPayments) {
+            $payment = $this->payments->findPendingByGatewayReference($event->reference);
+
+            if ($payment !== null && $payment->status === PaymentRecordStatus::Pending) {
+                $this->applyGatewayResult($payment, $gateway->capture($event->reference));
+            }
+
+            return true;
+        }
 
         if ($event->succeeded === null || $event->reference === null) {
             return true;
@@ -300,11 +325,61 @@ class PaymentService
 
         $payment = $this->payments->findPendingByGatewayReference($event->reference);
 
-        if ($payment === null || $payment->status !== PaymentRecordStatus::Pending) {
-            return true;
+        if ($payment !== null) {
+            $this->applyGatewayResult($payment, $event);
+        }
+
+        return true;
+    }
+
+    /**
+     * Buyer back from PayPal: captures the approved order and returns the booking page URL to redirect to.
+     */
+    public function completeReturn(int $paymentId, ?string $orderReference): string
+    {
+        $payment = $this->payments->find($paymentId);
+        abort_if($payment === null || $payment->gateway_reference === null || ($orderReference !== null && ! hash_equals($payment->gateway_reference, $orderReference)), 404);
+
+        $booking = $payment->booking;
+        $driver = (string) $payment->method?->driver;
+
+        if ($payment->status === PaymentRecordStatus::Pending && $this->gateways->isAvailable($driver)) {
+            $gateway = $this->gateways->driver($driver);
+
+            if ($gateway instanceof CapturesPayments) {
+                try {
+                    $this->applyGatewayResult($payment, $gateway->capture($payment->gateway_reference));
+                } catch (PaymentGatewayException $exception) {
+                    report($exception);
+                }
+            }
+        }
+
+        $payment->refresh();
+
+        return ReturnUrls::page($booking, ['payment' => match ($payment->status) {
+            PaymentRecordStatus::Succeeded => 'success',
+            PaymentRecordStatus::Failed => 'failed',
+            default => 'pending',
+        }]);
+    }
+
+    /**
+     * Marks a pending online payment succeeded (and settles the booking) or failed. Repeated results are ignored.
+     */
+    private function applyGatewayResult(Payment $payment, WebhookEventData $event): void
+    {
+        if ($event->succeeded === null) {
+            return;
         }
 
         DB::transaction(function () use ($payment, $event): void {
+            $payment = $this->payments->query()->lockForUpdate()->find($payment->id);
+
+            if ($payment === null || $payment->status !== PaymentRecordStatus::Pending) {
+                return;
+            }
+
             $booking = $payment->booking;
 
             if ($event->succeeded) {
@@ -320,9 +395,9 @@ class PaymentService
             if ($booking->payment_status === PaymentStatus::AwaitingPayment) {
                 $this->bookings->update($booking, ['payment_status' => PaymentStatus::Failed]);
             }
-        });
 
-        return true;
+            $this->notifications->booking(NotificationEvent::PaymentFailed, $booking);
+        });
     }
 
     public function createMethod(PaymentMethodData $data): PaymentMethod
@@ -418,8 +493,9 @@ class PaymentService
     /**
      * Payment status and booking status from the recorded payments: deposit paid -> confirmed, nothing due -> fully paid.
      */
-    private function settle(Booking $booking, ?User $actor, string $note): void
+    private function settle(Booking $booking, ?User $actor, string $note): ?NotificationEvent
     {
+        $before = $booking->status;
         $booking->unsetRelation('payments');
         $paid = $booking->paidAmount();
         $fullyPaid = $paid + 0.01 >= (float) $booking->total;
@@ -435,5 +511,28 @@ class PaymentService
         }
 
         $this->transfers->syncWithPayment($booking, TransferStatus::Paid);
+
+        return $this->notifySettled($booking, $before);
+    }
+
+    /**
+     * SRS 15.1: deposit confirmed (customer with the voucher, and admin) or balance recorded / account closed.
+     */
+    private function notifySettled(Booking $booking, ?BookingStatus $before): ?NotificationEvent
+    {
+        if (in_array($before, [BookingStatus::AwaitingPayment, BookingStatus::AwaitingReceiptReview], true) && in_array($booking->status, [BookingStatus::Confirmed, BookingStatus::FullyPaid], true)) {
+            $this->notifications->booking(NotificationEvent::DepositConfirmed, $booking);
+            $this->notifications->booking(NotificationEvent::DepositConfirmedAdmin, $booking);
+
+            return NotificationEvent::DepositConfirmed;
+        }
+
+        if ($before === BookingStatus::Confirmed && $booking->status === BookingStatus::FullyPaid) {
+            $this->notifications->booking(NotificationEvent::BalanceRecorded, $booking);
+
+            return NotificationEvent::BalanceRecorded;
+        }
+
+        return null;
     }
 }

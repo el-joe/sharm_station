@@ -21,7 +21,17 @@ final readonly class RoomFilterData
         public ?CarbonImmutable $checkIn = null,
         public ?CarbonImmutable $checkOut = null,
         public bool $freeCancellation = false,
+        public bool $onlyAvailable = false,
+        public ?string $groupBy = null,
     ) {}
+
+    /**
+     * Dates or guests were searched: rooms carry "available" and "unavailable_reason".
+     */
+    public function checksAvailability(): bool
+    {
+        return $this->nights() !== null || $this->guests !== null;
+    }
 
     /**
      * Number of nights of the requested stay, or null without dates.
@@ -49,6 +59,8 @@ final readonly class RoomFilterData
             checkIn: filled($data['check_in'] ?? null) ? CarbonImmutable::parse($data['check_in'])->startOfDay() : null,
             checkOut: filled($data['check_out'] ?? null) ? CarbonImmutable::parse($data['check_out'])->startOfDay() : null,
             freeCancellation: (bool) ($data['free_cancellation'] ?? false),
+            onlyAvailable: (bool) ($data['only_available'] ?? false),
+            groupBy: $data['group_by'] ?? null,
         );
     }
 
@@ -72,6 +84,8 @@ final readonly class RoomFilterData
             checkIn: $this->checkIn,
             checkOut: $this->checkOut,
             freeCancellation: $this->freeCancellation,
+            onlyAvailable: $this->onlyAvailable,
+            groupBy: $this->groupBy,
         );
     }
 }

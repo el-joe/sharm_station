@@ -4,11 +4,13 @@ namespace App\Services;
 
 use App\Models\Partner;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Barryvdh\DomPDF\PDF as DomPdf;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * Partner statement downloads (P1): PDF rendered from a Blade view with DomPDF, Excel with PhpSpreadsheet.
@@ -22,18 +24,42 @@ class PartnerStatementExporter
         private readonly SettingsService $settings,
     ) {}
 
+    /**
+     * @throws NotFoundHttpException when the partner has no bookings in that month.
+     */
     public function download(Partner $partner, string $period, string $format): Response
     {
         $statement = $this->portal->statement($partner, $period);
+
+        if ($statement['bookings'] === []) {
+            throw new NotFoundHttpException('No bookings in this period.');
+        }
+
         $filename = 'statement-'.$period.'-'.str($partner->company)->slug().'.'.$format;
 
         return $format === 'pdf' ? $this->pdf($partner, $statement, $filename) : $this->xlsx($partner, $statement, $filename);
     }
 
     /**
+     * Raw PDF of a month's statement (attached to the monthly statement email).
+     */
+    public function pdfContent(Partner $partner, string $period): string
+    {
+        return $this->pdfDocument($partner, $this->portal->statement($partner, $period))->output();
+    }
+
+    /**
      * @param  array{summary: array<string, mixed>, bookings: list<array<string, mixed>>}  $statement
      */
     private function pdf(Partner $partner, array $statement, string $filename): Response
+    {
+        return $this->pdfDocument($partner, $statement)->download($filename);
+    }
+
+    /**
+     * @param  array{summary: array<string, mixed>, bookings: list<array<string, mixed>>}  $statement
+     */
+    private function pdfDocument(Partner $partner, array $statement): DomPdf
     {
         return Pdf::loadView('pdf.partner-statement', [
             'partner' => $partner,
@@ -45,7 +71,7 @@ class PartnerStatementExporter
                 'email' => $this->settings->get('site.email'),
                 'phone' => $this->settings->get('site.phone'),
             ],
-        ])->setOption(['enable_font_subsetting' => true, 'enable_remote' => false])->setPaper('a4', 'landscape')->download($filename);
+        ])->setOption(['enable_font_subsetting' => true, 'enable_remote' => false])->setPaper('a4', 'landscape');
     }
 
     /**

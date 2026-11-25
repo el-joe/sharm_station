@@ -26,19 +26,19 @@ function tabOf(b: BookingDetail, today: string | null): Tab {
   return "upcoming";
 }
 
-/** /account/bookings: GET /me/bookings with the customer token (error state with retry when the API cannot be reached). */
+/** /account/bookings: GET /me/bookings with the customer session (error state with retry when the API cannot be reached). */
 export function MyBookings() {
   const t = useTranslations("account.bookings");
   const tg = useTranslations("guard");
   const locale = useLocale() as Locale;
-  const { token, signOut } = useAuth();
+  const { hasSession, signOut } = useAuth();
   const today = useToday();
   const [tab, setTab] = useState<Tab>("upcoming");
 
   const query = useQuery({
-    queryKey: ["account", "bookings", token, locale],
-    queryFn: ({ signal }) => api.getMyBookings({ locale, token: token!, signal }),
-    enabled: Boolean(token),
+    queryKey: ["account", "bookings", locale],
+    queryFn: ({ signal }) => api.getMyBookings({ locale, signal }),
+    enabled: hasSession,
     retry: false,
   });
 

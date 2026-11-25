@@ -18,6 +18,8 @@ use App\Repositories\Contracts\GoogleReviewRepositoryInterface;
 use App\Repositories\Contracts\McpTokenRepositoryInterface;
 use App\Repositories\Contracts\NationalityGroupRepositoryInterface;
 use App\Repositories\Contracts\NewsletterSubscriberRepositoryInterface;
+use App\Repositories\Contracts\NotificationLogRepositoryInterface;
+use App\Repositories\Contracts\NotificationTemplateRepositoryInterface;
 use App\Repositories\Contracts\PackageRepositoryInterface;
 use App\Repositories\Contracts\PageRepositoryInterface;
 use App\Repositories\Contracts\PartnerRepositoryInterface;
@@ -26,9 +28,12 @@ use App\Repositories\Contracts\PaymentProofRepositoryInterface;
 use App\Repositories\Contracts\PaymentRepositoryInterface;
 use App\Repositories\Contracts\ProductPriceRepositoryInterface;
 use App\Repositories\Contracts\ReportRepositoryInterface;
+use App\Repositories\Contracts\RoomIcalFeedRepositoryInterface;
+use App\Repositories\Contracts\RoomOptionRepositoryInterface;
 use App\Repositories\Contracts\RoomRepositoryInterface;
 use App\Repositories\Contracts\SeasonPriceRepositoryInterface;
 use App\Repositories\Contracts\SettingRepositoryInterface;
+use App\Repositories\Contracts\SlugRedirectRepositoryInterface;
 use App\Repositories\Contracts\TransferFixedRouteRepositoryInterface;
 use App\Repositories\Contracts\TransferHubRepositoryInterface;
 use App\Repositories\Contracts\TransferRequestRepositoryInterface;
@@ -51,6 +56,8 @@ use App\Repositories\Eloquent\GoogleReviewRepository;
 use App\Repositories\Eloquent\McpTokenRepository;
 use App\Repositories\Eloquent\NationalityGroupRepository;
 use App\Repositories\Eloquent\NewsletterSubscriberRepository;
+use App\Repositories\Eloquent\NotificationLogRepository;
+use App\Repositories\Eloquent\NotificationTemplateRepository;
 use App\Repositories\Eloquent\PackageRepository;
 use App\Repositories\Eloquent\PageRepository;
 use App\Repositories\Eloquent\PartnerRepository;
@@ -59,9 +66,12 @@ use App\Repositories\Eloquent\PaymentProofRepository;
 use App\Repositories\Eloquent\PaymentRepository;
 use App\Repositories\Eloquent\ProductPriceRepository;
 use App\Repositories\Eloquent\ReportRepository;
+use App\Repositories\Eloquent\RoomIcalFeedRepository;
+use App\Repositories\Eloquent\RoomOptionRepository;
 use App\Repositories\Eloquent\RoomRepository;
 use App\Repositories\Eloquent\SeasonPriceRepository;
 use App\Repositories\Eloquent\SettingRepository;
+use App\Repositories\Eloquent\SlugRedirectRepository;
 use App\Repositories\Eloquent\TransferFixedRouteRepository;
 use App\Repositories\Eloquent\TransferHubRepository;
 use App\Repositories\Eloquent\TransferRequestRepository;
@@ -85,6 +95,8 @@ class RepositoryServiceProvider extends ServiceProvider
         PackageRepositoryInterface::class => PackageRepository::class,
         PartnerRepositoryInterface::class => PartnerRepository::class,
         RoomRepositoryInterface::class => RoomRepository::class,
+        RoomIcalFeedRepositoryInterface::class => RoomIcalFeedRepository::class,
+        RoomOptionRepositoryInterface::class => RoomOptionRepository::class,
         SeasonPriceRepositoryInterface::class => SeasonPriceRepository::class,
         SettingRepositoryInterface::class => SettingRepository::class,
         TripRepositoryInterface::class => TripRepository::class,
@@ -109,5 +121,8 @@ class RepositoryServiceProvider extends ServiceProvider
         FaqRepositoryInterface::class => FaqRepository::class,
         BlogPostRepositoryInterface::class => BlogPostRepository::class,
         PageRepositoryInterface::class => PageRepository::class,
+        NotificationTemplateRepositoryInterface::class => NotificationTemplateRepository::class,
+        NotificationLogRepositoryInterface::class => NotificationLogRepository::class,
+        SlugRedirectRepositoryInterface::class => SlugRedirectRepository::class,
     ];
 }

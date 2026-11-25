@@ -55,7 +55,7 @@ export function NationalityProvider({ children }: { children: ReactNode }) {
   const locale = useLocale() as Locale;
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user, token, setUser } = useAuth();
+  const { user, hasSession, setUser } = useAuth();
   const [refreshing, startTransition] = useTransition();
   const code = useSyncExternalStore<string | null | undefined>(subscribe, readCookie, () => undefined);
 
@@ -74,15 +74,15 @@ export function NationalityProvider({ children }: { children: ReactNode }) {
 
   const saveToAccount = useCallback(
     async (next: string) => {
-      if (!token) return;
+      if (!hasSession) return;
       try {
-        const res = await api.updateProfile({ nationality_code: next }, { locale, token });
+        const res = await api.updateProfile({ nationality_code: next }, { locale });
         if (res.status === "ok") setUser(res.data);
       } catch {
         /* the cookie is the source of truth for prices; the account copy is best effort */
       }
     },
-    [locale, token, setUser],
+    [locale, hasSession, setUser],
   );
 
   const setNationality = useCallback(

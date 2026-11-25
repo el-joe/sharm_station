@@ -66,6 +66,24 @@ export async function apiLogin(role: Role): Promise<{ token: string; user: Recor
   return { token: body.token, user: body.data };
 }
 
+/** httpOnly cookie that holds the Sanctum token on the site origin (F6, lib/session-shared.ts). */
+export const SESSION_COOKIE = "ssv_session";
+
+/**
+ * Signs a demo account in through the site's POST /api/auth/login route handler (same-origin + CSRF header),
+ * which stores the session cookies in the given context. Use it instead of writing a token into the browser.
+ */
+export async function siteLogin(context: BrowserContext, role: Role) {
+  const res = await context.request.post(`${SITE_URL}/api/auth/login?locale=en`, {
+    headers: { Accept: "application/json", "x-ssv-csrf": "1", Origin: SITE_URL },
+    data: { email: ACCOUNTS[role], password: password() },
+  });
+  expect(res.status(), `site login for ${role}`).toBe(200);
+  const body = await res.json();
+  expect(body.token, "the token never reaches the browser").toBeUndefined();
+  return body.data as Record<string, unknown>;
+}
+
 /** Collect console errors from first-party code (third-party noise ignored). */
 export function trackConsoleErrors(page: Page): string[] {
   const errors: string[] = [];

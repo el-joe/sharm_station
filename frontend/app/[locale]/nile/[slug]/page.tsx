@@ -1,6 +1,6 @@
 import { TripDetailSkeleton, TripDetailView } from "@/components/trips/TripDetailView";
 import { getNationality } from "@/lib/api/nationality-server";
-import { getCatalogueKeys, getTrip } from "@/lib/api/server";
+import { getCatalogueKeys, getTrip, notFoundOrMoved } from "@/lib/api/server";
 import type { Locale } from "@/lib/api/types";
 import { pageMetadata } from "@/lib/seo";
 import type { Metadata } from "next";
@@ -37,6 +37,7 @@ async function Content({ params }: { params: PageProps<"/[locale]/nile/[slug]">[
   const { locale, slug } = await params;
   const nationality = await getNationality();
   const trip = await getTrip(slug, locale as Locale, nationality);
-  if (!trip || !(trip.type === "nile")) notFound();
+  if (!trip) return notFoundOrMoved("nile", slug, locale as Locale);
+  if (!(trip.type === "nile")) notFound();
   return <TripDetailView trip={trip} locale={locale as Locale} nationality={nationality} />;
 }
