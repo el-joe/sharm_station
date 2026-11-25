@@ -75,6 +75,12 @@ if [[ -z "${SKIP_FRONTEND:-}" ]]; then
     npm run build
 
     log "Frontend: process (pm2: sharm-web on :${WEB_PORT})"
+    # A stray (non-PM2) server on the web port would keep serving the old build
+    # from memory and 500 on every chunk that this build just deleted.
+    if ! pm2 describe sharm-web >/dev/null 2>&1 && ss -ltn "sport = :${WEB_PORT}" | grep -q LISTEN; then
+        echo "Port ${WEB_PORT} is held by a non-PM2 process; stop it first." >&2
+        exit 1
+    fi
     if pm2 describe sharm-web >/dev/null 2>&1; then
         pm2 restart sharm-web --update-env
     else
@@ -83,5 +89,18 @@ if [[ -z "${SKIP_FRONTEND:-}" ]]; then
 fi
 
 pm2 save >/dev/null
+
+# ---------------------------------------------------------------- sanity checks
+# nginx and Laravel must both target the PM2 web port, or the site serves a stale build.
+for f in /etc/nginx/conf.d/*.conf /etc/nginx/sites-enabled/*; do
+    [[ -f "$f" ]] || continue
+    if grep -E 'upstream +sharm_next' "$f" | grep -qv ":${WEB_PORT}"; then
+        echo "WARNING: nginx upstream sharm_next in $f does not point at :${WEB_PORT}" >&2
+    fi
+done
+if grep -q '^FRONTEND_REVALIDATE_URL=' "$ROOT/backend/.env" \
+   && ! grep -q "^FRONTEND_REVALIDATE_URL=http://127.0.0.1:${WEB_PORT}/" "$ROOT/backend/.env"; then
+    echo "WARNING: backend/.env FRONTEND_REVALIDATE_URL does not point at :${WEB_PORT}" >&2
+fi
 log "Done"
 pm2 ls
